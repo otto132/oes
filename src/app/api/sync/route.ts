@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { auth } from '@/lib/auth';
 import { syncEmails } from '@/lib/integrations/email-sync';
 import { syncCalendar } from '@/lib/integrations/calendar-sync';
 
@@ -6,12 +7,24 @@ import { syncCalendar } from '@/lib/integrations/calendar-sync';
 // Body: { "type": "all" | "emails" | "calendar" }
 // Vercel Cron: add to vercel.json: { "crons": [{ "path": "/api/sync", "schedule": "*/15 * * * *" }] }
 
-export async function POST(req: NextRequest) {
-  // Verify cron secret if called by scheduler
+/** Require either a valid CRON_SECRET header or an authenticated session. */
+async function verifyCronOrSession(req: NextRequest): Promise<NextResponse | null> {
   const cronSecret = req.headers.get('x-cron-secret');
-  if (cronSecret && cronSecret !== process.env.CRON_SECRET) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  if (cronSecret === process.env.CRON_SECRET && process.env.CRON_SECRET) {
+    return null; // authorised via cron secret
   }
+
+  const session = await auth();
+  if (session?.user) {
+    return null; // authorised via session
+  }
+
+  return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+}
+
+export async function POST(req: NextRequest) {
+  const denied = await verifyCronOrSession(req);
+  if (denied) return denied;
 
   const body = await req.json().catch(() => ({ type: 'all' }));
   const type = body.type || 'all';
@@ -38,7 +51,10 @@ export async function POST(req: NextRequest) {
 }
 
 // GET /api/sync — check sync status
-export async function GET() {
+export async function GET(req: NextRequest) {
+  const denied = await verifyCronOrSession(req);
+  if (denied) return denied;
+
   // In production, return last sync timestamp, status, error count
   return NextResponse.json({
     outlook: { status: 'Check /settings for connection status' },
