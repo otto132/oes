@@ -6,7 +6,7 @@ export default auth((req) => {
   const { pathname } = req.nextUrl
 
   // Public routes — no auth needed
-  if (pathname.startsWith("/login") || pathname.startsWith("/api/auth")) {
+  if (pathname.startsWith("/login") || pathname.startsWith("/api/auth") || pathname.startsWith("/api/health")) {
     return
   }
 

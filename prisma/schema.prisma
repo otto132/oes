@@ -436,6 +436,7 @@ model Task {
   @@index([status])
   @@index([ownerId])
   @@index([accountId])
+  @@index([due])
   @@index([goalId])
   @@map("tasks")
 }
