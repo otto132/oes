@@ -14,7 +14,7 @@ export default function HomePage() {
   const h = new Date().getHours();
   const greeting = h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening';
 
-  if (isLoading) {
+  if (isLoading || (!data && !error)) {
     return (
       <div className="max-w-[1100px] page-enter">
         {/* Hero skeleton */}
@@ -110,6 +110,8 @@ export default function HomePage() {
       </div>
     );
   }
+
+  if (!data) return null;
 
   const { stats, nextBestActions, topSignals, todayMeetings, dealsAtRisk, recentActivity } = data as {
     stats: { pipelineTotal: number; pipelineWeighted: number; openDeals: number; atRiskCount: number; pendingApprovals: number; newSignals: number; unreadEmails: number };
