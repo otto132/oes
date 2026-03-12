@@ -1,0 +1,11 @@
+node_modules/
+.next/
+out/
+.env
+.env.local
+.env.production.local
+*.tsbuildinfo
+prisma/migrations/*/migration_lock.toml
+
+.DS_Store
+.claude/

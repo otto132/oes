@@ -1,0 +1,575 @@
+// ═══════════════════════════════════════════════════════════════
+// Eco-Insight Revenue OS — Prisma Schema
+// ═══════════════════════════════════════════════════════════════
+// Derived from src/lib/types.ts. Every table, field, relation,
+// and index maps to a working product behavior.
+//
+// Run: npx prisma migrate dev --name init
+// Seed: npx prisma db seed
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ═══════════════════════════════════════════════════════════════
+// ENUMS
+// ═══════════════════════════════════════════════════════════════
+
+enum SignalType {
+  ppa_announcement
+  renewable_target
+  job_posting
+  market_entry
+  conference
+  registry_pain
+}
+
+enum SignalStatus {
+  new_signal     // "new" is reserved in some contexts
+  reviewed
+  converted
+  dismissed
+}
+
+enum LeadStage {
+  New
+  Researching
+  Qualified
+  Converted
+  Disqualified
+}
+
+enum AccountType {
+  Utility
+  Trader
+  Retailer
+  Industrial
+  Developer
+  Unknown
+}
+
+enum AccountStatus {
+  Prospect
+  Active
+  Partner
+  Churned
+}
+
+enum OppStage {
+  Identified
+  Contacted
+  Discovery
+  Qualified
+  SolutionFit    // Prisma enums can't have spaces
+  Proposal
+  Negotiation
+  VerbalCommit
+  ClosedWon
+  ClosedLost
+}
+
+enum ContactRole {
+  Champion
+  EconomicBuyer
+  TechnicalBuyer
+  Influencer
+  Blocker
+}
+
+enum ContactWarmth {
+  Strong
+  Warm
+  Cold
+}
+
+enum QueueItemType {
+  outreach_draft
+  lead_qualification
+  enrichment
+  task_creation
+}
+
+enum QueueItemStatus {
+  pending
+  approved
+  rejected
+}
+
+enum QueuePriority {
+  High
+  Normal
+  Low
+}
+
+enum TaskStatus {
+  Open
+  InProgress
+  InReview
+  Done
+}
+
+enum TaskPriority {
+  High
+  Medium
+  Low
+}
+
+enum ActivityType {
+  Email
+  Meeting
+  Call
+  Note
+}
+
+enum EmailClassification {
+  positive_reply
+  question
+  objection
+  meeting_request
+  bounce
+  unsubscribe
+  new_domain
+  auto_reply
+  internal
+  spam
+}
+
+enum MeetingPrepStatus {
+  draft
+  ready
+}
+
+enum GoalStatus {
+  active
+  completed
+  archived
+}
+
+// ═══════════════════════════════════════════════════════════════
+// USERS
+// ═══════════════════════════════════════════════════════════════
+
+model User {
+  id        String   @id @default(cuid())
+  name      String
+  initials  String   @db.VarChar(4)
+  email     String   @unique
+  role      String
+  color     String   @default("default") @db.VarChar(20)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  ownedLeads        Lead[]        @relation("LeadOwner")
+  ownedAccounts     Account[]     @relation("AccountOwner")
+  ownedOpps         Opportunity[] @relation("OppOwner")
+  ownedTasks        Task[]        @relation("TaskOwner")
+  assignedTasks     Task[]        @relation("TaskAssignees")
+  reviewingTasks    Task[]        @relation("TaskReviewer")
+  ownedGoals        Goal[]        @relation("GoalOwner")
+  activities        Activity[]    @relation("ActivityAuthor")
+  taskComments      TaskComment[] @relation("CommentAuthor")
+
+  @@map("users")
+}
+
+// ═══════════════════════════════════════════════════════════════
+// SIGNALS
+// ═══════════════════════════════════════════════════════════════
+
+model Signal {
+  id         String       @id @default(cuid())
+  type       SignalType
+  title      String
+  summary    String       @db.Text
+  reasoning  String       @db.Text
+  source     String       // source name e.g. "Reuters Energy"
+  sourceUrl  String?      // original URL
+  relevance  Int          // 0–100
+  confidence Float        // 0.0–1.0
+  agent      String       @default("Signal Hunter")
+  status     SignalStatus @default(new_signal)
+  detectedAt DateTime     @default(now())
+  createdAt  DateTime     @default(now())
+
+  // Extracted entities stored as JSON array of company names
+  companies  String[]
+
+  // Relations
+  leads Lead[] @relation("LeadSignal")
+
+  @@index([status, detectedAt(sort: Desc)])
+  @@index([type])
+  @@map("signals")
+}
+
+// ═══════════════════════════════════════════════════════════════
+// LEADS
+// ═══════════════════════════════════════════════════════════════
+
+model Lead {
+  id        String    @id @default(cuid())
+  company   String
+  domain    String    @default("")
+  source    String    // "Signal", "Manual", "Conference", etc.
+  type      AccountType @default(Unknown)
+  country   String    @default("")
+  region    String    @default("")
+  stage     LeadStage @default(New)
+  pain      String    @db.Text @default("")
+
+  // FIUAC scores stored as individual columns for queryability
+  scoreFit        Int @default(50)
+  scoreIntent     Int @default(50)
+  scoreUrgency    Int @default(50)
+  scoreAccess     Int @default(30)
+  scoreCommercial Int @default(50)
+
+  // Module fit as string array
+  moduleFit  String[]
+
+  confidence Float     @default(0.5)
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  // Relations
+  signalId  String?
+  signal    Signal?   @relation("LeadSignal", fields: [signalId], references: [id])
+  ownerId   String
+  owner     User      @relation("LeadOwner", fields: [ownerId], references: [id])
+
+  @@unique([company]) // dedup by company name
+  @@index([stage])
+  @@index([ownerId])
+  @@map("leads")
+}
+
+// ═══════════════════════════════════════════════════════════════
+// ACCOUNTS
+// ═══════════════════════════════════════════════════════════════
+
+model Account {
+  id          String        @id @default(cuid())
+  name        String        @unique
+  type        AccountType   @default(Unknown)
+  country     String        @default("")
+  countryCode String        @default("") @db.VarChar(2)
+  region      String        @default("")
+  status      AccountStatus @default(Prospect)
+
+  // Certificate schemes as string array (GoO, ELcert, REGO, I-REC, EECS)
+  schemes     String[]
+
+  // FIUAC scores
+  scoreFit        Int @default(50)
+  scoreIntent     Int @default(50)
+  scoreUrgency    Int @default(50)
+  scoreAccess     Int @default(30)
+  scoreCommercial Int @default(50)
+
+  // Cached/computed
+  pipelineValue Int      @default(0)  // cached sum of open opp amounts
+  lastActivityAt DateTime @default(now())
+
+  // AI Account Brief
+  pain         String  @db.Text @default("")
+  whyNow       String  @db.Text @default("")
+  moduleFit    String[]
+  competitors  String? @db.Text
+  aiConfidence Float   @default(0.5)
+  aiUpdatedAt  DateTime @default(now())
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  ownerId       String
+  owner         User          @relation("AccountOwner", fields: [ownerId], references: [id])
+  contacts      Contact[]
+  opportunities Opportunity[]
+  activities    Activity[]
+  tasks         Task[]
+  goals         Goal[]
+
+  @@index([status])
+  @@index([ownerId])
+  @@index([type])
+  @@map("accounts")
+}
+
+// ═══════════════════════════════════════════════════════════════
+// CONTACTS
+// ═══════════════════════════════════════════════════════════════
+
+model Contact {
+  id        String       @id @default(cuid())
+  name      String
+  title     String       @default("")
+  role      ContactRole  @default(Champion)
+  warmth    ContactWarmth @default(Cold)
+  email     String       @default("")
+  phone     String?
+  linkedinUrl String?
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+
+  // Relations
+  accountId String
+  account   Account @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  @@index([accountId])
+  @@map("contacts")
+}
+
+// ═══════════════════════════════════════════════════════════════
+// OPPORTUNITIES
+// ═══════════════════════════════════════════════════════════════
+
+model Opportunity {
+  id          String   @id @default(cuid())
+  name        String
+  stage       OppStage @default(Identified)
+  amount      Int      @default(0) // euro cents in production; whole euros in seed
+  probability Int      @default(5) // 0–100, auto-set from stage
+  closeDate   DateTime?
+
+  // Deal health dimensions (0–100 each)
+  healthEngagement  Int @default(50)
+  healthStakeholders Int @default(30)
+  healthCompetitive Int @default(50)
+  healthTimeline    Int @default(70)
+
+  // AI next action (from Pipeline Hygiene)
+  nextAction     String? @db.Text
+  nextActionDate DateTime?
+
+  // Win metadata
+  winNotes         String? @db.Text
+  competitorBeaten String?
+
+  // Loss metadata
+  lossReason    String?
+  lossCompetitor String?
+  lossNotes     String? @db.Text
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  accountId String
+  account   Account @relation(fields: [accountId], references: [id])
+  ownerId   String
+  owner     User    @relation("OppOwner", fields: [ownerId], references: [id])
+
+  @@index([accountId])
+  @@index([ownerId])
+  @@index([stage])
+  @@map("opportunities")
+}
+
+// ═══════════════════════════════════════════════════════════════
+// APPROVAL QUEUE
+// ═══════════════════════════════════════════════════════════════
+
+model QueueItem {
+  id        String          @id @default(cuid())
+  type      QueueItemType
+  title     String
+  accName   String          @default("")  // denormalized for display
+  accId     String?                       // nullable for cold outreach
+  agent     String
+  confidence Float          @default(0.5)
+
+  // Confidence breakdown + sources + payload as JSON
+  confidenceBreakdown Json  @default("{}")
+  sources             Json  @default("[]")  // [{name, url}]
+  payload             Json  @default("{}")  // type-specific data
+
+  reasoning String          @db.Text @default("")
+  status    QueueItemStatus @default(pending)
+  priority  QueuePriority   @default(Normal)
+  createdAt DateTime        @default(now())
+
+  // Audit trail
+  reviewedById String?
+  reviewedAt   DateTime?
+  rejReason    String?
+  originalPayload Json?     // snapshot before edit
+
+  @@index([status, createdAt(sort: Desc)])
+  @@index([type])
+  @@map("queue_items")
+}
+
+// ═══════════════════════════════════════════════════════════════
+// TASKS
+// ═══════════════════════════════════════════════════════════════
+
+model Task {
+  id          String       @id @default(cuid())
+  title       String
+  status      TaskStatus   @default(Open)
+  priority    TaskPriority @default(Medium)
+  due         DateTime?
+  source      String       @default("Manual") // "Manual", "AI Suggested", "Pipeline Hygiene Agent", etc.
+  completedAt DateTime?
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  // Relations
+  accountId  String?
+  account    Account?  @relation(fields: [accountId], references: [id])
+  ownerId    String
+  owner      User      @relation("TaskOwner", fields: [ownerId], references: [id])
+  assignees  User[]    @relation("TaskAssignees")
+  reviewerId String?
+  reviewer   User?     @relation("TaskReviewer", fields: [reviewerId], references: [id])
+  goalId     String?
+  goal       Goal?     @relation(fields: [goalId], references: [id])
+  comments   TaskComment[]
+
+  @@index([status])
+  @@index([ownerId])
+  @@index([accountId])
+  @@index([goalId])
+  @@map("tasks")
+}
+
+model TaskComment {
+  id        String   @id @default(cuid())
+  text      String   @db.Text
+  mentions  String[] // user IDs mentioned
+  createdAt DateTime @default(now())
+
+  // Relations
+  taskId   String
+  task     Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  authorId String
+  author   User @relation("CommentAuthor", fields: [authorId], references: [id])
+
+  @@index([taskId])
+  @@map("task_comments")
+}
+
+// ═══════════════════════════════════════════════════════════════
+// GOALS
+// ═══════════════════════════════════════════════════════════════
+
+model Goal {
+  id        String     @id @default(cuid())
+  title     String
+  status    GoalStatus @default(active)
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+
+  // Relations
+  accountId String?
+  account   Account? @relation(fields: [accountId], references: [id])
+  ownerId   String
+  owner     User     @relation("GoalOwner", fields: [ownerId], references: [id])
+  tasks     Task[]
+
+  @@index([ownerId])
+  @@map("goals")
+}
+
+// ═══════════════════════════════════════════════════════════════
+// ACTIVITIES (TIMELINE)
+// ═══════════════════════════════════════════════════════════════
+
+model Activity {
+  id        String       @id @default(cuid())
+  type      ActivityType
+  summary   String       // max ~80 chars for list display
+  detail    String       @db.Text @default("")
+  source    String       @default("Manual") // "Outlook Sync", "Calendar Sync", "Quick Log", etc.
+  noteType  String?      // "insight", "objection", "competitor", etc. for Quick Log entries
+  createdAt DateTime     @default(now())
+
+  // Relations
+  accountId String?
+  account   Account? @relation(fields: [accountId], references: [id])
+  authorId  String
+  author    User     @relation("ActivityAuthor", fields: [authorId], references: [id])
+
+  @@index([accountId, createdAt(sort: Desc)])
+  @@index([createdAt(sort: Desc)])
+  @@map("activities")
+}
+
+// ═══════════════════════════════════════════════════════════════
+// EMAILS (INBOX)
+// ═══════════════════════════════════════════════════════════════
+
+model InboxEmail {
+  id          String              @id @default(cuid())
+  subject     String
+  fromEmail   String
+  fromName    String
+  preview     String              @db.Text // first ~200 chars
+  receivedAt  DateTime            @default(now())
+  isUnread    Boolean             @default(true)
+  isArchived  Boolean             @default(false)
+
+  // AI classification
+  classification     EmailClassification
+  classificationConf Float               @default(0.5)
+  classifierAgent    String              @default("Inbox Classifier")
+
+  // Account linking
+  isLinked    Boolean  @default(false)
+  accountId   String?
+  accountName String?  // denormalized
+  domain      String?  // sender domain for new-domain detection
+
+  createdAt DateTime @default(now())
+
+  @@index([isArchived, isUnread, receivedAt(sort: Desc)])
+  @@index([accountId])
+  @@map("inbox_emails")
+}
+
+// ═══════════════════════════════════════════════════════════════
+// INTEGRATION TOKENS (OAuth)
+// ═══════════════════════════════════════════════════════════════
+
+model IntegrationToken {
+  id           String   @id @default(cuid())
+  provider     String   // "microsoft"
+  accessToken  String   @db.Text
+  refreshToken String   @db.Text
+  expiresAt    DateTime
+  userEmail    String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@unique([provider, userEmail])
+  @@map("integration_tokens")
+}
+
+// ═══════════════════════════════════════════════════════════════
+// MEETINGS
+// ═══════════════════════════════════════════════════════════════
+
+model Meeting {
+  id         String            @id @default(cuid())
+  title      String
+  startTime  String            // "HH:MM" display
+  duration   String            // "30 min", "60 min"
+  date       DateTime
+  attendees  String[]          // names
+  prepStatus MeetingPrepStatus @default(draft)
+  createdAt  DateTime          @default(now())
+
+  // Relations
+  accountId  String?
+  accountName String?  // denormalized
+
+  @@index([date])
+  @@map("meetings")
+}

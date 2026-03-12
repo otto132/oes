@@ -1,0 +1,88 @@
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ── Design tokens ── */
+:root {
+  --bg: #09090b;
+  --elevated: #111113;
+  --surface: #18181b;
+  --overlay: #1e1e22;
+  --hover: #1c1c20;
+  --brand: #3ecf8e;
+  --brand-dim: rgba(62,207,142,0.06);
+  --brand-border: rgba(62,207,142,0.15);
+  --border: #27272a;
+  --border-strong: #3f3f46;
+  --text: #fafafa;
+  --sub: #a1a1aa;
+  --muted: #52525b;
+  --card-hover: #1c1c20;
+  --row-hover: rgba(255,255,255,0.02);
+}
+
+/* ── Base ── */
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html { -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
+::selection { background: rgba(62,207,142,.15); color: #fff; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-size: 13px;
+  line-height: 1.5;
+  font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
+}
+
+/* ── Scrollbars — minimal ── */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #27272a; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #3f3f46; }
+
+/* ── Score pills ── */
+.score-strong { background: rgba(62,207,142,.08); color: var(--brand); border: 1px solid rgba(62,207,142,.15); }
+.score-moderate { background: rgba(234,179,8,.08); color: #eab308; border: 1px solid rgba(234,179,8,.12); }
+.score-weak { background: rgba(239,68,68,.08); color: #ef4444; border: 1px solid rgba(239,68,68,.12); }
+
+/* ── Confidence dots ── */
+.conf-dot { width: 5px; height: 5px; border-radius: 99px; }
+.conf-high { background: var(--brand); }
+.conf-med { background: #eab308; }
+.conf-low { background: #ef4444; }
+
+/* ── Stage dots ── */
+.stg-dot::before { content: ''; width: 4px; height: 4px; border-radius: 99px; flex-shrink: 0; }
+
+/* ── AI box — restrained ── */
+.ai-box {
+  border-radius: 8px;
+  background: var(--elevated);
+  padding: 14px;
+  position: relative;
+  border: 1px solid var(--border);
+  border-left: 2px solid var(--brand);
+}
+
+/* ── Page entrance ── */
+@keyframes fadeUp { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+.page-enter { animation: fadeUp .2s ease both; }
+
+/* ── Queue focus ── */
+.queue-focused { border-color: var(--brand) !important; box-shadow: 0 0 0 2px rgba(62,207,142,.1); }
+
+/* ── Shimmer ── */
+@keyframes shimmer { 0% { opacity: .5; } 50% { opacity: .8; } 100% { opacity: .5; } }
+.shimmer { animation: shimmer 1.5s ease-in-out infinite; background: var(--surface); }
+
+/* ── Kbd ── */
+kbd {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--muted);
+}
