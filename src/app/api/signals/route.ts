@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { adaptSignal } from '@/lib/adapters';
+import { auth } from '@/lib/auth';
 
 // ── GET /api/signals ─────────────────────────────
 export async function GET(req: NextRequest) {
@@ -14,6 +15,10 @@ export async function GET(req: NextRequest) {
 
 // ── POST /api/signals (dismiss, convert) ─────────
 export async function POST(req: NextRequest) {
+  const session = await auth();
+  if (!session?.user?.id) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
   const body = await req.json();
   const { action, id, company, type, country } = body;
 
@@ -45,7 +50,7 @@ export async function POST(req: NextRequest) {
         scoreAccess: 20,
         scoreCommercial: 50,
         confidence: signal.confidence,
-        ownerId: 'u1',
+        ownerId: session.user.id,
       },
     });
     return NextResponse.json({ data: { signal: adaptSignal(signal), lead } }, { status: 201 });
