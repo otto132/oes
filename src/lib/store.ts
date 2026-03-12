@@ -21,10 +21,6 @@ interface Store {
   toggleTheme: () => void;
   openDrawer: (c: { title: string; subtitle: string; body: React.ReactNode; footer: React.ReactNode }) => void;
   closeDrawer: () => void;
-  dismissSignal: (id: string) => void;
-  completeTask: (id: string) => void;
-  archiveEmail: (id: string) => void;
-  markEmailRead: (id: string) => void;
 }
 
 export const useStore = create<Store>((set) => ({
@@ -49,8 +45,4 @@ export const useStore = create<Store>((set) => ({
   }),
   openDrawer: (content) => set({ drawerOpen: true, drawerContent: content }),
   closeDrawer: () => set({ drawerOpen: false }),
-  dismissSignal: (id) => set(s => ({ signals: s.signals.map(sig => sig.id === id ? { ...sig, status: 'dismissed' as const } : sig) })),
-  completeTask: (id) => set(s => ({ tasks: s.tasks.map(t => t.id === id ? { ...t, status: 'Done' as const, completedAt: new Date().toISOString() } : t) })),
-  archiveEmail: (id) => set(s => ({ emails: s.emails.map(e => e.id === id ? { ...e, archived: true } : e) })),
-  markEmailRead: (id) => set(s => ({ emails: s.emails.map(e => e.id === id ? { ...e, unread: false } : e) })),
 }));
