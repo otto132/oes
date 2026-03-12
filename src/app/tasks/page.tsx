@@ -1,59 +1,29 @@
 'use client';
 import { useState } from 'react';
 import { useStore } from '@/lib/store';
-import { useTasksQuery, useCompleteTask } from '@/lib/queries/tasks';
+import { useTasksQuery } from '@/lib/queries/tasks';
 import { Badge, Avatar, AgentTag, EmptyState } from '@/components/ui';
 import { fDate, isOverdue, cn, fR } from '@/lib/utils';
 import type { Task, Goal } from '@/lib/types';
 
-function LoadingSkeleton() {
-  return (
-    <div className="max-w-[900px]">
-      <div className="mb-3.5">
-        <div className="h-6 w-16 rounded bg-[var(--surface)] animate-pulse mb-1" />
-        <div className="h-4 w-40 rounded bg-[var(--surface)] animate-pulse" />
-      </div>
-      <div className="flex border-b border-[var(--border)] mb-2.5 gap-4">
-        {Array.from({ length: 3 }).map((_, i) => (
-          <div key={i} className="h-8 w-20 rounded bg-[var(--surface)] animate-pulse" />
-        ))}
-      </div>
-      <div className="flex flex-col gap-1">
-        {Array.from({ length: 6 }).map((_, i) => (
-          <div key={i} className="rounded-lg bg-[var(--surface)] animate-pulse h-[56px]" />
-        ))}
-      </div>
-    </div>
-  );
-}
-
 export default function TasksPage() {
-  const { users, openDrawer, closeDrawer } = useStore();
+  const { openDrawer, closeDrawer } = useStore();
   const [tab, setTab] = useState<'mine' | 'review' | 'all'>('mine');
   const [showCompleted, setShowCompleted] = useState(false);
   const [search, setSearch] = useState('');
-  const me = users[0];
 
-  const { data, isLoading, error, refetch } = useTasksQuery(showCompleted);
-  const complete = useCompleteTask();
+  // Always fetch all tasks (including completed) so goal progress bars
+  // can compute done/total correctly. Client-side filtering for the
+  // showCompleted toggle happens below.
+  const { data: resp } = useTasksQuery(true);
+  const allTasks = resp?.data?.tasks ?? [];
+  const goals = resp?.data?.goals ?? [];
+  const me = { id: 'u1', name: 'Juuso Kari', ini: 'JK', role: 'Commercial Director', ac: 'green' }; // until auth
 
-  if (isLoading) return <LoadingSkeleton />;
+  // Apply showCompleted filter client-side
+  const tasks = showCompleted ? allTasks : allTasks.filter(t => t.status !== 'Done');
 
-  if (error) {
-    return (
-      <div className="max-w-[900px]">
-        <div className="rounded-lg bg-[var(--elevated)] border border-[var(--border)] p-5 text-center">
-          <p className="text-sub text-[12.5px] mb-2">Failed to load tasks.</p>
-          <button onClick={() => refetch()} className="px-3 py-1.5 text-[12.5px] font-medium bg-brand text-[#09090b] rounded-md hover:brightness-110 transition-colors">Retry</button>
-        </div>
-      </div>
-    );
-  }
-
-  const tasks: Task[] = data?.data?.tasks ?? [];
-  const goals: Goal[] = data?.data?.goals ?? [];
-
-  let all = showCompleted ? tasks : tasks.filter(t => t.status !== 'Done');
+  let all = tasks;
   if (search) all = all.filter(t => `${t.title} ${t.accName}`.toLowerCase().includes(search.toLowerCase()));
   const mine = all.filter(t => t.assignees?.some(u => u.id === me.id) || t.owner.id === me.id);
   const review = all.filter(t => t.status === 'In Review' && t.reviewer?.id === me.id);
@@ -128,18 +98,7 @@ export default function TasksPage() {
           </div>
         </div>
       ),
-      footer: t.status !== 'Done' ? (
-        <>
-          <button className="px-3.5 py-1.5 text-[12.5px] text-sub bg-[var(--surface)] border border-[var(--border)] rounded-md hover:bg-[var(--hover)] transition-colors" onClick={closeDrawer}>Close</button>
-          <button
-            className="px-3.5 py-1.5 text-[12.5px] font-medium bg-brand text-[#09090b] rounded-md hover:brightness-110 transition-colors disabled:opacity-50"
-            disabled={complete.isPending}
-            onClick={() => { complete.mutate({ id: t.id }); closeDrawer(); }}
-          >
-            Complete
-          </button>
-        </>
-      ) : (
+      footer: (
         <button className="px-3.5 py-1.5 text-[12.5px] text-sub bg-[var(--surface)] border border-[var(--border)] rounded-md hover:bg-[var(--hover)] transition-colors" onClick={closeDrawer}>Close</button>
       ),
     });
@@ -150,10 +109,7 @@ export default function TasksPage() {
     const done = t.status === 'Done';
     return (
       <div className={cn('flex items-center gap-2.5 px-3.5 py-2.5 rounded-lg bg-[var(--elevated)] border border-[var(--border)] hover:bg-[var(--hover)] transition-colors', done && 'opacity-50')}>
-        <div
-          className={cn('w-4 h-4 rounded border-[1.5px] flex-shrink-0 cursor-pointer flex items-center justify-center', done ? 'border-brand bg-brand-dim text-brand text-[9px]' : od ? 'border-danger' : 'border-[var(--border-strong)]', complete.isPending && 'opacity-50 pointer-events-none')}
-          onClick={() => !done && complete.mutate({ id: t.id })}
-        >{done ? '✓' : ''}</div>
+        <div className={cn('w-4 h-4 rounded border-[1.5px] flex-shrink-0 flex items-center justify-center', done ? 'border-brand bg-brand-dim text-brand text-[9px]' : od ? 'border-danger' : 'border-[var(--border-strong)]')}>{done ? '✓' : ''}</div>
         <div className="flex-1 min-w-0 cursor-pointer" onClick={() => openTaskDetail(t)}>
           <div className={cn('text-[12.5px] font-medium', done && 'line-through text-muted')}>{t.title}</div>
           <div className="flex items-center gap-1 mt-0.5 flex-wrap">
@@ -215,8 +171,8 @@ export default function TasksPage() {
           {Object.entries(goalTasks).map(([gId, gTasks]) => {
             const g = goals.find(x => x.id === gId);
             if (!g) return null;
-            const done = tasks.filter(t => t.goalId === gId && t.status === 'Done').length;
-            const total = tasks.filter(t => t.goalId === gId).length;
+            const done = allTasks.filter(t => t.goalId === gId && t.status === 'Done').length;
+            const total = allTasks.filter(t => t.goalId === gId).length;
             const pct = total ? Math.round(done / total * 100) : 0;
             return (
               <div key={gId} className="rounded-lg bg-[var(--elevated)] border border-[var(--border)] overflow-hidden">

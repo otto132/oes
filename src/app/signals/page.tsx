@@ -1,7 +1,7 @@
 'use client';
 import { useState } from 'react';
 import { useStore } from '@/lib/store';
-import { useSignalsQuery, useDismissSignal } from '@/lib/queries/signals';
+import { useSignalsQuery } from '@/lib/queries/signals';
 import { Badge, ConfBadge, AgentTag, EmptyState } from '@/components/ui';
 import { signalLabel, signalColor, fR, cn, confNum } from '@/lib/utils';
 import { Zap, Check } from 'lucide-react';
@@ -15,10 +15,10 @@ const FILTERS = [
 export default function SignalsPage() {
   const { openDrawer, closeDrawer } = useStore();
   const [filter, setFilter] = useState('all');
-  const { data, isLoading, error, refetch } = useSignalsQuery(filter === 'all' ? undefined : filter);
-  const dismiss = useDismissSignal();
+  const { data: resp } = useSignalsQuery(filter !== 'all' ? filter : undefined);
+  const signals = resp?.data ?? [];
 
-  const signals = data?.data ?? [];
+  const filtered = signals;
 
   function viewDetail(id: string) {
     const s = signals.find((x: any) => x.id === id);
@@ -46,22 +46,11 @@ export default function SignalsPage() {
       ),
       footer: (
         <>
-          <button className="px-3.5 py-1.5 text-[12.5px] text-[var(--sub)] bg-[var(--surface)] border border-[var(--border)] rounded-md hover:bg-[var(--hover)] transition-colors" disabled={dismiss.isPending} onClick={() => { dismiss.mutate(s.id); closeDrawer(); }}>Dismiss</button>
+          <button className="px-3.5 py-1.5 text-[12.5px] text-[var(--sub)] bg-[var(--surface)] border border-[var(--border)] rounded-md hover:bg-[var(--hover)] transition-colors" onClick={closeDrawer}>Dismiss</button>
           <button className="px-3.5 py-1.5 text-[12.5px] font-medium bg-[var(--brand)] text-[#09090b] rounded-md hover:brightness-110 transition-colors" onClick={closeDrawer}>Convert to Lead</button>
         </>
       ),
     });
-  }
-
-  if (error) {
-    return (
-      <div className="max-w-[900px] page-enter">
-        <div className="rounded-lg bg-[var(--elevated)] border border-[var(--border)] p-8 text-center">
-          <p className="text-[12.5px] text-[#ef4444] mb-3">Failed to load signals</p>
-          <button onClick={() => refetch()} className="px-3.5 py-1.5 text-[12.5px] font-medium bg-[var(--brand)] text-[#09090b] rounded-md hover:brightness-110 transition-colors">Retry</button>
-        </div>
-      </div>
-    );
   }
 
   return (
@@ -69,7 +58,7 @@ export default function SignalsPage() {
       <div className="flex items-center justify-between mb-4">
         <div>
           <h1 className="text-[18px] font-semibold text-[var(--text)]">Signals</h1>
-          <p className="text-[12.5px] text-[var(--sub)] mt-0.5">{signals.length} active · AI market monitoring</p>
+          <p className="text-[12.5px] text-[var(--sub)] mt-0.5">{filtered.length} active · AI market monitoring</p>
         </div>
         <Badge variant="ai">Signal Hunter Agent</Badge>
       </div>
@@ -84,26 +73,9 @@ export default function SignalsPage() {
           ))}
         </div>
 
-        {isLoading ? (
-          <div className="divide-y divide-[var(--border)]">
-            {Array.from({ length: 5 }).map((_, i) => (
-              <div key={i} className="flex items-start gap-2.5 px-4 py-3.5 animate-pulse">
-                <div className="w-8 h-8 rounded-lg bg-[var(--surface)] flex-shrink-0" />
-                <div className="flex-1 space-y-2">
-                  <div className="h-3.5 bg-[var(--surface)] rounded w-3/4" />
-                  <div className="h-3 bg-[var(--surface)] rounded w-full" />
-                  <div className="flex gap-1.5">
-                    <div className="h-3 bg-[var(--surface)] rounded w-12" />
-                    <div className="h-3 bg-[var(--surface)] rounded w-10" />
-                    <div className="h-3 bg-[var(--surface)] rounded w-16" />
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        ) : signals.length === 0 ? (
+        {filtered.length === 0 ? (
           <EmptyState icon="📶" title="No signals match this filter" description="Try a different filter or wait for the Signal Hunter agent to detect new activity." />
-        ) : signals.map((s: any) => {
+        ) : filtered.map((s: any) => {
           const converted = s.status === 'converted';
           return (
             <div key={s.id} className={cn('flex items-start gap-2.5 px-4 py-3.5 border-b border-[var(--border)] hover:bg-[var(--hover)] transition-colors cursor-pointer', converted && 'opacity-60')} onClick={() => viewDetail(s.id)}>
@@ -124,7 +96,7 @@ export default function SignalsPage() {
               {!converted && (
                 <div className="flex gap-1 flex-shrink-0 self-start mt-0.5">
                   <button className="px-2 py-1 text-[11px] font-medium rounded-md bg-[var(--brand)] text-[#09090b] hover:brightness-110 transition-colors" onClick={e => e.stopPropagation()}>→ Lead</button>
-                  <button className="px-1.5 py-1 text-[11px] text-[var(--sub)] hover:bg-[var(--hover)] rounded-md transition-colors" disabled={dismiss.isPending} onClick={e => { e.stopPropagation(); dismiss.mutate(s.id); }}>✕</button>
+                  <button className="px-1.5 py-1 text-[11px] text-[var(--sub)] hover:bg-[var(--hover)] rounded-md transition-colors" onClick={e => e.stopPropagation()}>✕</button>
                 </div>
               )}
             </div>

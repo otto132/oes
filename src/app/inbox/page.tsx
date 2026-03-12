@@ -1,6 +1,6 @@
 'use client';
 import { useStore } from '@/lib/store';
-import { useInboxQuery, useMarkEmailRead, useArchiveEmail, useCreateTaskFromEmail, useCreateAccountFromEmail } from '@/lib/queries/inbox';
+import { useInboxQuery } from '@/lib/queries/inbox';
 import { Badge, ConfBadge, AgentTag, EmptyState } from '@/components/ui';
 import { fR, clsLabel, cn, confNum } from '@/lib/utils';
 
@@ -15,21 +15,15 @@ const CLS_STYLE: Record<string, string> = {
 
 export default function InboxPage() {
   const { openDrawer, closeDrawer } = useStore();
-  const { data, isLoading, error, refetch } = useInboxQuery();
-  const markRead = useMarkEmailRead();
-  const archive = useArchiveEmail();
-  const createTask = useCreateTaskFromEmail();
-  const createAccount = useCreateAccountFromEmail();
+  const { data: resp } = useInboxQuery();
+  const emails = resp?.data ?? [];
+  const unread = resp?.meta?.unreadCount ?? 0;
 
-  const emails = data?.data ?? [];
-  const meta = data?.meta;
-  const active = emails.filter((e: any) => !e.archived);
-  const unread = meta?.unreadCount ?? active.filter((e: any) => e.unread).length;
+  const active = emails; // API already filters to non-archived
 
   function viewEmail(id: string) {
     const e = emails.find((x: any) => x.id === id);
     if (!e) return;
-    markRead.mutate(id);
     openDrawer({
       title: e.subj,
       subtitle: `${e.fromName} · ${fR(e.dt)}`,
@@ -61,13 +55,12 @@ export default function InboxPage() {
             <div className="ai-box">
               <div className="text-[9px] font-semibold tracking-widest uppercase text-brand mb-1">New Domain Detected</div>
               <p className="text-[12px] text-sub">{e.domain} does not match any existing account.</p>
-              <button className="mt-2 px-2.5 py-1 text-[11px] font-medium bg-brand text-[#09090b] rounded-md hover:brightness-110 transition-colors" onClick={() => { createAccount.mutate(e.id); closeDrawer(); }}>+ Create Account</button>
             </div>
           )}
           <div className="text-[9px] font-semibold tracking-widest uppercase text-muted mt-1">Quick Actions</div>
           <div className="grid grid-cols-2 gap-1.5">
-            <button className="px-2.5 py-1.5 text-[11.5px] font-medium bg-[var(--surface)] text-[var(--text)] border border-[var(--border)] rounded-md hover:bg-[var(--hover)] transition-colors" onClick={() => { createTask.mutate(e.id); closeDrawer(); }}>Create Task</button>
-            <button className="px-2.5 py-1.5 text-[11.5px] text-sub bg-[var(--surface)] border border-[var(--border)] rounded-md hover:bg-[var(--hover)] transition-colors" disabled={archive.isPending} onClick={() => { archive.mutate(e.id); closeDrawer(); }}>Archive</button>
+            <button className="px-2.5 py-1.5 text-[11.5px] font-medium bg-[var(--surface)] text-[var(--text)] border border-[var(--border)] rounded-md hover:bg-[var(--hover)] transition-colors">Create Task</button>
+            <button className="px-2.5 py-1.5 text-[11.5px] text-sub bg-[var(--surface)] border border-[var(--border)] rounded-md hover:bg-[var(--hover)] transition-colors" onClick={closeDrawer}>Archive</button>
             {e.accId && <button className="px-2.5 py-1.5 text-[11.5px] text-sub bg-[var(--surface)] border border-[var(--border)] rounded-md hover:bg-[var(--hover)] transition-colors col-span-2" onClick={() => { closeDrawer(); window.location.href = `/accounts/${e.accId}`; }}>View Account</button>}
           </div>
         </div>
@@ -81,17 +74,6 @@ export default function InboxPage() {
     });
   }
 
-  if (error) {
-    return (
-      <div className="max-w-[900px] page-enter">
-        <div className="rounded-lg bg-[var(--elevated)] border border-[var(--border)] p-8 text-center">
-          <p className="text-sm text-danger mb-3">Failed to load inbox</p>
-          <button onClick={() => refetch()} className="px-3.5 py-1.5 text-sm font-medium bg-brand text-[#09090b] rounded-md hover:brightness-110 transition-colors">Retry</button>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="max-w-[900px] page-enter">
       <div className="flex items-center justify-between mb-3.5">
@@ -103,28 +85,7 @@ export default function InboxPage() {
       </div>
 
       <div className="rounded-lg bg-[var(--elevated)] border border-[var(--border)] overflow-hidden">
-        {isLoading ? (
-          <div className="divide-y divide-[var(--border)]">
-            {Array.from({ length: 6 }).map((_, i) => (
-              <div key={i} className="flex gap-2.5 items-start px-4 py-2.5 animate-pulse">
-                <div className="w-[5px] h-[5px] rounded-full bg-[var(--surface)] flex-shrink-0 mt-[7px]" />
-                <div className="flex-1 space-y-2">
-                  <div className="flex justify-between">
-                    <div className="h-3.5 bg-[var(--surface)] rounded w-2/3" />
-                    <div className="h-3 bg-[var(--surface)] rounded w-12" />
-                  </div>
-                  <div className="h-3 bg-[var(--surface)] rounded w-1/3" />
-                  <div className="h-3 bg-[var(--surface)] rounded w-full" />
-                  <div className="flex gap-1.5">
-                    <div className="h-3 bg-[var(--surface)] rounded w-14" />
-                    <div className="h-3 bg-[var(--surface)] rounded w-10" />
-                    <div className="h-3 bg-[var(--surface)] rounded w-16" />
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        ) : active.length === 0 ? (
+        {active.length === 0 ? (
           <EmptyState icon="📬" title="Inbox clear" description="All emails have been archived or triaged." />
         ) : active.map((e: any) => (
           <div key={e.id} className="flex gap-2.5 items-start px-4 py-2.5 border-b border-[var(--border)] hover:bg-[var(--hover)] transition-colors cursor-pointer" onClick={() => viewEmail(e.id)}>
