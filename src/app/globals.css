@@ -76,6 +76,12 @@ body {
 @keyframes shimmer { 0% { opacity: .5; } 50% { opacity: .8; } 100% { opacity: .5; } }
 .shimmer { animation: shimmer 1.5s ease-in-out infinite; background: var(--surface); }
 
+/* ── Toast ── */
+@keyframes toastSlideIn { from { opacity: 0; transform: translateX(16px); } to { opacity: 1; transform: translateX(0); } }
+@keyframes toastProgress { from { width: 100%; } to { width: 0%; } }
+.toast-slide-in { animation: toastSlideIn .2s ease both; }
+.toast-progress { animation: toastProgress 5s linear both; }
+
 /* ── Kbd ── */
 kbd {
   font-family: 'JetBrains Mono', monospace;
