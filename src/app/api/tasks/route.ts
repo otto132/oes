@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { adaptTask, adaptGoal, adaptTaskComment } from '@/lib/adapters';
+import { auth } from '@/lib/auth';
 
 export async function GET(req: NextRequest) {
   const includeCompleted = req.nextUrl.searchParams.get('completed') === 'true';
@@ -24,12 +25,17 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
+  const session = await auth();
+  if (!session?.user?.id) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
   const body = await req.json();
   const { action, id } = body;
 
   if (!action) {
     // Create task
-    const { title, accountId, priority, due, assigneeIds, reviewerId, goalId, ownerId = 'u1' } = body;
+    const { title, accountId, priority, due, assigneeIds, reviewerId, goalId } = body;
+    const ownerId = body.ownerId || session.user.id;
     if (!title) return NextResponse.json({ error: 'Title required' }, { status: 400 });
     const task = await db.task.create({
       data: {
@@ -44,7 +50,8 @@ export async function POST(req: NextRequest) {
   }
 
   if (action === 'complete') {
-    const { outcome, notes, followUpTasks, userId = 'u1' } = body;
+    const { outcome, notes, followUpTasks } = body;
+    const userId = session.user.id;
     const task = await db.task.update({
       where: { id },
       data: { status: 'Done', completedAt: new Date() },
@@ -89,7 +96,8 @@ export async function POST(req: NextRequest) {
   }
 
   if (action === 'comment') {
-    const { text, userId = 'u1' } = body;
+    const { text } = body;
+    const userId = session.user.id;
     if (!text) return NextResponse.json({ error: 'Text required' }, { status: 400 });
     const mentions = (text.match(/@(\w+)/g) || []).map((m: string) => m.slice(1));
     const comment = await db.taskComment.create({
