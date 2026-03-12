@@ -134,4 +134,9 @@ export const api = {
   auth: {
     connectOutlook: () => window.location.href = '/api/auth/connect',
   },
+
+  // ── Badge Counts ──────────────────────────────
+  badgeCounts: {
+    get: () => get<{ queue: number; signals: number; leads: number; inbox: number; tasks: number }>('/badge-counts'),
+  },
 };
