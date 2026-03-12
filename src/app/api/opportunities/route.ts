@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { adaptOpportunity, adaptActivity, adaptContact } from '@/lib/adapters';
+import { auth } from '@/lib/auth';
 
 const PROB: Record<string, number> = { Identified: 5, Contacted: 10, Discovery: 20, Qualified: 35, SolutionFit: 50, Proposal: 65, Negotiation: 80, VerbalCommit: 90, ClosedWon: 100, ClosedLost: 0 };
 
@@ -39,12 +40,17 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
+  const session = await auth();
+  if (!session?.user?.id) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
   const body = await req.json();
   const { action, id } = body;
 
   // Create
   if (!action) {
-    const { name, accountId, stage, amount, closeDate, ownerId = 'u1' } = body;
+    const { name, accountId, stage, amount, closeDate } = body;
+    const ownerId = body.ownerId || session.user.id;
     if (!name || !accountId) return NextResponse.json({ error: 'Name and account required' }, { status: 400 });
     const opp = await db.opportunity.create({
       data: {
@@ -69,7 +75,7 @@ export async function POST(req: NextRequest) {
     await db.activity.create({
       data: {
         type: 'Note', summary: `Stage → ${stage}`, detail: `${opp.name} moved`,
-        source: 'Pipeline', accountId: opp.accountId, authorId: body.userId || 'u1',
+        source: 'Pipeline', accountId: opp.accountId, authorId: session.user.id,
       },
     });
     await db.account.update({ where: { id: opp.accountId }, data: { lastActivityAt: new Date() } });
@@ -89,7 +95,7 @@ export async function POST(req: NextRequest) {
       data: {
         type: 'Note', summary: `WON: ${opp.name}`,
         detail: `${winNotes || ''}${competitorBeaten ? ' · Beat: ' + competitorBeaten : ''}`,
-        source: 'Pipeline', accountId: opp.accountId, authorId: body.userId || 'u1',
+        source: 'Pipeline', accountId: opp.accountId, authorId: session.user.id,
       },
     });
     return NextResponse.json({ data: adaptOpportunity(opp) });
@@ -107,7 +113,7 @@ export async function POST(req: NextRequest) {
       data: {
         type: 'Note', summary: `Lost: ${opp.name} — ${lossReason}`,
         detail: `${lossNotes || ''}${lossCompetitor ? ' · Won by: ' + lossCompetitor : ''}`,
-        source: 'Pipeline', accountId: opp.accountId, authorId: body.userId || 'u1',
+        source: 'Pipeline', accountId: opp.accountId, authorId: session.user.id,
       },
     });
     return NextResponse.json({ data: adaptOpportunity(opp) });
