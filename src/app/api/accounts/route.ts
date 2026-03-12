@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { adaptAccount, adaptContact, adaptOpportunity, adaptActivity, adaptTask, adaptGoal } from '@/lib/adapters';
+import { auth } from '@/lib/auth';
 
 export async function GET(req: NextRequest) {
   const search = req.nextUrl.searchParams.get('q');
@@ -78,8 +79,13 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
+  const session = await auth();
+  if (!session?.user?.id) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
   const body = await req.json();
-  const { name, type, country, notes, ownerId = 'u1' } = body;
+  const { name, type, country, notes } = body;
+  const ownerId = body.ownerId || session.user.id;
   if (!name) return NextResponse.json({ error: 'Name required' }, { status: 400 });
 
   // Dedup
