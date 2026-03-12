@@ -23,7 +23,13 @@ const SHORTCUTS = [
 ];
 
 export default function SettingsPage() {
-  const { users, openDrawer, closeDrawer } = useStore();
+  const { openDrawer, closeDrawer } = useStore();
+  // Team list will come from API in E2-09; hardcode for now
+  const users = [
+    { id: 'u1', name: 'Juuso Kari', ini: 'JK', role: 'Commercial Director', ac: 'green' },
+    { id: 'u2', name: 'Laura Puranen', ini: 'LP', role: 'CEO', ac: 'default' },
+    { id: 'u3', name: 'Nick Schoch', ini: 'NS', role: 'COO', ac: 'blue' },
+  ];
 
   function openAgentConfig(key: string) {
     const a = AGENTS.find(x => x.key === key);
