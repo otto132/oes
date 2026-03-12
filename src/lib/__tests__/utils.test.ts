@@ -13,7 +13,7 @@ import {
   confNum,
 } from '@/lib/utils';
 import { compositeScore, healthAvg, riskLevel } from '@/lib/types';
-import type { FIUACScores, DealHealth } from '@/lib/types';
+import type { FIUACScores } from '@/lib/types';
 
 // ── fmt (currency formatter) ───────────────────────────────
 

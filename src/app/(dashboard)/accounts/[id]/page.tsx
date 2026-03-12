@@ -3,7 +3,6 @@ import { useState } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { useAccountDetail } from '@/lib/queries/accounts';
-import { compositeScore, healthAvg } from '@/lib/types';
 import type { Account, Opportunity, Activity, Task, Goal } from '@/lib/types';
 import { fmt, fRelative, fDate, isOverdue, cn, confNum } from '@/lib/utils';
 import { Badge, ScorePill, FIUACBars, ConfBadge, AgentTag, Avatar, StageBadge, HealthBar, SectionTitle, EmptyState } from '@/components/ui';

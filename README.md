@@ -15,7 +15,7 @@ AI-assisted Revenue OS for the GoO / renewable certificates / PPA market.
 ```bash
 nvm use            # Uses Node version from .nvmrc
 npm install        # Also runs prisma generate via postinstall
-cp .env.example .env   # Fill in your credentials
+cp .env.local.example .env.local  # Fill in your credentials
 npm run db:migrate     # Run database migrations
 npm run db:seed        # Seed with demo data
 npm run dev            # http://localhost:3000
@@ -23,7 +23,7 @@ npm run dev            # http://localhost:3000
 
 ### Environment Variables
 
-See `.env.example` for all required variables:
+See `.env.local.example` for all required variables:
 
 | Variable | Purpose |
 |----------|---------|
@@ -115,6 +115,76 @@ npm run db:seed       # Seed demo data
 npm run db:studio     # Open Prisma Studio GUI
 npm run db:reset      # Reset and re-seed (destructive)
 ```
+
+## Database Migrations
+
+This project uses [Prisma Migrate](https://www.prisma.io/docs/concepts/components/prisma-migrate) to manage database schema changes. Migrations are version-controlled SQL files that track every change to the database schema.
+
+### Why migrations (not `db push`)
+
+`prisma db push` is convenient during early prototyping but is **not safe for production** because it can drop data without warning, produces no audit trail, and cannot be rolled back. Always use `prisma migrate` for any environment that holds real data.
+
+### Creating a migration
+
+After editing `prisma/schema.prisma`, generate a migration file:
+
+```bash
+npx prisma migrate dev --name <short-description>
+# Example: npx prisma migrate dev --name add-invoice-table
+```
+
+This will:
+1. Generate a SQL migration file in `prisma/migrations/`
+2. Apply the migration to your local database
+3. Regenerate the Prisma Client
+
+To generate the SQL file **without** applying it (useful for review):
+
+```bash
+npx prisma migrate dev --name <short-description> --create-only
+```
+
+### Applying migrations in production
+
+In CI/CD or production environments, run:
+
+```bash
+npx prisma migrate deploy
+```
+
+This applies all pending migrations in order. It never creates new migrations or modify existing ones.
+
+### Bootstrapping the initial migration
+
+If no `prisma/migrations/` directory exists yet (first time setup with a running database):
+
+```bash
+npx prisma migrate dev --name init --create-only   # generate SQL
+# Review the generated SQL in prisma/migrations/<timestamp>_init/migration.sql
+npx prisma migrate dev                              # apply it
+```
+
+If the database already has tables from `db push`, you may need to [baseline](https://www.prisma.io/docs/guides/prisma-guides/prisma-migrate-guides/add-prisma-migrate-to-an-existing-project) the migration so Prisma treats the existing schema as already applied.
+
+### Workflow summary
+
+```
+Edit schema.prisma
+       |
+       v
+npx prisma migrate dev --name <description>
+       |
+       v
+Review generated SQL in prisma/migrations/
+       |
+       v
+Commit migration files to version control
+       |
+       v
+CI/CD runs: npx prisma migrate deploy
+```
+
+> **Warning:** Never use `npx prisma db push` in production. It can silently drop columns and data. Use `prisma migrate deploy` instead.
 
 ## API Endpoints
 

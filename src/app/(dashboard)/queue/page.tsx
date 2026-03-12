@@ -2,7 +2,7 @@
 import { useState } from 'react';
 import { Shield, Eye, Check } from 'lucide-react';
 import { useQueueQuery, useApproveQueueItem, useRejectQueueItem } from '@/lib/queries/queue';
-import { fRelative, queueTypeLabel, cn, confNum } from '@/lib/utils';
+import { fRelative, queueTypeLabel, cn } from '@/lib/utils';
 import { Badge, ConfBadge, AgentTag, ScorePill, FIUACBars, EmptyState } from '@/components/ui';
 import type { QueueItem } from '@/lib/types';
 

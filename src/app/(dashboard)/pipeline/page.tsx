@@ -3,8 +3,8 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { useOpportunitiesQuery } from '@/lib/queries/opportunities';
 import { Avatar, HealthBar, StageBadge, EmptyState } from '@/components/ui';
-import { fmt, fDate, isOverdue, weightedValue, cn } from '@/lib/utils';
-import { KANBAN_STAGES, STAGE_COLOR, healthAvg } from '@/lib/types';
+import { fmt, fDate, isOverdue, cn } from '@/lib/utils';
+import { KANBAN_STAGES, healthAvg } from '@/lib/types';
 import type { Opportunity } from '@/lib/types';
 
 function riskHex(h: { eng: number; stake: number; comp: number; time: number }): string {

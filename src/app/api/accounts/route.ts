@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { adaptAccount, adaptContact, adaptOpportunity, adaptActivity, adaptTask, adaptGoal } from '@/lib/adapters';
+import { adaptAccount, adaptOpportunity, adaptActivity, adaptTask, adaptGoal } from '@/lib/adapters';
 import { auth } from '@/lib/auth';
 
 export async function GET(req: NextRequest) {

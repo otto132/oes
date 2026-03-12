@@ -1,5 +1,5 @@
 // Formatting & display utilities
-import { type FIUACScores, type DealHealth, compositeScore, healthAvg, STAGE_PROB } from './types';
+import { type DealHealth, healthAvg, STAGE_PROB } from './types';
 
 export const fmt = (n: number) => n >= 1e6 ? '€' + (n / 1e6).toFixed(1) + 'M' : n >= 1e3 ? '€' + (n / 1e3).toFixed(0) + 'K' : '€' + n;
 
