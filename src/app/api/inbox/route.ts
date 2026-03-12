@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { adaptEmail } from '@/lib/adapters';
+import { auth } from '@/lib/auth';
 
 export async function GET() {
   const emails = await db.inboxEmail.findMany({
@@ -12,6 +13,10 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
+  const session = await auth();
+  if (!session?.user?.id) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
   const body = await req.json();
   const { action, id } = body;
 
@@ -33,8 +38,8 @@ export async function POST(req: NextRequest) {
         priority: 'High',
         source: 'Inbox',
         accountId: email.accountId || undefined,
-        ownerId: body.userId || 'u1',
-        assignees: { connect: [{ id: body.userId || 'u1' }] },
+        ownerId: session.user.id,
+        assignees: { connect: [{ id: session.user.id }] },
       },
     });
     return NextResponse.json({ data: task }, { status: 201 });
@@ -52,7 +57,7 @@ export async function POST(req: NextRequest) {
     }
     const account = await db.account.create({
       data: {
-        name, type: 'Unknown', status: 'Prospect', ownerId: body.userId || 'u1',
+        name, type: 'Unknown', status: 'Prospect', ownerId: session.user.id,
         pain: 'Inbound inquiry: ' + email.preview.slice(0, 80),
         whyNow: 'Inbound email received',
       },
