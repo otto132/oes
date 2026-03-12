@@ -1,6 +1,6 @@
 'use client';
 import { create } from 'zustand';
-import type { Signal, Lead, Account, Opportunity, Task, Activity, Email, Goal, Meeting, User } from './types';
+import type { Signal, Lead, Account, Opportunity, Task, Activity, Email, QueueItem, Goal, Meeting, User } from './types';
 import * as data from './data';
 
 interface Store {
@@ -12,6 +12,7 @@ interface Store {
   tasks: Task[];
   activities: Activity[];
   emails: Email[];
+  queue: QueueItem[]; // kept for layout badge counts; Queue page uses React Query
   goals: Goal[];
   meetings: Meeting[];
   theme: 'dark' | 'light';
@@ -35,6 +36,7 @@ export const useStore = create<Store>((set) => ({
   tasks: [...data.tasks],
   activities: [...data.activities],
   emails: [...data.emails],
+  queue: [...data.queue],
   goals: [...data.goals],
   meetings: [...data.meetings],
   theme: 'dark',
