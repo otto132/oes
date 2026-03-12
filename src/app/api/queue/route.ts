@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { adaptQueueItem } from '@/lib/adapters';
+import { auth } from '@/lib/auth';
 
 export async function GET(req: NextRequest) {
   const status = req.nextUrl.searchParams.get('status') || 'pending';
@@ -36,8 +37,13 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
+  const session = await auth();
+  if (!session?.user?.id) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
   const body = await req.json();
-  const { action, id, reason, editedPayload, userId = 'u1' } = body;
+  const { action, id, reason, editedPayload } = body;
+  const userId = session.user.id;
 
   if (action === 'approve') {
     const item = await db.queueItem.findUnique({ where: { id } });
