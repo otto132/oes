@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { adaptLead } from '@/lib/adapters';
+import { auth } from '@/lib/auth';
 
 export async function GET() {
   const leads = await db.lead.findMany({
@@ -12,12 +13,17 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
+  const session = await auth();
+  if (!session?.user?.id) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
   const body = await req.json();
   const { action, id } = body;
 
   if (!action) {
     // Create lead
-    const { company, type, country, pain, ownerId = 'u1' } = body;
+    const { company, type, country, pain } = body;
+    const ownerId = body.ownerId || session.user.id;
     if (!company) return NextResponse.json({ error: 'Company required' }, { status: 400 });
     const dup = await db.lead.findFirst({ where: { company: { equals: company, mode: 'insensitive' } } });
     if (dup) return NextResponse.json({ error: `Lead "${dup.company}" already exists` }, { status: 409 });
@@ -46,7 +52,8 @@ export async function POST(req: NextRequest) {
     const lead = await db.lead.findUnique({ where: { id } });
     if (!lead) return NextResponse.json({ error: 'Not found' }, { status: 404 });
     await db.lead.update({ where: { id }, data: { stage: 'Converted' } });
-    const { accountName, accountType, oppName, oppAmount, oppStage, ownerId = 'u1' } = body;
+    const { accountName, accountType, oppName, oppAmount, oppStage } = body;
+    const ownerId = body.ownerId || session.user.id;
     const account = await db.account.create({
       data: {
         name: accountName || lead.company, type: accountType || lead.type, country: lead.country,
