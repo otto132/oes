@@ -6,7 +6,7 @@ import type { Lead } from '@/lib/types';
 
 export default function LeadsPage() {
   const { data: resp } = useLeadsQuery();
-  const leads = resp?.data ?? [];
+  const leads: Lead[] = resp?.data ?? [];
 
   const stageMeta: Record<string, { variant: 'info' | 'warn' | 'ok' }> = {
     New: { variant: 'info' }, Researching: { variant: 'warn' }, Qualified: { variant: 'ok' },

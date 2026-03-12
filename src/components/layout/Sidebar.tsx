@@ -2,6 +2,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Home, Shield, Signal, Target, Building2, TrendingUp, Inbox, CheckSquare, Settings, Search, Sun, Moon } from 'lucide-react';
+import { useSession } from 'next-auth/react';
 import { useStore } from '@/lib/store';
 import { cn } from '@/lib/utils';
 import { useBadgeCounts } from '@/lib/queries/badge-counts';
@@ -30,7 +31,14 @@ export default function Sidebar() {
   const pathname = usePathname();
   const { theme, toggleTheme } = useStore();
   const { data: badges } = useBadgeCounts();
-  const me = { id: 'u1', name: 'Juuso Kari', ini: 'JK', role: 'Commercial Director', ac: 'green' }; // until auth
+  const { data: session } = useSession();
+  const me = {
+    id: session?.user?.id ?? '',
+    name: session?.user?.name ?? '',
+    ini: session?.user?.name ? session.user.name.split(/\s+/).map(p => p[0]).join('').toUpperCase().slice(0, 2) : '??',
+    role: session?.user?.role ?? '',
+    ac: 'green',
+  };
 
   const badgeCounts: Record<string, number> = {
     queue: badges?.queue ?? 0,

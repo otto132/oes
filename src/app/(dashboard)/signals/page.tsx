@@ -5,6 +5,7 @@ import { useSignalsQuery } from '@/lib/queries/signals';
 import { Badge, ConfBadge, AgentTag, EmptyState } from '@/components/ui';
 import { signalLabel, signalColor, fR, cn, confNum } from '@/lib/utils';
 import { Zap, Check } from 'lucide-react';
+import type { Signal } from '@/lib/types';
 
 const FILTERS = [
   { k: 'all', l: 'All' }, { k: 'ppa_announcement', l: 'PPA' }, { k: 'renewable_target', l: 'Target' },
@@ -16,7 +17,7 @@ export default function SignalsPage() {
   const { openDrawer, closeDrawer } = useStore();
   const [filter, setFilter] = useState('all');
   const { data: resp } = useSignalsQuery(filter !== 'all' ? filter : undefined);
-  const signals = resp?.data ?? [];
+  const signals: Signal[] = resp?.data ?? [];
 
   const filtered = signals;
 

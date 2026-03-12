@@ -3,6 +3,7 @@ import { useStore } from '@/lib/store';
 import { useInboxQuery } from '@/lib/queries/inbox';
 import { Badge, ConfBadge, AgentTag, EmptyState } from '@/components/ui';
 import { fR, clsLabel, cn, confNum } from '@/lib/utils';
+import type { Email } from '@/lib/types';
 
 const CLS_STYLE: Record<string, string> = {
   positive_reply: 'text-brand bg-brand-dim',
@@ -16,7 +17,7 @@ const CLS_STYLE: Record<string, string> = {
 export default function InboxPage() {
   const { openDrawer, closeDrawer } = useStore();
   const { data: resp } = useInboxQuery();
-  const emails = resp?.data ?? [];
+  const emails: Email[] = resp?.data ?? [];
   const unread = resp?.meta?.unreadCount ?? 0;
 
   const active = emails; // API already filters to non-archived

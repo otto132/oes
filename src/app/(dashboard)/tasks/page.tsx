@@ -1,5 +1,6 @@
 'use client';
 import { useState } from 'react';
+import { useSession } from 'next-auth/react';
 import { useStore } from '@/lib/store';
 import { useTasksQuery } from '@/lib/queries/tasks';
 import { Badge, Avatar, AgentTag, EmptyState } from '@/components/ui';
@@ -8,6 +9,7 @@ import type { Task, Goal } from '@/lib/types';
 
 export default function TasksPage() {
   const { openDrawer, closeDrawer } = useStore();
+  const { data: session } = useSession();
   const [tab, setTab] = useState<'mine' | 'review' | 'all'>('mine');
   const [showCompleted, setShowCompleted] = useState(false);
   const [search, setSearch] = useState('');
@@ -16,9 +18,15 @@ export default function TasksPage() {
   // can compute done/total correctly. Client-side filtering for the
   // showCompleted toggle happens below.
   const { data: resp } = useTasksQuery(true);
-  const allTasks = resp?.data?.tasks ?? [];
-  const goals = resp?.data?.goals ?? [];
-  const me = { id: 'u1', name: 'Juuso Kari', ini: 'JK', role: 'Commercial Director', ac: 'green' }; // until auth
+  const allTasks: Task[] = resp?.data?.tasks ?? [];
+  const goals: Goal[] = resp?.data?.goals ?? [];
+  const me = {
+    id: session?.user?.id ?? '',
+    name: session?.user?.name ?? '',
+    ini: session?.user?.name ? session.user.name.split(/\s+/).map(p => p[0]).join('').toUpperCase().slice(0, 2) : '??',
+    role: session?.user?.role ?? '',
+    ac: 'green',
+  };
 
   // Apply showCompleted filter client-side
   const tasks = showCompleted ? allTasks : allTasks.filter(t => t.status !== 'Done');

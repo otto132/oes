@@ -11,7 +11,7 @@ export default function AccountsPage() {
   const [search, setSearch] = useState('');
   const [typeFilter, setTypeFilter] = useState('all');
   const { data: resp } = useAccountsQuery(search || undefined, typeFilter !== 'all' ? typeFilter : undefined);
-  const accounts = resp?.data ?? [];
+  const accounts: Account[] = resp?.data ?? [];
 
   const sorted = [...accounts].sort((a, b) => compositeScore(b.scores) - compositeScore(a.scores));
   const types = [...new Set(accounts.map(a => a.type))];
