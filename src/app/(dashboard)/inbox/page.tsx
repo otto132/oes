@@ -1,7 +1,7 @@
 'use client';
 import { useStore } from '@/lib/store';
 import { useInboxQuery } from '@/lib/queries/inbox';
-import { Badge, ConfBadge, AgentTag, EmptyState } from '@/components/ui';
+import { Badge, ConfBadge, AgentTag, EmptyState, Skeleton, SkeletonCard, SkeletonText, ErrorState } from '@/components/ui';
 import { fR, clsLabel, cn, confNum } from '@/lib/utils';
 import type { Email } from '@/lib/types';
 
@@ -14,9 +14,34 @@ const CLS_STYLE: Record<string, string> = {
   auto_reply: 'text-muted bg-[var(--surface)]',
 };
 
+function InboxSkeleton() {
+  return (
+    <div className="page-enter space-y-2">
+      {Array.from({ length: 5 }).map((_, i) => (
+        <SkeletonCard key={i} className="flex items-start gap-3">
+          <Skeleton className="h-2 w-2 rounded-full mt-1.5 shrink-0" />
+          <div className="flex-1 space-y-1.5">
+            <div className="flex items-center gap-2">
+              <SkeletonText className="w-1/4" />
+              <Skeleton className="h-3 w-16 rounded-full" />
+            </div>
+            <SkeletonText className="w-3/4" />
+            <SkeletonText className="w-full h-2" />
+          </div>
+          <Skeleton className="h-3 w-10 shrink-0" />
+        </SkeletonCard>
+      ))}
+    </div>
+  );
+}
+
 export default function InboxPage() {
   const { openDrawer, closeDrawer } = useStore();
-  const { data: resp } = useInboxQuery();
+  const { data: resp, isLoading, isError, refetch } = useInboxQuery();
+
+  if (isLoading) return <InboxSkeleton />;
+  if (isError) return <ErrorState onRetry={() => refetch()} />;
+
   const emails: Email[] = resp?.data ?? [];
   const unread = resp?.meta?.unreadCount ?? 0;
 
