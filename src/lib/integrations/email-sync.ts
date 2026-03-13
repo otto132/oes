@@ -7,7 +7,8 @@
 // Called by: /api/sync/emails (cron or manual trigger)
 
 import { db } from '@/lib/db';
-import { fetchRecentEmails, refreshAccessToken, type GraphEmail } from './microsoft-graph';
+import { fetchRecentEmails, type GraphEmail } from './microsoft-graph';
+import { runSync } from './run-sync';
 
 // ── Domain Matching ──────────────────────────────
 // Match sender domain to existing account contacts
@@ -82,39 +83,11 @@ function classifyEmail(subject: string, body: string, fromEmail: string): { cls:
 // ── Sync Function ────────────────────────────────
 
 export async function syncEmails(): Promise<{ synced: number; errors: string[] }> {
-  const tokens = await db.integrationToken.findMany({
-    where: { provider: 'microsoft', user: { isActive: true } },
-    include: { user: true },
-  });
-
-  if (tokens.length === 0) {
-    return { synced: 0, errors: ['No Microsoft tokens found — users need to connect Outlook'] };
-  }
-
-  let totalSynced = 0;
-  const allErrors: string[] = [];
-
-  for (const tokenRow of tokens) {
-    try {
-      // Refresh token if expired
-      let accessToken = tokenRow.accessToken;
-      if (tokenRow.expiresAt < new Date()) {
-        try {
-          const refreshed = await refreshAccessToken(tokenRow.refreshToken);
-          accessToken = refreshed.access_token;
-          await db.integrationToken.update({
-            where: { id: tokenRow.id },
-            data: {
-              accessToken: refreshed.access_token,
-              refreshToken: refreshed.refresh_token,
-              expiresAt: new Date(Date.now() + refreshed.expires_in * 1000),
-            },
-          });
-        } catch (err) {
-          allErrors.push(`Token refresh failed for ${tokenRow.userEmail} — reconnect Outlook`);
-          continue;
-        }
-      }
+  return runSync({
+    type: 'email',
+    syncFn: async (tokenRow, accessToken) => {
+      let synced = 0;
+      const errors: string[] = [];
 
       // Fetch emails from last 24h
       const since = new Date(Date.now() - 24 * 60 * 60 * 1000);
@@ -122,21 +95,13 @@ export async function syncEmails(): Promise<{ synced: number; errors: string[] }
       try {
         graphEmails = await fetchRecentEmails(accessToken, since);
       } catch (err) {
-        allErrors.push(`Graph API error for ${tokenRow.userEmail}: ${err}`);
-        continue;
+        errors.push(`Graph API error for ${tokenRow.userEmail}: ${err}`);
+        return { synced, errors };
       }
 
       for (const ge of graphEmails) {
         try {
-          // Skip if already synced (by subject + from + receivedDateTime)
-          const existing = await db.inboxEmail.findFirst({
-            where: {
-              subject: ge.subject,
-              fromEmail: ge.from.emailAddress.address,
-              receivedAt: new Date(ge.receivedDateTime),
-            },
-          });
-          if (existing) continue;
+          const graphId = ge.id;
 
           // Match to account
           const match = await matchDomainToAccount(ge.from.emailAddress.address);
@@ -148,32 +113,52 @@ export async function syncEmails(): Promise<{ synced: number; errors: string[] }
             cls = 'new_domain';
           }
 
-          // Store
-          await db.inboxEmail.create({
-            data: {
-              subject: ge.subject,
-              fromEmail: ge.from.emailAddress.address,
-              fromName: ge.from.emailAddress.name,
-              preview: ge.bodyPreview.slice(0, 500),
-              receivedAt: new Date(ge.receivedDateTime),
-              isUnread: !ge.isRead,
-              classification: cls,
-              classificationConf: conf,
-              isLinked: !!match,
-              accountId: match?.accountId || null,
-              accountName: match?.accountName || null,
-              domain: !match ? domain : null,
-            },
-          });
-          totalSynced++;
+          const emailData = {
+            subject: ge.subject,
+            fromEmail: ge.from.emailAddress.address,
+            fromName: ge.from.emailAddress.name,
+            preview: ge.bodyPreview.slice(0, 500),
+            receivedAt: new Date(ge.receivedDateTime),
+            isUnread: !ge.isRead,
+            classification: cls,
+            classificationConf: conf,
+            isLinked: !!match,
+            accountId: match?.accountId || null,
+            accountName: match?.accountName || null,
+            domain: !match ? domain : null,
+          };
+
+          // Dedup by externalId using upsert (race-condition safe)
+          if (graphId) {
+            const result = await db.inboxEmail.upsert({
+              where: { externalId: graphId },
+              update: {},  // no-op on duplicate
+              create: { externalId: graphId, ...emailData },
+            });
+            // upsert returns existing record on duplicate — only count new ones
+            if (result.createdAt.getTime() >= new Date(Date.now() - 5000).getTime()) {
+              synced++;
+            }
+          } else {
+            // Fallback dedup for emails without Graph ID (backward compat)
+            const existing = await db.inboxEmail.findFirst({
+              where: {
+                subject: ge.subject,
+                fromEmail: ge.from.emailAddress.address,
+                receivedAt: new Date(ge.receivedDateTime),
+              },
+            });
+            if (existing) continue;
+
+            await db.inboxEmail.create({ data: emailData });
+            synced++;
+          }
         } catch (err) {
-          allErrors.push(`Failed to sync email "${ge.subject}": ${err}`);
+          errors.push(`Failed to sync email "${ge.subject}": ${err}`);
         }
       }
-    } catch (err) {
-      allErrors.push(`Sync failed for user ${tokenRow.userEmail}: ${err}`);
-    }
-  }
 
-  return { synced: totalSynced, errors: allErrors };
+      return { synced, errors };
+    },
+  });
 }

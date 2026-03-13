@@ -158,6 +158,12 @@ enum InvitationStatus {
   REVOKED
 }
 
+enum IntegrationTokenStatus {
+  active
+  error
+  revoked
+}
+
 enum Role {
   ADMIN
   MEMBER
@@ -194,6 +200,7 @@ model User {
   taskComments      TaskComment[]      @relation("CommentAuthor")
   sentInvitations   Invitation[]       @relation("SentInvitations")
   integrationTokens IntegrationToken[]
+  syncLogs          SyncLog[]
 
   @@map("users")
 }
@@ -547,6 +554,7 @@ model InboxEmail {
   accountId   String?
   accountName String? // denormalized
   domain      String? // sender domain for new-domain detection
+  externalId  String?  @unique // Microsoft Graph message ID
 
   createdAt DateTime @default(now())
 
@@ -566,6 +574,7 @@ model IntegrationToken {
   refreshToken String   @db.Text
   expiresAt    DateTime
   userEmail    String
+  status       IntegrationTokenStatus @default(active)
   userId       String
   user         User     @relation(fields: [userId], references: [id])
   createdAt    DateTime @default(now())
@@ -580,21 +589,37 @@ model IntegrationToken {
 // ═══════════════════════════════════════════════════════════════
 
 model Meeting {
-  id         String            @id @default(cuid())
-  title      String
-  startTime  String // "HH:MM" display
-  duration   String // "30 min", "60 min"
-  date       DateTime
-  attendees  String[] // names
-  prepStatus MeetingPrepStatus @default(draft)
-  createdAt  DateTime          @default(now())
+  id             String            @id @default(cuid())
+  title          String
+  startTime      DateTime          // ISO datetime (was String "HH:MM")
+  duration       Int               // minutes (was String "30 min")
+  date           DateTime
+  attendees      String[]          // display names
+  attendeeEmails String[]          // email addresses for re-matching
+  externalId     String?  @unique  // Microsoft Graph event ID
+  prepStatus     MeetingPrepStatus @default(draft)
+  createdAt      DateTime          @default(now())
 
-  // Relations
   accountId   String?
-  accountName String? // denormalized
+  accountName String?
 
   @@index([date])
   @@map("meetings")
+}
+
+model SyncLog {
+  id          String   @id @default(cuid())
+  type        String   // "email" | "calendar"
+  status      String   // "success" | "partial" | "failed"
+  itemsSynced Int      @default(0)
+  errors      String[]
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+  startedAt   DateTime @default(now())
+  completedAt DateTime?
+
+  @@index([userId, type, startedAt(sort: Desc)])
+  @@map("sync_logs")
 }
 
 // ═══════════════════════════════════════════════════════════════

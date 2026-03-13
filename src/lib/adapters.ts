@@ -450,8 +450,8 @@ export function adaptEmail(e: {
 export function adaptMeeting(m: {
   id: string;
   title: string;
-  startTime: string;
-  duration: string;
+  startTime: Date;
+  duration: number;
   date: Date;
   attendees: string[];
   prepStatus: string;
@@ -459,11 +459,26 @@ export function adaptMeeting(m: {
   accountName: string | null;
   [k: string]: unknown;
 }): UIMeeting {
+  // Format DateTime to "HH:MM" for display
+  const hours = m.startTime.getUTCHours().toString().padStart(2, '0');
+  const mins = m.startTime.getUTCMinutes().toString().padStart(2, '0');
+  const time = `${hours}:${mins}`;
+
+  // Format duration (minutes) to display string
+  let dur: string;
+  if (m.duration < 60) {
+    dur = `${m.duration} min`;
+  } else if (m.duration % 60 === 0) {
+    dur = `${m.duration / 60}h`;
+  } else {
+    dur = `${Math.floor(m.duration / 60)}h ${m.duration % 60}m`;
+  }
+
   return {
     id: m.id,
     title: m.title,
-    time: m.startTime,
-    dur: m.duration,
+    time,
+    dur,
     date: m.date.toISOString(),
     acc: m.accountName ?? '',
     accId: m.accountId ?? '',

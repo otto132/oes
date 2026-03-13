@@ -122,3 +122,14 @@ export function useUpdateProfile() {
     },
   });
 }
+
+// Trigger manual sync
+export function useSyncMutation() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (type: 'all' | 'emails' | 'calendar') => api.sync.trigger(type),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: settingsKeys.integrations() });
+    },
+  });
+}

@@ -15,6 +15,7 @@ import {
   useRevokeInvitation,
   useUpdateProfile,
   usePatchAgent,
+  useSyncMutation,
 } from '@/lib/queries/settings';
 
 const TABS = ['Team', 'Integrations', 'Agents', 'Profile'] as const;
@@ -389,10 +390,41 @@ function ProfileTab() {
 
 function IntegrationsTab() {
   const integrations = useIntegrationsQuery();
+  const syncMutation = useSyncMutation();
+  const session = useSession();
+  const isAdmin = session.data?.user?.role === 'ADMIN';
+
+  function handleSync() {
+    syncMutation.mutate('all');
+  }
 
   return (
     <div className="flex flex-col gap-4">
-      <span className="text-[9px] font-semibold tracking-wide uppercase text-[var(--muted)]">Integrations</span>
+      <div className="flex items-center justify-between">
+        <span className="text-[9px] font-semibold tracking-wide uppercase text-[var(--muted)]">Integrations</span>
+        {isAdmin && (
+          <button
+            onClick={handleSync}
+            disabled={syncMutation.isPending}
+            className="px-3 py-1 text-[10px] font-medium bg-brand text-white rounded-md hover:bg-brand/90 transition-colors disabled:opacity-50"
+          >
+            {syncMutation.isPending ? 'Syncing...' : 'Sync Now'}
+          </button>
+        )}
+      </div>
+
+      {syncMutation.isSuccess && (
+        <div className="text-[10px] text-brand bg-brand/10 px-3 py-1.5 rounded-md">
+          Sync complete — {syncMutation.data?.synced ?? 0} items synced
+          {(syncMutation.data?.errors?.length ?? 0) > 0 && `, ${syncMutation.data.errors.length} errors`}
+        </div>
+      )}
+      {syncMutation.isError && (
+        <div className="text-[10px] text-red-400 bg-red-400/10 px-3 py-1.5 rounded-md">
+          Sync failed — {syncMutation.error instanceof Error ? syncMutation.error.message : 'Unknown error'}
+        </div>
+      )}
+
       <div className="rounded-lg bg-[var(--elevated)] border border-[var(--border)] p-4">
         {integrations.isLoading ? (
           <div className="text-[11px] text-muted py-2">Loading integrations...</div>
@@ -400,11 +432,27 @@ function IntegrationsTab() {
           <div className="text-[11px] text-red-400 py-2">Failed to load integrations</div>
         ) : (
           integrations.data?.data?.map((i: any) => (
-            <div key={i.name} className="flex items-center justify-between py-1.5 border-b border-[var(--border)] last:border-b-0">
-              <span className="text-[12.5px]">{i.name}</span>
+            <div key={i.provider || i.name} className="flex items-center justify-between py-2 border-b border-[var(--border)] last:border-b-0">
+              <div className="flex flex-col gap-0.5">
+                <span className="text-[12.5px]">{i.name}</span>
+                <div className="flex items-center gap-2 text-[9px] text-muted">
+                  {i.lastSyncAt && <span>Last sync: {new Date(i.lastSyncAt).toLocaleString()}</span>}
+                  {i.emailsSynced != null && <span>{i.emailsSynced} emails</span>}
+                  {i.meetingsSynced != null && <span>{i.meetingsSynced} meetings</span>}
+                </div>
+                {i.lastError && (
+                  <span className="text-[9px] text-red-400">{i.lastError}</span>
+                )}
+              </div>
               <div className="flex items-center gap-1.5">
-                <span className={`text-[10px] ${i.active ? 'text-brand' : 'text-muted'}`}>{i.status}</span>
-                <button className="px-2 py-1 text-[11px] text-sub hover:bg-[var(--hover)] rounded-md transition-colors">{i.active ? 'Disconnect' : 'Connect'}</button>
+                <span className={`text-[10px] ${i.active ? 'text-brand' : i.needsReconnect ? 'text-red-400' : 'text-muted'}`}>
+                  {i.active ? 'Connected' : i.needsReconnect ? 'Reconnect' : i.status === 'manual' ? 'Manual' : 'Disconnected'}
+                </span>
+                {i.provider !== 'linkedin' && (
+                  <button className="px-2 py-1 text-[11px] text-sub hover:bg-[var(--hover)] rounded-md transition-colors">
+                    {i.needsReconnect ? 'Reconnect' : i.active ? 'Disconnect' : 'Connect'}
+                  </button>
+                )}
               </div>
             </div>
           ))

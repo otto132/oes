@@ -4,7 +4,10 @@ const { mockDb, mockAuthFn } = vi.hoisted(() => {
   const fn = vi.fn;
   return {
     mockDb: {
-      integrationToken: { findFirst: fn() },
+      integrationToken: { findUnique: fn() },
+      syncLog: { findFirst: fn(), findMany: fn() },
+      inboxEmail: { count: fn() },
+      meeting: { count: fn() },
     },
     mockAuthFn: fn(),
   };
@@ -19,9 +22,17 @@ function mockAuth(userId = 'user-1') {
   mockAuthFn.mockResolvedValue({ user: { id: userId } });
 }
 
+function setupDefaultMocks() {
+  mockDb.syncLog.findFirst.mockResolvedValue(null);
+  mockDb.syncLog.findMany.mockResolvedValue([]);
+  mockDb.inboxEmail.count.mockResolvedValue(0);
+  mockDb.meeting.count.mockResolvedValue(0);
+}
+
 describe('GET /api/settings/integrations', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    setupDefaultMocks();
   });
 
   it('returns 401 when not authenticated', async () => {
@@ -30,52 +41,79 @@ describe('GET /api/settings/integrations', () => {
     expect(res.status).toBe(401);
   });
 
-  it('returns Disconnected when no Microsoft token exists', async () => {
+  it('returns disconnected when no Microsoft token exists', async () => {
     mockAuth();
-    mockDb.integrationToken.findFirst.mockResolvedValue(null);
+    mockDb.integrationToken.findUnique.mockResolvedValue(null);
 
     const res = await GET();
     const json = await res.json();
 
     expect(res.status).toBe(200);
     expect(json.data).toHaveLength(3);
-    expect(json.data[0]).toMatchObject({ name: 'Microsoft 365 / Outlook', status: 'Disconnected', active: false });
-    expect(json.data[1]).toMatchObject({ name: 'Calendar Sync', status: 'Disconnected', active: false });
-    expect(json.data[2]).toMatchObject({ name: 'LinkedIn (manual)', status: 'Manual enrichment', active: false });
+    expect(json.data[0]).toMatchObject({
+      provider: 'microsoft',
+      status: 'disconnected',
+      active: false,
+      needsReconnect: false,
+    });
   });
 
-  it('returns Disconnected when Microsoft token is expired', async () => {
+  it('returns error status when token status is error', async () => {
     mockAuth();
-    const token = {
-      id: 't1',
-      provider: 'microsoft',
-      expiresAt: new Date(Date.now() - 3600_000),
-      updatedAt: new Date('2026-03-13T10:00:00Z'),
-    };
-    mockDb.integrationToken.findFirst.mockResolvedValue(token);
+    mockDb.integrationToken.findUnique.mockResolvedValue({
+      status: 'error',
+      expiresAt: new Date(Date.now() + 3600_000),
+      updatedAt: new Date(),
+    });
 
     const res = await GET();
     const json = await res.json();
 
-    expect(json.data[0]).toMatchObject({ name: 'Microsoft 365 / Outlook', status: 'Disconnected', active: false });
-    expect(json.data[1]).toMatchObject({ name: 'Calendar Sync', status: 'Disconnected', active: false });
+    expect(json.data[0]).toMatchObject({
+      status: 'error',
+      active: false,
+      needsReconnect: true,
+    });
   });
 
-  it('returns Connected when valid Microsoft token exists', async () => {
+  it('returns connected when valid active token exists', async () => {
     mockAuth();
-    const token = {
-      id: 't1',
-      provider: 'microsoft',
+    mockDb.integrationToken.findUnique.mockResolvedValue({
+      status: 'active',
       expiresAt: new Date(Date.now() + 3600_000),
       updatedAt: new Date('2026-03-13T10:00:00Z'),
-    };
-    mockDb.integrationToken.findFirst.mockResolvedValue(token);
+    });
+    mockDb.inboxEmail.count.mockResolvedValue(42);
+    mockDb.meeting.count.mockResolvedValue(5);
 
     const res = await GET();
     const json = await res.json();
 
-    expect(json.data[0]).toMatchObject({ name: 'Microsoft 365 / Outlook', status: 'Connected', active: true });
-    expect(json.data[1]).toMatchObject({ name: 'Calendar Sync', status: 'Connected', active: true });
-    expect(json.data[0].lastSyncAt).toBe(token.updatedAt.toISOString());
+    expect(json.data[0]).toMatchObject({
+      provider: 'microsoft',
+      status: 'connected',
+      active: true,
+      emailsSynced: 42,
+    });
+    expect(json.data[1]).toMatchObject({
+      provider: 'calendar',
+      status: 'connected',
+      active: true,
+      meetingsSynced: 5,
+    });
+  });
+
+  it('includes syncHistory in response', async () => {
+    mockAuth();
+    mockDb.integrationToken.findUnique.mockResolvedValue(null);
+    mockDb.syncLog.findMany.mockResolvedValue([
+      { id: 's1', type: 'email', status: 'success', itemsSynced: 10, errors: [], startedAt: new Date(), completedAt: new Date() },
+    ]);
+
+    const res = await GET();
+    const json = await res.json();
+
+    expect(json.syncHistory).toHaveLength(1);
+    expect(json.syncHistory[0]).toMatchObject({ id: 's1', type: 'email', errorCount: 0 });
   });
 });

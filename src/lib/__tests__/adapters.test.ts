@@ -690,10 +690,11 @@ describe('adaptMeeting', () => {
   const base = {
     id: 'm1',
     title: 'Discovery Call',
-    startTime: '10:00',
-    duration: '30min',
+    startTime: new Date('2025-06-20T10:00:00Z'),
+    duration: 30,
     date: new Date('2025-06-20T00:00:00Z'),
     attendees: ['Alice', 'Bob'],
+    attendeeEmails: ['alice@test.com', 'bob@test.com'],
     prepStatus: 'ready',
     accountId: 'a1' as string | null,
     accountName: 'Acme Corp' as string | null,
@@ -705,13 +706,23 @@ describe('adaptMeeting', () => {
       id: 'm1',
       title: 'Discovery Call',
       time: '10:00',
-      dur: '30min',
+      dur: '30 min',
       date: '2025-06-20T00:00:00.000Z',
       acc: 'Acme Corp',
       accId: 'a1',
       who: ['Alice', 'Bob'],
       prep: 'ready',
     });
+  });
+
+  it('formats duration as hours when >= 60 min', () => {
+    const result = adaptMeeting({ ...base, duration: 90 });
+    expect(result.dur).toBe('1h 30m');
+  });
+
+  it('formats duration as exact hours', () => {
+    const result = adaptMeeting({ ...base, duration: 120 });
+    expect(result.dur).toBe('2h');
   });
 
   it('defaults acc/accId to empty string when null', () => {
