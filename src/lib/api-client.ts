@@ -50,6 +50,19 @@ async function post<T>(path: string, body: any): Promise<T> {
   return res.json();
 }
 
+async function patch<T>(path: string, body: any): Promise<T> {
+  const res = await fetch(`${BASE}${path}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: res.statusText }));
+    throw new ApiError(res.status, extractErrorMessage(err, `API ${path}: ${res.status}`));
+  }
+  return res.json();
+}
+
 export const api = {
   // ── Home ───────────────────────────────────────
   home: {
@@ -194,5 +207,14 @@ export const api = {
   // ── Badge Counts ──────────────────────────────
   badgeCounts: {
     get: () => get<{ queue: number; signals: number; leads: number; inbox: number; tasks: number }>('/badge-counts'),
+  },
+
+  // ── Settings ────────────────────────────────────
+  settings: {
+    team: () => get<any>('/settings/team'),
+    agents: () => get<any>('/settings/agents'),
+    patchAgent: (name: string, data: { status?: string; parameters?: Record<string, string> }) =>
+      patch<any>(`/settings/agents/${name}`, data),
+    integrations: () => get<any>('/settings/integrations'),
   },
 };
