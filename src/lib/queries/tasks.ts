@@ -53,6 +53,17 @@ export function useCommentOnTask() {
   });
 }
 
+export function useUpdateTask() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, data }: { id: string; data: Record<string, unknown> }) =>
+      api.tasks.update(id, data),
+    onSettled: () => {
+      qc.invalidateQueries({ queryKey: taskKeys.all });
+    },
+  });
+}
+
 export function useCreateTask() {
   const qc = useQueryClient();
   return useMutation({

@@ -2,14 +2,15 @@
 import { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
-import { useAccountDetail, useCreateContact, useUpdateAccount } from '@/lib/queries/accounts';
+import { useAccountDetail, useCreateContact, useUpdateContact, useDeleteContact, useUpdateAccount } from '@/lib/queries/accounts';
+import { Pencil, Trash2 } from 'lucide-react';
 import { useTeamQuery } from '@/lib/queries/settings';
 import { useSession } from 'next-auth/react';
 import { useCreateOpportunity } from '@/lib/queries/opportunities';
 import { useLogActivity } from '@/lib/queries/activities';
 import { useStore } from '@/lib/store';
 import { KANBAN_STAGES, STAGE_PROB } from '@/lib/types';
-import type { Account, Opportunity, Activity, Task, Goal } from '@/lib/types';
+import type { Account, AccountStatus, Opportunity, Activity, Task, Goal } from '@/lib/types';
 import { api } from '@/lib/api-client';
 import { fmt, fRelative, fDate, isOverdue, cn, confNum } from '@/lib/utils';
 import { Badge, ScorePill, FIUACBars, ConfBadge, AgentTag, Avatar, StageBadge, HealthBar, SectionTitle, EmptyState, Skeleton, SkeletonCard, SkeletonText, ErrorState } from '@/components/ui';
@@ -170,6 +171,8 @@ export default function AccountDetailPage() {
   const logActivity = useLogActivity();
   const createOpp = useCreateOpportunity();
   const createContact = useCreateContact(id);
+  const updateContact = useUpdateContact(id);
+  const deleteContact = useDeleteContact(id);
   const { openDrawer, closeDrawer, addToast } = useStore();
   const updateAccount = useUpdateAccount(id);
   const { data: teamData } = useTeamQuery();
@@ -448,6 +451,321 @@ export default function AccountDetailPage() {
     });
   }
 
+  function openEditContactDrawer(c: { id: string; name: string; title: string; role: string; warmth: string; email: string; phone?: string }) {
+    // Map display role back to enum value for the select
+    const ROLE_DISPLAY_TO_ENUM: Record<string, string> = { 'Economic Buyer': 'EconomicBuyer', 'Technical Buyer': 'TechnicalBuyer' };
+    const roleEnum = ROLE_DISPLAY_TO_ENUM[c.role] ?? c.role;
+
+    const state = { name: c.name, title: c.title, role: roleEnum, warmth: c.warmth, email: c.email, phone: c.phone || '' };
+
+    openDrawer({
+      title: 'Edit Contact',
+      subtitle: a.name,
+      body: (
+        <div
+          className="flex flex-col gap-3"
+          onKeyDown={e => { if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') (document.querySelector('[data-submit-edit-contact]') as HTMLButtonElement)?.click(); }}
+        >
+          <label className="flex flex-col gap-1">
+            <span className="text-[10px] font-semibold uppercase tracking-wide text-muted">Name *</span>
+            <input
+              autoFocus
+              defaultValue={state.name}
+              onChange={e => { state.name = e.target.value; }}
+              placeholder="Full name"
+              className="px-2.5 py-1.5 text-[12px] rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] placeholder:text-muted focus:outline-none focus:border-brand/40"
+            />
+          </label>
+          <label className="flex flex-col gap-1">
+            <span className="text-[10px] font-semibold uppercase tracking-wide text-muted">Job Title</span>
+            <input
+              defaultValue={state.title}
+              onChange={e => { state.title = e.target.value; }}
+              placeholder="e.g. VP of Energy Trading"
+              className="px-2.5 py-1.5 text-[12px] rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] placeholder:text-muted focus:outline-none focus:border-brand/40"
+            />
+          </label>
+          <div className="flex gap-2">
+            <label className="flex flex-col gap-1 flex-1">
+              <span className="text-[10px] font-semibold uppercase tracking-wide text-muted">Role</span>
+              <select
+                defaultValue={state.role}
+                onChange={e => { state.role = e.target.value; }}
+                className="px-2.5 py-1.5 text-[12px] rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] focus:outline-none focus:border-brand/40"
+              >
+                <option value="Champion">Champion</option>
+                <option value="EconomicBuyer">Economic Buyer</option>
+                <option value="TechnicalBuyer">Technical Buyer</option>
+                <option value="Influencer">Influencer</option>
+                <option value="Blocker">Blocker</option>
+              </select>
+            </label>
+            <label className="flex flex-col gap-1 flex-1">
+              <span className="text-[10px] font-semibold uppercase tracking-wide text-muted">Warmth</span>
+              <select
+                defaultValue={state.warmth}
+                onChange={e => { state.warmth = e.target.value; }}
+                className="px-2.5 py-1.5 text-[12px] rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] focus:outline-none focus:border-brand/40"
+              >
+                <option value="Strong">Strong</option>
+                <option value="Warm">Warm</option>
+                <option value="Cold">Cold</option>
+              </select>
+            </label>
+          </div>
+          <label className="flex flex-col gap-1">
+            <span className="text-[10px] font-semibold uppercase tracking-wide text-muted">Email</span>
+            <input
+              type="email"
+              defaultValue={state.email}
+              onChange={e => { state.email = e.target.value; }}
+              placeholder="email@company.com"
+              className="px-2.5 py-1.5 text-[12px] rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] placeholder:text-muted focus:outline-none focus:border-brand/40"
+            />
+          </label>
+          <label className="flex flex-col gap-1">
+            <span className="text-[10px] font-semibold uppercase tracking-wide text-muted">Phone</span>
+            <input
+              type="tel"
+              defaultValue={state.phone}
+              onChange={e => { state.phone = e.target.value; }}
+              placeholder="+358 40 123 4567"
+              className="px-2.5 py-1.5 text-[12px] rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] placeholder:text-muted focus:outline-none focus:border-brand/40"
+            />
+          </label>
+        </div>
+      ),
+      footer: (
+        <>
+          <button
+            className="px-3.5 py-1.5 text-[12px] text-sub bg-[var(--surface)] border border-[var(--border)] rounded-md hover:bg-[var(--hover)] transition-colors"
+            onClick={closeDrawer}
+          >
+            Cancel
+          </button>
+          <button
+            data-submit-edit-contact
+            disabled={updateContact.isPending}
+            className="px-3.5 py-1.5 text-[12px] font-medium bg-brand text-[#09090b] rounded-md hover:brightness-110 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            onClick={() => {
+              if (!state.name.trim()) {
+                addToast({ type: 'error', message: 'Name is required' });
+                return;
+              }
+              updateContact.mutate(
+                {
+                  contactId: c.id,
+                  data: {
+                    name: state.name.trim(),
+                    title: state.title.trim(),
+                    role: state.role,
+                    warmth: state.warmth,
+                    email: state.email.trim(),
+                    phone: state.phone.trim() || undefined,
+                  },
+                },
+                {
+                  onSuccess: () => { addToast({ type: 'success', message: `Contact updated: ${state.name}` }); closeDrawer(); },
+                  onError: (err) => addToast({ type: 'error', message: err.message }),
+                }
+              );
+            }}
+          >
+            Save Changes
+          </button>
+        </>
+      ),
+    });
+  }
+
+  function openDeleteContactDrawer(c: { id: string; name: string }) {
+    openDrawer({
+      title: 'Delete Contact',
+      subtitle: a.name,
+      body: (
+        <div className="flex flex-col gap-3 py-2">
+          <p className="text-[13px] text-[var(--text)]">
+            Are you sure you want to delete <span className="font-semibold">{c.name}</span>?
+          </p>
+          <p className="text-[11.5px] text-[var(--sub)]">This action cannot be undone.</p>
+        </div>
+      ),
+      footer: (
+        <>
+          <button
+            className="px-3.5 py-1.5 text-[12px] text-sub bg-[var(--surface)] border border-[var(--border)] rounded-md hover:bg-[var(--hover)] transition-colors"
+            onClick={closeDrawer}
+          >
+            Cancel
+          </button>
+          <button
+            disabled={deleteContact.isPending}
+            className="px-3.5 py-1.5 text-[12px] font-medium bg-[#ef4444] text-white rounded-md hover:brightness-110 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            onClick={() => {
+              deleteContact.mutate(c.id, {
+                onSuccess: () => { addToast({ type: 'success', message: `Contact deleted: ${c.name}` }); closeDrawer(); },
+                onError: (err) => addToast({ type: 'error', message: err.message }),
+              });
+            }}
+          >
+            Delete
+          </button>
+        </>
+      ),
+    });
+  }
+
+  function openEditDrawer() {
+    const state = {
+      name: a.name,
+      type: a.type,
+      country: a.country,
+      status: a.status,
+      pain: a.pain || '',
+      whyNow: a.whyNow || '',
+      moduleFit: (a.fit || []).join(', '),
+      competitors: a.competitors || '',
+    };
+
+    openDrawer({
+      title: 'Edit Account',
+      subtitle: a.name,
+      body: (
+        <div
+          className="flex flex-col gap-3"
+          onKeyDown={e => { if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') (document.querySelector('[data-submit-edit]') as HTMLButtonElement)?.click(); }}
+        >
+          <label className="flex flex-col gap-1">
+            <span className="text-[10px] font-semibold uppercase tracking-wide text-[var(--muted)]">Name *</span>
+            <input
+              autoFocus
+              defaultValue={state.name}
+              onChange={e => { state.name = e.target.value; }}
+              className="px-2.5 py-1.5 text-[12px] rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] placeholder:text-[var(--muted)] focus:outline-none focus:border-brand/40"
+            />
+          </label>
+
+          <div className="flex gap-2">
+            <label className="flex flex-col gap-1 flex-1">
+              <span className="text-[10px] font-semibold uppercase tracking-wide text-[var(--muted)]">Type</span>
+              <select
+                defaultValue={state.type}
+                onChange={e => { state.type = e.target.value; }}
+                className="px-2.5 py-1.5 text-[12px] rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] focus:outline-none focus:border-brand/40"
+              >
+                {['Unknown', 'PPA Buyer', 'Certificate Trader', 'Corporate Offtaker'].map(t => (
+                  <option key={t} value={t}>{t}</option>
+                ))}
+              </select>
+            </label>
+            <label className="flex flex-col gap-1 flex-1">
+              <span className="text-[10px] font-semibold uppercase tracking-wide text-[var(--muted)]">Country</span>
+              <select
+                defaultValue={state.country}
+                onChange={e => { state.country = e.target.value; }}
+                className="px-2.5 py-1.5 text-[12px] rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] focus:outline-none focus:border-brand/40"
+              >
+                {['Finland', 'Denmark', 'Sweden', 'Norway', 'Germany', 'Netherlands', 'UK', 'US', 'Other'].map(c => (
+                  <option key={c} value={c}>{c}</option>
+                ))}
+              </select>
+            </label>
+          </div>
+
+          <label className="flex flex-col gap-1">
+            <span className="text-[10px] font-semibold uppercase tracking-wide text-[var(--muted)]">Status</span>
+            <select
+              defaultValue={state.status}
+              onChange={e => { state.status = e.target.value as AccountStatus; }}
+              className="px-2.5 py-1.5 text-[12px] rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] focus:outline-none focus:border-brand/40"
+            >
+              {['Prospect', 'Active', 'Partner', 'Churned'].map(s => (
+                <option key={s} value={s}>{s}</option>
+              ))}
+            </select>
+          </label>
+
+          <label className="flex flex-col gap-1">
+            <span className="text-[10px] font-semibold uppercase tracking-wide text-[var(--muted)]">Pain Hypothesis</span>
+            <textarea
+              rows={3}
+              defaultValue={state.pain}
+              onChange={e => { state.pain = e.target.value; }}
+              placeholder="What pain point does this account have?"
+              className="px-2.5 py-1.5 text-[12px] rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] placeholder:text-[var(--muted)] focus:outline-none focus:border-brand/40 resize-none"
+            />
+          </label>
+
+          <label className="flex flex-col gap-1">
+            <span className="text-[10px] font-semibold uppercase tracking-wide text-[var(--muted)]">Why Now</span>
+            <textarea
+              rows={3}
+              defaultValue={state.whyNow}
+              onChange={e => { state.whyNow = e.target.value; }}
+              placeholder="Why is now the right time?"
+              className="px-2.5 py-1.5 text-[12px] rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] placeholder:text-[var(--muted)] focus:outline-none focus:border-brand/40 resize-none"
+            />
+          </label>
+
+          <label className="flex flex-col gap-1">
+            <span className="text-[10px] font-semibold uppercase tracking-wide text-[var(--muted)]">Module Fit</span>
+            <input
+              defaultValue={state.moduleFit}
+              onChange={e => { state.moduleFit = e.target.value; }}
+              placeholder="e.g. PPA, GoO, Carbon (comma-separated)"
+              className="px-2.5 py-1.5 text-[12px] rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] placeholder:text-[var(--muted)] focus:outline-none focus:border-brand/40"
+            />
+          </label>
+
+          <label className="flex flex-col gap-1">
+            <span className="text-[10px] font-semibold uppercase tracking-wide text-[var(--muted)]">Competitors</span>
+            <input
+              defaultValue={state.competitors}
+              onChange={e => { state.competitors = e.target.value; }}
+              placeholder="e.g. Pexapark, Zeigo (comma-separated)"
+              className="px-2.5 py-1.5 text-[12px] rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] placeholder:text-[var(--muted)] focus:outline-none focus:border-brand/40"
+            />
+          </label>
+        </div>
+      ),
+      footer: (
+        <>
+          <button className="px-3.5 py-1.5 text-[12px] text-[var(--sub)] bg-[var(--surface)] border border-[var(--border)] rounded-md hover:bg-[var(--hover)] transition-colors" onClick={closeDrawer}>Cancel</button>
+          <button
+            data-submit-edit
+            disabled={updateAccount.isPending}
+            className="px-3.5 py-1.5 text-[12px] font-medium bg-brand text-[#09090b] rounded-md hover:brightness-110 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            onClick={() => {
+              if (!state.name.trim()) {
+                addToast({ type: 'error', message: 'Name is required' });
+                return;
+              }
+              const moduleFit = state.moduleFit.split(',').map(s => s.trim()).filter(Boolean);
+              updateAccount.mutate(
+                {
+                  name: state.name.trim(),
+                  type: state.type,
+                  country: state.country,
+                  status: state.status,
+                  pain: state.pain.trim() || undefined,
+                  whyNow: state.whyNow.trim() || undefined,
+                  moduleFit,
+                  competitors: state.competitors.trim() || undefined,
+                },
+                {
+                  onSuccess: () => { addToast({ type: 'success', message: 'Account updated' }); closeDrawer(); },
+                  onError: (err: Error) => addToast({ type: 'error', message: err.message }),
+                }
+              );
+            }}
+          >
+            Save Changes
+          </button>
+        </>
+      ),
+    });
+  }
+
   function openNewOppDrawer() {
     const submitRef = { current: () => {} };
     const DISPLAY_TO_PRISMA: Record<string, string> = { 'Solution Fit': 'SolutionFit', 'Verbal Commit': 'VerbalCommit' };
@@ -499,7 +817,15 @@ export default function AccountDetailPage() {
             {a.name[0]}
           </div>
           <div className="flex-1">
-            <h1 className="text-[18px] font-semibold tracking-tight">{a.name}</h1>
+            <div className="flex items-center gap-2">
+              <h1 className="text-[18px] font-semibold tracking-tight">{a.name}</h1>
+              <button
+                onClick={openEditDrawer}
+                className="px-2.5 py-1 text-[11px] font-medium rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--sub)] hover:bg-[var(--hover)] transition-colors"
+              >
+                Edit
+              </button>
+            </div>
             <div className="flex items-center gap-1 mt-1 flex-wrap">
               <Badge variant={a.status === 'Active' ? 'ok' : a.status === 'Partner' ? 'purple' : 'info'}>{a.status}</Badge>
               <Badge variant="neutral">{a.type} · {a.country}</Badge>
@@ -627,15 +953,21 @@ export default function AccountDetailPage() {
                 <div className="text-[12px] text-muted text-center py-3">No contacts</div>
               ) : (
                 a.contacts.map(c => (
-                  <div key={c.id} className="flex items-center gap-2 py-1.5 border-b border-[var(--border)] last:border-b-0">
+                  <div key={c.id} className="group flex items-center gap-2 py-1.5 border-b border-[var(--border)] last:border-b-0">
                     <Avatar initials={c.name.split(' ').map(w => w[0]).join('')} size="sm" />
                     <div className="flex-1 min-w-0">
                       <div className="text-[11.5px] font-medium truncate">{c.name}</div>
                       <div className="text-[9.5px] text-muted truncate">{c.title}</div>
                     </div>
-                    <div className="flex flex-col items-end gap-0.5">
-                      <Badge variant={c.role === 'Champion' ? 'ok' : c.role === 'Economic Buyer' ? 'info' : 'neutral'} className="!text-[8.5px]">{c.role}</Badge>
-                      <span className={cn('text-[9px]', c.warmth === 'Strong' ? 'text-brand' : c.warmth === 'Warm' ? 'text-warn' : 'text-info')}>{c.warmth}</span>
+                    <div className="flex items-center gap-1">
+                      <div className="flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button onClick={() => openEditContactDrawer(c)} className="p-0.5 rounded hover:bg-[var(--hover)] text-[var(--muted)] hover:text-[var(--text)] transition-colors" title="Edit contact"><Pencil size={12} /></button>
+                        <button onClick={() => openDeleteContactDrawer(c)} className="p-0.5 rounded hover:bg-[var(--hover)] text-[var(--muted)] hover:text-danger transition-colors" title="Delete contact"><Trash2 size={12} /></button>
+                      </div>
+                      <div className="flex flex-col items-end gap-0.5">
+                        <Badge variant={c.role === 'Champion' ? 'ok' : c.role === 'Economic Buyer' ? 'info' : 'neutral'} className="!text-[8.5px]">{c.role}</Badge>
+                        <span className={cn('text-[9px]', c.warmth === 'Strong' ? 'text-brand' : c.warmth === 'Warm' ? 'text-warn' : 'text-info')}>{c.warmth}</span>
+                      </div>
                     </div>
                   </div>
                 ))
@@ -661,7 +993,7 @@ export default function AccountDetailPage() {
             <EmptyState icon="\uD83D\uDC65" title="No contacts" description="Add contacts to build the buying committee map." />
           ) : (
             a.contacts.map(c => (
-              <div key={c.id} className="flex items-center gap-3 py-2.5 border-b border-[var(--border)] last:border-b-0">
+              <div key={c.id} className="group flex items-center gap-3 py-2.5 border-b border-[var(--border)] last:border-b-0">
                 <Avatar initials={c.name.split(' ').map(w => w[0]).join('')} size="lg" color="green" />
                 <div className="flex-1 min-w-0">
                   <div className="text-[12.5px] font-medium">{c.name}</div>
@@ -669,6 +1001,10 @@ export default function AccountDetailPage() {
                   {c.email && <div className="text-[10.5px] text-info mt-0.5">{c.email}</div>}
                 </div>
                 <div className="flex items-center gap-1.5">
+                  <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <button onClick={() => openEditContactDrawer(c)} className="p-1 rounded hover:bg-[var(--hover)] text-[var(--muted)] hover:text-[var(--text)] transition-colors" title="Edit contact"><Pencil size={14} /></button>
+                    <button onClick={() => openDeleteContactDrawer(c)} className="p-1 rounded hover:bg-[var(--hover)] text-[var(--muted)] hover:text-danger transition-colors" title="Delete contact"><Trash2 size={14} /></button>
+                  </div>
                   <Badge variant={c.role === 'Champion' ? 'ok' : c.role === 'Economic Buyer' ? 'info' : 'neutral'}>{c.role}</Badge>
                   <Badge variant={c.warmth === 'Strong' ? 'ok' : c.warmth === 'Warm' ? 'warn' : 'info'}>{c.warmth}</Badge>
                 </div>

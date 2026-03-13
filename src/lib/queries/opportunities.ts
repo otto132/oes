@@ -138,6 +138,18 @@ export function useCloseWon() {
   });
 }
 
+export function useUpdateOpportunity() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, data }: { id: string; data: Record<string, unknown> }) =>
+      api.opportunities.update(id, data),
+    onSuccess: (_data, vars) => {
+      qc.invalidateQueries({ queryKey: oppKeys.detail(vars.id) });
+      qc.invalidateQueries({ queryKey: oppKeys.all });
+    },
+  });
+}
+
 export function useCloseLost() {
   const qc = useQueryClient();
   return useMutation({
