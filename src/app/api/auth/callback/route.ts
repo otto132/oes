@@ -1,9 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { exchangeCodeForTokens, getGraphUser } from '@/lib/integrations/microsoft-graph';
+import { auth } from '@/lib/auth';
 import { db } from '@/lib/db';
-
-// This route handles the Microsoft OAuth callback after user grants permissions.
-// URL: /api/auth/callback?code=xxx&state=xxx
+import { exchangeCodeForTokens, getGraphUser } from '@/lib/integrations/microsoft-graph';
 
 export async function GET(req: NextRequest) {
   const code = req.nextUrl.searchParams.get('code');
@@ -18,20 +16,23 @@ export async function GET(req: NextRequest) {
     return NextResponse.redirect(new URL('/settings?error=no_code', req.url));
   }
 
-  try {
-    // Exchange code for tokens
-    const tokens = await exchangeCodeForTokens(code);
+  // Require active session
+  const session = await auth();
+  if (!session?.user?.id) {
+    return NextResponse.redirect(new URL('/login?callbackUrl=/settings', req.url));
+  }
 
-    // Get user profile to identify who connected
+  try {
+    const tokens = await exchangeCodeForTokens(code);
     const profile = await getGraphUser(tokens.access_token);
 
-    // Store tokens using Prisma model
     await db.integrationToken.upsert({
-      where: { provider_userEmail: { provider: 'microsoft', userEmail: profile.mail } },
+      where: { provider_userId: { provider: 'microsoft', userId: session.user.id } },
       update: {
         accessToken: tokens.access_token,
         refreshToken: tokens.refresh_token,
         expiresAt: new Date(Date.now() + tokens.expires_in * 1000),
+        userEmail: profile.mail,
       },
       create: {
         provider: 'microsoft',
@@ -39,10 +40,11 @@ export async function GET(req: NextRequest) {
         refreshToken: tokens.refresh_token,
         expiresAt: new Date(Date.now() + tokens.expires_in * 1000),
         userEmail: profile.mail,
+        userId: session.user.id,
       },
     });
 
-    console.log(`✓ Microsoft Graph connected for ${profile.mail}`);
+    console.log(`Microsoft Graph connected for user ${session.user.id} (${profile.mail})`);
     return NextResponse.redirect(new URL('/settings?connected=microsoft', req.url));
   } catch (err) {
     console.error('OAuth token exchange failed:', err);
