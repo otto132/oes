@@ -1,5 +1,6 @@
 'use client';
-import { useLeadsQuery } from '@/lib/queries/leads';
+import { useStore } from '@/lib/store';
+import { useLeadsQuery, useAdvanceLead, useDisqualifyLead, useConvertLead } from '@/lib/queries/leads';
 import { Badge, Avatar, FIUACBars, ScorePill, EmptyState, Skeleton, SkeletonCard, SkeletonText, ErrorState } from '@/components/ui';
 import { compositeScore } from '@/lib/utils';
 import type { Lead } from '@/lib/types';
@@ -38,6 +39,11 @@ function LeadsSkeleton() {
 
 export default function LeadsPage() {
   const { data: resp, isLoading, isError, refetch } = useLeadsQuery();
+  const { openDrawer, closeDrawer } = useStore();
+  const addToast = useStore(s => s.addToast);
+  const advance = useAdvanceLead();
+  const disqualify = useDisqualifyLead();
+  const convertLead = useConvertLead();
 
   if (isLoading) return <LeadsSkeleton />;
   if (isError) return <ErrorState onRetry={() => refetch()} />;
@@ -70,7 +76,7 @@ export default function LeadsPage() {
                 {cards.length === 0 ? (
                   <div className="h-[50px] rounded-lg border border-dashed border-[var(--border)] flex items-center justify-center text-[10px] text-muted">No items</div>
                 ) : cards.map(l => (
-                  <div key={l.id} className="rounded-lg p-3 mb-1.5 bg-[var(--elevated)] border border-[var(--border)] cursor-pointer hover:-translate-y-px hover:border-[var(--border-strong)] transition-all">
+                  <div key={l.id} className="group rounded-lg p-3 mb-1.5 bg-[var(--elevated)] border border-[var(--border)] cursor-pointer hover:-translate-y-px hover:border-[var(--border-strong)] transition-all">
                     <div className="text-[10px] text-muted mb-0.5">{l.type || 'Unknown'} · {l.country || '—'}</div>
                     <div className="text-[12.5px] font-medium mb-1.5">{l.company}</div>
                     <div className="text-[11px] text-sub leading-tight line-clamp-2 mb-2">{l.pain || 'No pain hypothesis yet'}</div>
@@ -79,6 +85,39 @@ export default function LeadsPage() {
                       <Avatar initials={l.owner.ini} color={l.owner.ac} size="xs" />
                     </div>
                     <div className="flex items-center gap-1.5"><FIUACBars scores={l.scores} /><ScorePill scores={l.scores} /></div>
+                    {/* Action buttons — visible on hover (desktop) */}
+                    <div className="hidden group-hover:flex items-center gap-1 mt-2 pt-2 border-t border-[var(--border)]">
+                      {l.stage === 'Qualified' ? (
+                        <button
+                          disabled={convertLead.isPending}
+                          onClick={() => openConvertDrawer(l)}
+                          className="flex-1 px-2 py-1 text-[10px] font-medium rounded-md bg-[var(--brand)] text-[#09090b] hover:brightness-110 transition-colors disabled:opacity-50"
+                        >
+                          Convert
+                        </button>
+                      ) : (
+                        <button
+                          disabled={advance.isPending}
+                          onClick={() => advance.mutate(l.id, {
+                            onSuccess: (data: any) => addToast({ type: 'success', message: `Lead advanced to ${data?.data?.stage || 'next stage'}` }),
+                            onError: (err: Error) => addToast({ type: 'error', message: err.message }),
+                          })}
+                          className="flex-1 px-2 py-1 text-[10px] font-medium rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] hover:bg-[var(--hover)] transition-colors disabled:opacity-50"
+                        >
+                          Advance
+                        </button>
+                      )}
+                      <button
+                        disabled={disqualify.isPending}
+                        onClick={() => disqualify.mutate(l.id, {
+                          onSuccess: () => addToast({ type: 'info', message: 'Lead disqualified' }),
+                          onError: (err: Error) => addToast({ type: 'error', message: err.message }),
+                        })}
+                        className="px-2 py-1 text-[10px] text-danger rounded-md hover:bg-[var(--hover)] transition-colors disabled:opacity-50"
+                      >
+                        Disqualify
+                      </button>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -98,7 +137,40 @@ export default function LeadsPage() {
               <Badge variant={stageMeta[l.stage]?.variant || 'neutral'} className="!text-[9px]">{l.stage}</Badge>
             </div>
             <div className="text-[11px] text-sub mb-1.5">{l.type} · {l.country || '—'}</div>
-            <div className="flex items-center gap-1.5"><FIUACBars scores={l.scores} /><ScorePill scores={l.scores} /></div>
+            <div className="flex items-center gap-1.5 mb-2"><FIUACBars scores={l.scores} /><ScorePill scores={l.scores} /></div>
+            {/* Action buttons — always visible on mobile */}
+            <div className="flex items-center gap-1 pt-2 border-t border-[var(--border)]">
+              {l.stage === 'Qualified' ? (
+                <button
+                  disabled={convertLead.isPending}
+                  onClick={() => openConvertDrawer(l)}
+                  className="flex-1 px-2 py-1 text-[10px] font-medium rounded-md bg-[var(--brand)] text-[#09090b] hover:brightness-110 transition-colors disabled:opacity-50"
+                >
+                  Convert
+                </button>
+              ) : (
+                <button
+                  disabled={advance.isPending}
+                  onClick={() => advance.mutate(l.id, {
+                    onSuccess: (data: any) => addToast({ type: 'success', message: `Lead advanced to ${data?.data?.stage || 'next stage'}` }),
+                    onError: (err: Error) => addToast({ type: 'error', message: err.message }),
+                  })}
+                  className="flex-1 px-2 py-1 text-[10px] font-medium rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] hover:bg-[var(--hover)] transition-colors disabled:opacity-50"
+                >
+                  Advance
+                </button>
+              )}
+              <button
+                disabled={disqualify.isPending}
+                onClick={() => disqualify.mutate(l.id, {
+                  onSuccess: () => addToast({ type: 'info', message: 'Lead disqualified' }),
+                  onError: (err: Error) => addToast({ type: 'error', message: err.message }),
+                })}
+                className="px-2 py-1 text-[10px] text-danger rounded-md hover:bg-[var(--hover)] transition-colors disabled:opacity-50"
+              >
+                Disqualify
+              </button>
+            </div>
           </div>
         ))}
       </div>
