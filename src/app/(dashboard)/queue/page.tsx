@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { Shield, Eye, Check } from 'lucide-react';
 import { useQueueQuery, useApproveQueueItem, useRejectQueueItem } from '@/lib/queries/queue';
 import { fRelative, queueTypeLabel, cn } from '@/lib/utils';
-import { Badge, ConfBadge, AgentTag, ScorePill, FIUACBars, EmptyState } from '@/components/ui';
+import { Badge, ConfBadge, AgentTag, ScorePill, FIUACBars, EmptyState, Skeleton, SkeletonCard, SkeletonText, ErrorState } from '@/components/ui';
 import type { QueueItem } from '@/lib/types';
 
 const TYPE_STYLE: Record<string, string> = {
@@ -40,22 +40,22 @@ export default function QueuePage() {
 
   function QueueSkeleton() {
     return (
-      <div className="flex flex-col gap-2">
-        {[1, 2, 3].map(i => (
-          <div key={i} className="rounded-lg bg-[var(--elevated)] border border-[var(--border)] p-4">
-            <div className="flex items-center gap-1.5 mb-2">
-              <div className="h-4 w-16 rounded shimmer" />
-              <div className="h-4 w-20 rounded shimmer" />
+      <div className="page-enter space-y-3">
+        {Array.from({ length: 3 }).map((_, i) => (
+          <SkeletonCard key={i} className="space-y-3">
+            <div className="flex items-center gap-2">
+              <Skeleton className="h-4 w-16 rounded-full" />
+              <Skeleton className="h-4 w-12 rounded-full" />
+              <Skeleton className="h-4 w-20 rounded-full ml-auto" />
             </div>
-            <div className="h-4 w-3/4 rounded shimmer mb-1.5" />
-            <div className="h-3 w-1/3 rounded shimmer mb-2" />
-            <div className="h-14 w-full rounded shimmer mb-2" />
-            <div className="flex gap-1.5 pt-2 border-t border-[var(--border)]">
-              <div className="h-7 w-16 rounded shimmer" />
-              <div className="h-7 w-24 rounded shimmer" />
-              <div className="h-7 w-20 rounded shimmer ml-auto" />
+            <SkeletonText className="w-3/4" />
+            <SkeletonText className="w-full h-2" />
+            <Skeleton className="h-16 w-full rounded-lg" />
+            <div className="flex gap-2 justify-end">
+              <Skeleton className="h-7 w-16 rounded-md" />
+              <Skeleton className="h-7 w-20 rounded-md" />
             </div>
-          </div>
+          </SkeletonCard>
         ))}
       </div>
     );
@@ -179,12 +179,7 @@ export default function QueuePage() {
       </div>
 
       {isLoading ? <QueueSkeleton /> : error ? (
-        <div>
-          <EmptyState icon="!" title="Failed to load queue" description={error.message} />
-          <div className="flex justify-center mt-2">
-            <button onClick={() => refetch()} className="px-3 py-1.5 text-[11px] font-medium rounded-md bg-brand text-[#09090b] hover:brightness-110">Retry</button>
-          </div>
-        </div>
+        <ErrorState onRetry={() => refetch()} />
       ) : items.length === 0 ? (
         <EmptyState icon={tab === 'pending' ? '✓' : '📋'} title={tab === 'pending' ? 'All clear — no pending approvals' : 'No completed items yet'} description={tab === 'pending' ? 'AI agents are running. Items will appear here when they need your review.' : 'Approved and rejected items will appear here.'} />
       ) : (

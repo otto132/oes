@@ -72,10 +72,6 @@ body {
 /* ── Queue focus ── */
 .queue-focused { border-color: var(--brand) !important; box-shadow: 0 0 0 2px rgba(62,207,142,.1); }
 
-/* ── Shimmer ── */
-@keyframes shimmer { 0% { opacity: .5; } 50% { opacity: .8; } 100% { opacity: .5; } }
-.shimmer { animation: shimmer 1.5s ease-in-out infinite; background: var(--surface); }
-
 /* ── Toast ── */
 @keyframes toastSlideIn { from { opacity: 0; transform: translateX(16px); } to { opacity: 1; transform: translateX(0); } }
 @keyframes toastProgress { from { width: 100%; } to { width: 0%; } }
