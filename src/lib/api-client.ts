@@ -189,6 +189,24 @@ export const api = {
       post<any>('/activities', data),
   },
 
+  // ── Meetings ────────────────────────────────────
+  meetings: {
+    list: (opts?: { date?: string; range?: number; cursor?: string; limit?: number }) => {
+      const params = new URLSearchParams();
+      if (opts?.date) params.set('date', opts.date);
+      if (opts?.range) params.set('range', String(opts.range));
+      if (opts?.cursor) params.set('cursor', opts.cursor);
+      if (opts?.limit) params.set('limit', String(opts.limit));
+      const qs = params.toString();
+      return get<any>(`/meetings${qs ? `?${qs}` : ''}`);
+    },
+    detail: (id: string) => get<any>(`/meetings/${id}`),
+    create: (data: { title: string; date: string; startTime: string; duration?: string; attendees?: string[]; accountId?: string }) =>
+      post<any>('/meetings', data),
+    update: (id: string, data: Record<string, unknown>) =>
+      patch<any>(`/meetings/${id}`, data),
+  },
+
   // ── Search ─────────────────────────────────────
   search: {
     query: (q: string) => get<any>(`/search?q=${encodeURIComponent(q)}`),
