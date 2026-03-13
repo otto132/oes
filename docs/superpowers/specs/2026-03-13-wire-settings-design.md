@@ -11,7 +11,7 @@ Replace all hardcoded data in the Settings page with real API-backed state. Impl
 
 ### `GET /api/settings/agents`
 
-- **Auth**: Any authenticated user
+- **Auth**: Any authenticated user (read-only view of agent status is safe for all roles)
 - **Behavior**: Returns all `AgentConfig` rows from DB
 - **Auto-seed**: If zero rows exist, seeds the 6 default agents before returning:
 
@@ -33,8 +33,8 @@ Replace all hardcoded data in the Settings page with real API-backed state. Impl
   name: string;         // unique key, e.g. "signal_hunter"
   displayName: string;  // e.g. "Signal Hunter"
   description: string;
-  status: string;       // "active" | "paused" | "disabled"
-  parameters: Record<string, string>;
+  status: string;       // "active" | "paused" (PATCH only allows these two; "disabled" reserved for system use)
+  parameters: Record<string, string>;  // Prisma stores as Json; API layer casts to flat string map
   lastRunAt: string | null;
   createdAt: string;
   updatedAt: string;
@@ -44,7 +44,7 @@ Replace all hardcoded data in the Settings page with real API-backed state. Impl
 ### `PATCH /api/settings/agents/[name]`
 
 - **Auth**: Admin only
-- **Path param**: `name` — the agent's unique name (e.g. `signal_hunter`)
+- **Path param**: `name` — the agent's unique name (e.g. `signal_hunter`). Uses `name` instead of `id` because agent names are stable identifiers meaningful to both humans and code, unlike opaque CUIDs.
 - **Body** (all optional):
   ```ts
   {
@@ -75,7 +75,7 @@ Replace all hardcoded data in the Settings page with real API-backed state. Impl
       name: string;       // e.g. "Microsoft 365 / Outlook"
       status: string;     // "Connected" | "Disconnected" | "Manual enrichment"
       active: boolean;
-      lastSyncAt: string | null;  // from IntegrationToken.updatedAt for connected ones
+      lastSyncAt: string | null;  // from IntegrationToken.updatedAt (token refresh time; best available proxy until dedicated sync tracking exists)
     }>
   }
   ```
@@ -154,9 +154,9 @@ The existing `openAgentConfig()` function renders a drawer with Configure/Pause/
 
 ### Data Mapping
 
-Team API returns `{ id, name, email, role, isActive, createdAt }`. The frontend needs initials and an accent color:
-- **Initials**: Derive from name (first letter of first + last name)
-- **Accent color**: Assign deterministically from a small palette based on user index or id hash
+Team API returns `{ id, name, initials, email, role, color, isActive, createdAt }`. The `User` model already stores `initials` and `color` fields, so the frontend uses them directly — no derivation needed. Update the existing team GET route's `select` clause to include `initials` and `color`.
+
+**Note**: The existing `GET /api/settings/team` requires Admin role. The settings page should handle a 403 gracefully for non-admin users by hiding the Team section or showing a "requires admin" message.
 
 ## Files to Create/Modify
 
