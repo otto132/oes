@@ -1,16 +1,6 @@
 // Environment variable validation — runs at import time.
 // Import `env` from this module instead of reading process.env directly.
 
-function getRequiredEnv(name: string, description: string): string {
-  const value = process.env[name];
-  if (!value) {
-    throw new Error(
-      `Missing required environment variable: ${name} — ${description}`
-    );
-  }
-  return value;
-}
-
 function getOptionalEnv(name: string, fallback?: string): string | undefined {
   return process.env[name] ?? fallback;
 }
@@ -30,7 +20,7 @@ function collectRequired(name: string, description: string): string {
   return value;
 }
 
-// --- Core ---
+// --- Core (required) ---
 const DATABASE_URL = collectRequired(
   "DATABASE_URL",
   "PostgreSQL connection string"
@@ -44,20 +34,6 @@ const NEXTAUTH_URL = collectRequired(
   "Canonical URL of the application (e.g. http://localhost:3000)"
 );
 
-// --- Azure AD (authentication provider) ---
-const AZURE_AD_CLIENT_ID = collectRequired(
-  "AZURE_AD_CLIENT_ID",
-  "Azure AD application (client) ID for authentication"
-);
-const AZURE_AD_CLIENT_SECRET = collectRequired(
-  "AZURE_AD_CLIENT_SECRET",
-  "Azure AD client secret for authentication"
-);
-const AZURE_AD_TENANT_ID = collectRequired(
-  "AZURE_AD_TENANT_ID",
-  "Azure AD tenant ID for authentication"
-);
-
 if (missing.length > 0) {
   throw new Error(
     [
@@ -69,7 +45,19 @@ if (missing.length > 0) {
   );
 }
 
-// --- Optional ---
+// --- Azure AD (optional — only needed if using Microsoft login) ---
+const AZURE_AD_CLIENT_ID = getOptionalEnv("AZURE_AD_CLIENT_ID");
+const AZURE_AD_CLIENT_SECRET = getOptionalEnv("AZURE_AD_CLIENT_SECRET");
+const AZURE_AD_TENANT_ID = getOptionalEnv("AZURE_AD_TENANT_ID");
+
+// --- Google (optional — only needed if using Google login) ---
+const GOOGLE_CLIENT_ID = getOptionalEnv("GOOGLE_CLIENT_ID");
+const GOOGLE_CLIENT_SECRET = getOptionalEnv("GOOGLE_CLIENT_SECRET");
+
+// --- Open signup (dev mode) ---
+const ALLOW_OPEN_SIGNUP = getOptionalEnv("ALLOW_OPEN_SIGNUP");
+
+// --- Other optional ---
 const CRON_SECRET = getOptionalEnv("CRON_SECRET");
 const MICROSOFT_CLIENT_ID = getOptionalEnv("MICROSOFT_CLIENT_ID");
 const MICROSOFT_CLIENT_SECRET = getOptionalEnv("MICROSOFT_CLIENT_SECRET");
@@ -85,10 +73,17 @@ export const env = {
   NEXTAUTH_SECRET,
   NEXTAUTH_URL,
 
-  // Azure AD
+  // Azure AD (optional)
   AZURE_AD_CLIENT_ID,
   AZURE_AD_CLIENT_SECRET,
   AZURE_AD_TENANT_ID,
+
+  // Google (optional)
+  GOOGLE_CLIENT_ID,
+  GOOGLE_CLIENT_SECRET,
+
+  // Dev mode
+  ALLOW_OPEN_SIGNUP,
 
   // Optional
   CRON_SECRET,
@@ -98,3 +93,14 @@ export const env = {
 } as const;
 
 export type Env = typeof env;
+
+// ---------------------------------------------------------------------------
+// Provider availability helper
+// ---------------------------------------------------------------------------
+
+export function availableProviders(): { google: boolean; microsoft: boolean } {
+  return {
+    google: !!(GOOGLE_CLIENT_ID && GOOGLE_CLIENT_SECRET),
+    microsoft: !!(AZURE_AD_CLIENT_ID && AZURE_AD_CLIENT_SECRET && AZURE_AD_TENANT_ID),
+  };
+}
