@@ -6,6 +6,8 @@ import { Badge, Avatar, HealthBar, StageBadge, AgentTag, Skeleton, SkeletonCard,
 import { fmt, fDate, fR, isOverdue, weightedValue, cn } from '@/lib/utils';
 import { STAGES, STAGE_COLOR, healthAvg } from '@/lib/types';
 import type { Activity, Contact } from '@/lib/types';
+import { useStore } from '@/lib/store';
+import { mapOppStage } from '@/lib/adapters';
 
 function riskHex(h: { eng: number; stake: number; comp: number; time: number }): string {
   const a = healthAvg(h);
@@ -111,6 +113,8 @@ export default function OppDetailPage() {
   const move = useMoveStage();
   const closeWon = useCloseWon();
   const closeLost = useCloseLost();
+  const { openDrawer, closeDrawer } = useStore();
+  const addToast = useStore(s => s.addToast);
 
   if (isLoading) return <LoadingSkeleton />;
 
@@ -261,7 +265,13 @@ export default function OppDetailPage() {
                   <button
                     key={s}
                     disabled={active || isMutating}
-                    onClick={() => move.mutate({ id: o.id, stage: toPrismaStage(s) })}
+                    onClick={() => move.mutate(
+                      { id: o.id, stage: toPrismaStage(s) },
+                      {
+                        onSuccess: () => addToast({ type: 'success', message: `Stage → ${s}` }),
+                        onError: (err: Error) => addToast({ type: 'error', message: `Move failed: ${err.message}` }),
+                      }
+                    )}
                     className={cn(
                       'text-left px-2 py-1.5 rounded-md text-[11.5px] transition-colors border disabled:opacity-50',
                       active ? 'border-brand/30 bg-brand/[.08] text-brand' : 'border-transparent text-[var(--sub)] hover:bg-[var(--hover)]'
