@@ -15,17 +15,21 @@ All data-fetching pages are wired to APIs. Core CRUD drawers (account create, op
 - Outcome dropdown: Completed (default), Deferred, Cancelled
 - Notes textarea (optional)
 - Follow-up tasks section:
-  - Title input + "Add" button
+  - Title input (required if adding) + "Add" button
   - List of added follow-ups with remove button
 - Footer: Cancel + "Complete Task" primary button
 
-**Mutation:** `completeTask.mutate({ id, data: { outcome, notes, followUpTasks } })`
+**Mutation:** `completeTask.mutate({ id, data: { outcome, notes, followUpTasks } })` — note: the hook spreads `data` flat into the POST body alongside `action: 'complete'` and `id`.
+
+**Outcome semantics:** All outcomes (Completed/Deferred/Cancelled) set task status to Done. The outcome value is informational, stored in the activity log entry. This matches the existing API behavior.
 
 **Existing API support:** `POST /api/tasks` with `action: 'complete'` already accepts `outcome`, `notes`, `followUpTasks` array. Creates activity log, bumps engagement health +10, auto-creates follow-up tasks.
 
 **Cache invalidation:** `taskKeys.all` (already in hook).
 
 **Toast:** "Task completed" with `{ label: 'View Tasks →', href: '/tasks' }`.
+
+**Error handling:** `onError` → toast "Failed to complete task".
 
 ## W-10: Contact Create within Account
 
@@ -47,10 +51,12 @@ All data-fetching pages are wired to APIs. Core CRUD drawers (account create, op
 - Returns 201 with created contact
 
 **New mutation hook:** `useCreateContact()` in `src/lib/queries/accounts.ts`
-- `mutationFn: ({ accountId, data }) => api.post(`/api/accounts/${accountId}/contacts`, data)`
+- Uses `api.post()` directly: `api.post('/api/accounts/${accountId}/contacts', data)`
 - `onSuccess`: invalidate `accountKeys.detail(accountId)`
 
 **Toast:** "Contact added" (no navigation link needed — already on account page).
+
+**Error handling:** `onError` → toast "Failed to add contact".
 
 ## W-12: Inbox Create Task from Email
 
@@ -62,38 +68,37 @@ All data-fetching pages are wired to APIs. Core CRUD drawers (account create, op
 - Account dropdown: pre-selected if email is linked to account, otherwise selectable
 - Due date input: pre-filled with +2 days from today
 - Priority dropdown: Medium (default), High, Low
-- Notes textarea: pre-filled with "From email: [sender name]"
 - Footer: Cancel + "Create Task" primary button
 
-**API:** Uses existing inbox API `action: 'create_task'` which creates task with email subject, 2-day due, inbox source. However, the current API is simple (no editable fields). Two options:
+**Approach:** Use the existing `useCreateTask()` hook which calls `POST /api/tasks` with `action: 'create'`. This gives full control over task fields. The `notes` field is removed from the drawer since the API and hook type don't support it on creation.
 
-**Approach:** Call the existing tasks API (`POST /api/tasks` with `action: 'create'`) directly with the edited form data, plus mark the email as actioned. This gives full control over task fields.
+**After task creation:** Call `markRead.mutate(emailId)` to mark the email as read (visual indicator that it's been actioned). No separate "actioned" state exists — read status serves this purpose.
 
-**Mutation:** `createTask.mutate(formData)` from `useCreateTask()` (already exists in queries/tasks.ts).
+**Mutation:** `createTask.mutate(formData)` from `useCreateTask()`.
 
-**Cache invalidation:** `taskKeys.all` + `inboxKeys.all`.
+**Cache invalidation:** `taskKeys.all` (from hook) + manually invalidate `inboxKeys.all` in the `onSuccess` callback at the call site.
 
 **Toast:** "Task created" with `{ label: 'View Tasks →', href: '/tasks' }`.
+
+**Error handling:** `onError` → toast "Failed to create task".
 
 ## W-13: Inbox Create Account from New Domain Email
 
 **Trigger:** "Create Account" button added to `new_domain` AI suggestion box in email drawer.
 
-**Drawer content:**
-- Title: "Create Account from Email" / Subtitle: sender domain
-- Company name input: pre-filled with domain-derived name (capitalize first letter of domain without TLD)
-- Type dropdown: Unknown (default), PPA Buyer, Certificate Trader, Corporate Offtaker
-- Country dropdown: Finland, Denmark, Germany, Sweden, Norway, Other
-- Notes textarea (optional)
-- Footer: Cancel + "Create Account" primary button
+**Simplified approach:** The existing `useCreateAccountFromEmail()` hook only accepts an email ID. Rather than extending the API to accept overrides, keep it simple: the button triggers the mutation directly (no drawer). The API derives company name from domain and creates the account + contact automatically.
 
-**API:** Uses existing `POST /api/inbox` with `action: 'create_account'` which creates account + contact from email sender + links email.
+**UX flow:**
+1. User clicks "Create Account" on new_domain email
+2. Mutation fires immediately (no drawer form)
+3. Success toast: "Account created" with `{ label: 'View Account →', href: '/accounts' }`
+4. If account already exists (API dedup): email is linked to existing account, toast says "Email linked to existing account"
 
 **Mutation:** `useCreateAccountFromEmail()` (already exists in queries/inbox.ts).
 
-**Cache invalidation:** `inboxKeys.all` + `accountKeys.all`.
+**Cache invalidation:** `inboxKeys.all` (from hook) + add `accountKeys.all` invalidation to the hook's `onSuccess`.
 
-**Toast:** "Account created" with `{ label: 'View Account →', href: '/accounts' }`.
+**Error handling:** `onError` → toast "Failed to create account".
 
 ## Shared Patterns
 
@@ -104,6 +109,7 @@ All drawers follow the established pattern:
 4. `addToast()` on success with optional action link
 5. `closeDrawer()` on cancel or success
 6. Cmd/Ctrl+Enter keyboard shortcut for submit
+7. `onError` → error toast with generic message
 
 ## Files Changed
 
@@ -113,6 +119,7 @@ All drawers follow the established pattern:
 | `src/app/(dashboard)/accounts/[id]/page.tsx` | Add `openAddContactDrawer()`, add "Add Contact" button |
 | `src/app/api/accounts/[id]/contacts/route.ts` | New: POST handler for contact creation |
 | `src/lib/queries/accounts.ts` | Add `useCreateContact()` hook |
+| `src/lib/queries/inbox.ts` | Add `accountKeys.all` invalidation to `useCreateAccountFromEmail` |
 | `src/app/(dashboard)/inbox/page.tsx` | Wire "Create Task" button, add "Create Account" button to new_domain box |
 
 ## Out of Scope
@@ -121,3 +128,4 @@ All drawers follow the established pattern:
 - Drag-and-drop task reordering
 - Bulk task completion
 - Email threading/conversation view
+- Editable fields on account-from-email (keep simple: auto-derive from domain)
