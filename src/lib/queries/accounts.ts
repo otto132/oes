@@ -1,4 +1,4 @@
-import { useQuery, keepPreviousData } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import { api } from '@/lib/api-client';
 
 export const accountKeys = {
@@ -20,5 +20,20 @@ export function useAccountDetail(id: string) {
     queryKey: accountKeys.detail(id),
     queryFn: () => api.accounts.detail(id),
     enabled: !!id,
+  });
+}
+
+export function useCreateAccount() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: {
+      name: string;
+      type?: string;
+      country?: string;
+      notes?: string;
+    }) => api.accounts.create(data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: accountKeys.all });
+    },
   });
 }
