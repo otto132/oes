@@ -1,15 +1,37 @@
 import NextAuth from "next-auth"
+import type { NextAuthConfig } from "next-auth"
 import MicrosoftEntraID from "next-auth/providers/microsoft-entra-id"
+import Google from "next-auth/providers/google"
 import { db } from "@/lib/db"
+import { env, availableProviders } from "@/lib/env"
+import { Prisma } from "@prisma/client"
+
+// Build providers array based on which env vars are configured
+const providers: NextAuthConfig["providers"] = []
+
+const { google, microsoft } = availableProviders()
+
+if (google) {
+  providers.push(
+    Google({
+      clientId: env.GOOGLE_CLIENT_ID!,
+      clientSecret: env.GOOGLE_CLIENT_SECRET!,
+    })
+  )
+}
+
+if (microsoft) {
+  providers.push(
+    MicrosoftEntraID({
+      clientId: env.AZURE_AD_CLIENT_ID!,
+      clientSecret: env.AZURE_AD_CLIENT_SECRET!,
+      issuer: `https://login.microsoftonline.com/${env.AZURE_AD_TENANT_ID!}/v2.0`,
+    })
+  )
+}
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
-  providers: [
-    MicrosoftEntraID({
-      clientId: process.env.AZURE_AD_CLIENT_ID!,
-      clientSecret: process.env.AZURE_AD_CLIENT_SECRET!,
-      issuer: `https://login.microsoftonline.com/${process.env.AZURE_AD_TENANT_ID!}/v2.0`,
-    }),
-  ],
+  providers,
   session: { strategy: "jwt" },
   pages: { signIn: "/login" },
   cookies: {
@@ -72,25 +94,47 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         },
       })
 
-      if (!invitation) return false // no invitation — reject
+      if (invitation) {
+        // Create user from invitation
+        await db.user.create({
+          data: {
+            email: user.email,
+            name: user.name || user.email,
+            initials: deriveInitials(user.name || user.email),
+            role: invitation.role,
+          },
+        })
 
-      // Create user from invitation
-      await db.user.create({
-        data: {
-          email: user.email,
-          name: user.name || user.email,
-          initials: deriveInitials(user.name || user.email),
-          role: invitation.role,
-        },
-      })
+        // Mark invitation as accepted
+        await db.invitation.update({
+          where: { id: invitation.id },
+          data: { status: 'ACCEPTED' },
+        })
 
-      // Mark invitation as accepted
-      await db.invitation.update({
-        where: { id: invitation.id },
-        data: { status: 'ACCEPTED' },
-      })
+        return true
+      }
 
-      return true
+      // No invitation — check if open signup is enabled
+      if (env.ALLOW_OPEN_SIGNUP === "true") {
+        try {
+          await db.user.create({
+            data: {
+              email: user.email,
+              name: user.name || user.email,
+              initials: deriveInitials(user.name || user.email),
+            },
+          })
+          return true
+        } catch (e) {
+          // Race condition: another request created the user first
+          if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2002') {
+            return true
+          }
+          throw e
+        }
+      }
+
+      return false // no invitation, no open signup
     },
     async jwt({ token, user }) {
       if (user?.email) {
