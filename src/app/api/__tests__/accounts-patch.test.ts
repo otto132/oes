@@ -52,7 +52,7 @@ describe('PATCH /api/accounts/[id]', () => {
 
     expect(res.status).toBe(200);
     expect(mockDb.account.update).toHaveBeenCalledWith(
-      expect.objectContaining({ data: expect.objectContaining({ ownerId: 'u2' }) }),
+      expect.objectContaining({ data: expect.objectContaining({ owner: { connect: { id: 'u2' } } }) }),
     );
   });
 

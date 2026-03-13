@@ -30,9 +30,14 @@ export async function PATCH(
   const parsed = updateAccountSchema.safeParse(raw);
   if (!parsed.success) return zodError(parsed.error);
 
+  const { ownerId, type, ...rest } = parsed.data;
   const updated = await db.account.update({
     where: { id },
-    data: parsed.data,
+    data: {
+      ...rest,
+      ...(type ? { type: type as any } : {}),
+      ...(ownerId ? { owner: { connect: { id: ownerId } } } : {}),
+    },
   });
 
   return NextResponse.json({ data: updated });
