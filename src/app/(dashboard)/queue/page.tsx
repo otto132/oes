@@ -24,7 +24,7 @@ export default function QueuePage() {
   const approve = useApproveQueueItem();
   const reject = useRejectQueueItem();
 
-  const addToast = useStore(s => s.addToast);
+  const { addToast, openDrawer, closeDrawer } = useStore();
 
   const SIDE_EFFECT_MSG: Record<string, string> = {
     lead_qualification: 'Lead created in pipeline',
@@ -32,6 +32,90 @@ export default function QueuePage() {
     enrichment: 'Account field updated',
     outreach_draft: 'Outreach logged as activity',
   };
+
+  function openEditDrawer(q: QueueItem) {
+    const p = q.payload || {};
+    let fields: Record<string, { label: string; value: string; multiline?: boolean }> = {};
+    if (q.type === 'outreach_draft') {
+      fields = {
+        subject: { label: 'Subject', value: p.subject || '' },
+        body: { label: 'Body', value: p.body || '', multiline: true },
+      };
+    } else if (q.type === 'lead_qualification') {
+      fields = {
+        company: { label: 'Company', value: p.company || '' },
+        pain: { label: 'Pain Point', value: p.pain || '' },
+        type: { label: 'Type', value: p.type || '' },
+      };
+    } else if (q.type === 'enrichment') {
+      fields = {
+        after: { label: `New value for "${p.field}"`, value: p.after || '' },
+      };
+    } else if (q.type === 'task_creation') {
+      fields = {
+        task: { label: 'Task', value: p.task || '' },
+        due: { label: 'Due Date', value: p.due || '' },
+      };
+    }
+
+    const state = { ...Object.fromEntries(Object.entries(fields).map(([k, v]) => [k, v.value])) };
+
+    openDrawer({
+      title: 'Edit & Approve',
+      subtitle: q.title,
+      body: (
+        <div className="flex flex-col gap-3">
+          {Object.entries(fields).map(([key, f]) => (
+            <label key={key} className="flex flex-col gap-1">
+              <span className="text-[10px] font-semibold uppercase tracking-wide text-muted">{f.label}</span>
+              {f.multiline ? (
+                <textarea
+                  defaultValue={f.value}
+                  onChange={e => { state[key] = e.target.value; }}
+                  rows={5}
+                  className="px-2.5 py-1.5 text-[12px] rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] focus:outline-none focus:border-brand/40 resize-y"
+                />
+              ) : (
+                <input
+                  defaultValue={f.value}
+                  onChange={e => { state[key] = e.target.value; }}
+                  className="px-2.5 py-1.5 text-[12px] rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] focus:outline-none focus:border-brand/40"
+                />
+              )}
+            </label>
+          ))}
+        </div>
+      ),
+      footer: (
+        <>
+          <button
+            className="px-3 py-1.5 text-[12px] text-sub bg-[var(--surface)] border border-[var(--border)] rounded-md hover:bg-[var(--hover)] transition-colors"
+            onClick={closeDrawer}
+          >
+            Cancel
+          </button>
+          <button
+            className="px-3 py-1.5 text-[12px] font-medium bg-brand text-[#09090b] rounded-md hover:brightness-110 transition-colors"
+            onClick={() => {
+              const editedPayload = { ...q.payload, ...state };
+              approve.mutate(
+                { id: q.id, editedPayload },
+                {
+                  onSuccess: () => {
+                    addToast({ type: 'success', message: `Approved (edited) — ${SIDE_EFFECT_MSG[q.type] || 'Done'}` });
+                    closeDrawer();
+                  },
+                  onError: (err) => addToast({ type: 'error', message: `Approve failed: ${err.message}` }),
+                }
+              );
+            }}
+          >
+            Save & Approve
+          </button>
+        </>
+      ),
+    });
+  }
 
   const items = response?.data ?? [];
   const pendingCount = response?.meta.pendingCount ?? 0;
@@ -163,7 +247,12 @@ export default function QueuePage() {
                 </div>
               )}
             </div>
-            <button className="px-2 py-1 text-[11px] font-medium rounded-md text-[var(--text)] bg-[var(--surface)] border border-[var(--border)] hover:border-[var(--border-strong)] transition-colors">Edit & Approve</button>
+            <button
+              onClick={() => openEditDrawer(q)}
+              className="px-2 py-1 text-[11px] font-medium rounded-md text-[var(--text)] bg-[var(--surface)] border border-[var(--border)] hover:border-[var(--border-strong)] transition-colors"
+            >
+              Edit & Approve
+            </button>
             <button
               onClick={() =>
                 approve.mutate(
