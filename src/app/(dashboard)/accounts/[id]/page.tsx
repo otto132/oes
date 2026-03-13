@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useAccountDetail } from '@/lib/queries/accounts';
 import type { Account, Opportunity, Activity, Task, Goal } from '@/lib/types';
 import { fmt, fRelative, fDate, isOverdue, cn, confNum } from '@/lib/utils';
-import { Badge, ScorePill, FIUACBars, ConfBadge, AgentTag, Avatar, StageBadge, HealthBar, SectionTitle, EmptyState } from '@/components/ui';
+import { Badge, ScorePill, FIUACBars, ConfBadge, AgentTag, Avatar, StageBadge, HealthBar, SectionTitle, EmptyState, Skeleton, SkeletonCard, SkeletonText, ErrorState } from '@/components/ui';
 
 const ACT_COLOR: Record<string, string> = { Email: '#5b9cf6', Meeting: '#33a882', Call: '#33a882', Note: '#e8a838' };
 
@@ -19,58 +19,58 @@ export default function AccountDetailPage() {
   if (isLoading) {
     return (
       <div className="max-w-[1100px] page-enter">
-        <div className="rounded-lg bg-[var(--elevated)] border border-[var(--border)] p-[18px] mb-3">
+        <SkeletonCard className="p-[18px] mb-3">
           <div className="flex gap-3.5 items-start flex-col md:flex-row">
-            <div className="w-11 h-11 rounded-lg animate-pulse bg-[var(--surface)]" />
+            <Skeleton className="w-11 h-11 rounded-lg flex-shrink-0" />
             <div className="flex-1">
-              <div className="h-5 w-48 rounded animate-pulse bg-[var(--surface)] mb-2" />
+              <Skeleton className="h-5 w-48 mb-2" />
               <div className="flex items-center gap-1">
-                <div className="h-4 w-16 rounded animate-pulse bg-[var(--surface)]" />
-                <div className="h-4 w-24 rounded animate-pulse bg-[var(--surface)]" />
+                <Skeleton className="h-4 w-16" />
+                <Skeleton className="h-4 w-24" />
               </div>
             </div>
             <div className="text-right flex-shrink-0">
-              <div className="h-5 w-16 rounded animate-pulse bg-[var(--surface)] mb-1 ml-auto" />
-              <div className="h-3 w-24 rounded animate-pulse bg-[var(--surface)] mb-1 ml-auto" />
-              <div className="h-3 w-20 rounded animate-pulse bg-[var(--surface)] ml-auto" />
+              <Skeleton className="h-5 w-16 mb-1 ml-auto" />
+              <Skeleton className="h-3 w-24 mb-1 ml-auto" />
+              <Skeleton className="h-3 w-20 ml-auto" />
             </div>
           </div>
           <div className="flex gap-2 mt-3.5 pt-3 border-t border-[var(--border)]">
             {Array.from({ length: 4 }).map((_, i) => (
-              <div key={i} className="flex-1 min-w-[80px] p-2 rounded-md bg-[var(--surface)] border border-[var(--border)]">
-                <div className="h-2 w-12 rounded animate-pulse bg-[var(--hover)] mb-1.5" />
-                <div className="h-4 w-16 rounded animate-pulse bg-[var(--hover)]" />
-              </div>
+              <SkeletonCard key={i} className="flex-1 min-w-[80px] p-2">
+                <Skeleton className="h-2 w-12 mb-1.5" />
+                <Skeleton className="h-4 w-16" />
+              </SkeletonCard>
             ))}
           </div>
-        </div>
+        </SkeletonCard>
         <div className="flex border-b border-[var(--border)] mb-4 gap-0">
           {Array.from({ length: 5 }).map((_, i) => (
             <div key={i} className="px-3.5 py-2">
-              <div className="h-3 w-16 rounded animate-pulse bg-[var(--surface)]" />
+              <Skeleton className="h-3 w-16" />
             </div>
           ))}
         </div>
         <div className="grid grid-cols-1 md:grid-cols-[2fr_1fr] gap-3">
-          <div className="rounded-lg bg-[var(--elevated)] border border-[var(--border)] p-4">
+          <SkeletonCard className="p-4">
             {Array.from({ length: 4 }).map((_, i) => (
               <div key={i} className="mb-3">
-                <div className="h-2 w-24 rounded animate-pulse bg-[var(--surface)] mb-1.5" />
-                <div className="h-3 w-full rounded animate-pulse bg-[var(--surface)]" />
+                <Skeleton className="h-2 w-24 mb-1.5" />
+                <SkeletonText />
               </div>
             ))}
-          </div>
-          <div className="rounded-lg bg-[var(--elevated)] border border-[var(--border)] p-3.5">
+          </SkeletonCard>
+          <SkeletonCard className="p-3.5">
             {Array.from({ length: 3 }).map((_, i) => (
               <div key={i} className="flex items-center gap-2 py-1.5 border-b border-[var(--border)] last:border-b-0">
-                <div className="w-[26px] h-[26px] rounded-full animate-pulse bg-[var(--surface)]" />
+                <Skeleton className="w-[26px] h-[26px] rounded-full flex-shrink-0" />
                 <div className="flex-1">
-                  <div className="h-3 w-24 rounded animate-pulse bg-[var(--surface)] mb-1" />
-                  <div className="h-2 w-32 rounded animate-pulse bg-[var(--surface)]" />
+                  <Skeleton className="h-3 w-24 mb-1" />
+                  <Skeleton className="h-2 w-32" />
                 </div>
               </div>
             ))}
-          </div>
+          </SkeletonCard>
         </div>
       </div>
     );
@@ -80,15 +80,10 @@ export default function AccountDetailPage() {
   if (error || !data?.data) {
     return (
       <div className="max-w-[1100px] page-enter">
-        <div className="rounded-lg bg-[var(--elevated)] border border-[var(--border)] p-8 text-center">
-          <p className="text-sub text-[12.5px] mb-3">{error ? 'Failed to load account.' : 'Account not found.'}</p>
-          <button
-            onClick={() => refetch()}
-            className="px-3 py-1.5 text-[12px] font-semibold rounded-md bg-brand text-[#09090b] hover:bg-brand/90 transition-colors"
-          >
-            Retry
-          </button>
-        </div>
+        <ErrorState
+          message={error ? 'Failed to load account.' : 'Account not found.'}
+          onRetry={() => refetch()}
+        />
       </div>
     );
   }

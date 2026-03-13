@@ -2,7 +2,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useOpportunitiesQuery } from '@/lib/queries/opportunities';
-import { Avatar, HealthBar, StageBadge, EmptyState } from '@/components/ui';
+import { Avatar, HealthBar, StageBadge, EmptyState, Skeleton, SkeletonCard, ErrorState } from '@/components/ui';
 import { fmt, fDate, isOverdue, cn } from '@/lib/utils';
 import { KANBAN_STAGES, healthAvg } from '@/lib/types';
 import type { Opportunity } from '@/lib/types';
@@ -16,22 +16,22 @@ function LoadingSkeleton() {
   return (
     <div className="max-w-[1400px]">
       <div className="mb-3.5">
-        <div className="h-5 w-24 rounded bg-[var(--surface)] animate-pulse mb-1" />
-        <div className="h-4 w-56 rounded bg-[var(--surface)] animate-pulse" />
+        <Skeleton className="h-5 w-24 mb-1" />
+        <Skeleton className="h-4 w-56" />
       </div>
       <div className="hidden md:flex gap-2.5">
         {Array.from({ length: 7 }).map((_, i) => (
           <div key={i} className="flex-shrink-0 w-[230px]">
-            <div className="h-4 w-20 rounded bg-[var(--surface)] animate-pulse mb-1.5 mx-1" />
+            <Skeleton className="h-4 w-20 mb-1.5 mx-1" />
             {Array.from({ length: 2 }).map((_, j) => (
-              <div key={j} className="rounded-lg p-3 mb-1.5 bg-[var(--surface)] animate-pulse h-[100px]" />
+              <SkeletonCard key={j} className="mb-1.5 h-[100px] p-3" />
             ))}
           </div>
         ))}
       </div>
       <div className="md:hidden flex flex-col gap-1.5">
         {Array.from({ length: 5 }).map((_, i) => (
-          <div key={i} className="rounded-lg p-3 bg-[var(--surface)] animate-pulse h-[72px]" />
+          <SkeletonCard key={i} className="h-[72px] p-3" />
         ))}
       </div>
     </div>
@@ -47,10 +47,7 @@ export default function PipelinePage() {
   if (error) {
     return (
       <div className="max-w-[1400px]">
-        <div className="rounded-lg bg-[var(--elevated)] border border-[var(--border)] p-5 text-center">
-          <p className="text-[var(--sub)] text-[12.5px] mb-2">Failed to load pipeline data.</p>
-          <button onClick={() => refetch()} className="px-3 py-1.5 text-[12.5px] font-medium bg-brand text-[#09090b] rounded-md hover:brightness-110 transition-colors">Retry</button>
-        </div>
+        <ErrorState message="Failed to load pipeline data." onRetry={() => refetch()} />
       </div>
     );
   }

@@ -2,7 +2,7 @@
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { useOpportunityDetail, useMoveStage, useCloseWon, useCloseLost } from '@/lib/queries/opportunities';
-import { Badge, Avatar, HealthBar, StageBadge, AgentTag } from '@/components/ui';
+import { Badge, Avatar, HealthBar, StageBadge, AgentTag, Skeleton, SkeletonCard, ErrorState } from '@/components/ui';
 import { fmt, fDate, fR, isOverdue, weightedValue, cn } from '@/lib/utils';
 import { STAGES, STAGE_COLOR, healthAvg } from '@/lib/types';
 import type { Activity, Contact } from '@/lib/types';
@@ -28,13 +28,76 @@ function toPrismaStage(display: string): string {
 function LoadingSkeleton() {
   return (
     <div className="max-w-[1100px]">
-      <div className="rounded-lg bg-[var(--surface)] animate-pulse h-[260px] mb-3" />
+      <SkeletonCard className="h-[260px] mb-3">
+        <div className="flex gap-3.5 items-start flex-col md:flex-row mb-3">
+          <div className="flex-1">
+            <Skeleton className="h-3 w-28 mb-1" />
+            <Skeleton className="h-5 w-56 mb-2" />
+            <div className="flex items-center gap-1.5">
+              <Skeleton className="h-4 w-20" />
+              <Skeleton className="h-4 w-10" />
+              <Skeleton className="h-3 w-16" />
+            </div>
+          </div>
+          <div className="text-right flex-shrink-0">
+            <Skeleton className="h-7 w-24 mb-1 ml-auto" />
+            <Skeleton className="h-3 w-20 mb-1 ml-auto" />
+            <Skeleton className="h-3 w-16 ml-auto" />
+          </div>
+        </div>
+        <Skeleton className="h-1 w-full mb-3" />
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-1.5">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="p-2 rounded-md border border-[var(--border)]">
+              <Skeleton className="h-2 w-16 mb-1" />
+              <Skeleton className="h-4 w-12" />
+            </div>
+          ))}
+        </div>
+      </SkeletonCard>
       <div className="grid grid-cols-1 md:grid-cols-[2fr_1fr] gap-3">
-        <div className="rounded-lg bg-[var(--surface)] animate-pulse h-[300px]" />
+        <SkeletonCard className="h-[300px] p-0 overflow-hidden">
+          <Skeleton className="h-9 w-full rounded-none rounded-t-xl mb-0" />
+          <div className="p-3.5 flex flex-col gap-2.5">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <div key={i}>
+                <Skeleton className="h-2 w-12 mb-1" />
+                <Skeleton className="h-3 w-full" />
+                <Skeleton className="h-3 w-3/4 mt-0.5" />
+              </div>
+            ))}
+          </div>
+        </SkeletonCard>
         <div className="flex flex-col gap-3">
-          <div className="rounded-lg bg-[var(--surface)] animate-pulse h-[120px]" />
-          <div className="rounded-lg bg-[var(--surface)] animate-pulse h-[160px]" />
-          <div className="rounded-lg bg-[var(--surface)] animate-pulse h-[280px]" />
+          <SkeletonCard className="h-[120px] p-3.5">
+            <Skeleton className="h-2 w-16 mb-2" />
+            {Array.from({ length: 2 }).map((_, i) => (
+              <div key={i} className="flex items-center justify-between py-1.5 border-b border-[var(--border)] last:border-b-0">
+                <Skeleton className="h-3 w-12" />
+                <Skeleton className="h-4 w-20" />
+              </div>
+            ))}
+          </SkeletonCard>
+          <SkeletonCard className="h-[160px] p-3.5">
+            <Skeleton className="h-2 w-20 mb-2" />
+            {Array.from({ length: 3 }).map((_, i) => (
+              <div key={i} className="flex items-center gap-2 py-1.5 border-b border-[var(--border)] last:border-b-0">
+                <Skeleton className="w-6 h-6 rounded-full flex-shrink-0" />
+                <div className="flex-1">
+                  <Skeleton className="h-3 w-20 mb-0.5" />
+                  <Skeleton className="h-2 w-14" />
+                </div>
+              </div>
+            ))}
+          </SkeletonCard>
+          <SkeletonCard className="h-[280px] p-3.5">
+            <Skeleton className="h-2 w-16 mb-2" />
+            <div className="flex flex-col gap-0.5">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <Skeleton key={i} className="h-7 w-full" />
+              ))}
+            </div>
+          </SkeletonCard>
         </div>
       </div>
     </div>
@@ -54,10 +117,7 @@ export default function OppDetailPage() {
   if (error) {
     return (
       <div className="max-w-[1100px]">
-        <div className="rounded-lg bg-[var(--elevated)] border border-[var(--border)] p-5 text-center">
-          <p className="text-[var(--sub)] text-[12.5px] mb-2">Failed to load opportunity.</p>
-          <button onClick={() => refetch()} className="px-3 py-1.5 text-[12.5px] font-medium bg-brand text-[#09090b] rounded-md hover:brightness-110 transition-colors">Retry</button>
-        </div>
+        <ErrorState message="Failed to load opportunity." onRetry={() => refetch()} />
       </div>
     );
   }
