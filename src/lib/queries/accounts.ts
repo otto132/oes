@@ -3,14 +3,14 @@ import { api } from '@/lib/api-client';
 
 export const accountKeys = {
   all: ['accounts'] as const,
-  list: (q?: string, type?: string) => ['accounts', 'list', q, type] as const,
+  list: (q?: string, type?: string, owner?: string) => ['accounts', 'list', q, type, owner] as const,
   detail: (id: string) => ['accounts', id] as const,
 };
 
-export function useAccountsQuery(q?: string, type?: string) {
+export function useAccountsQuery(q?: string, type?: string, owner?: string) {
   return useQuery({
-    queryKey: accountKeys.list(q, type),
-    queryFn: () => api.accounts.list({ q, type }),
+    queryKey: accountKeys.list(q, type, owner),
+    queryFn: () => api.accounts.list({ q, type, owner }),
     placeholderData: keepPreviousData,
   });
 }
