@@ -8,15 +8,13 @@ export const metadata: Metadata = {
   description: 'AI-assisted Revenue OS for the GoO / renewable certificates market',
 };
 
-// Inline script that runs before first paint to set the correct theme class,
-// preventing a flash of the wrong theme on page load.
-const themeInitScript = `(function(){try{var t=localStorage.getItem('eco-theme');if(t==='light'||t==='dark'){document.documentElement.className=t}else{document.documentElement.className='dark'}}catch(e){document.documentElement.className='dark'}})()`;
+const themeScript = `(function(){try{var t=localStorage.getItem('eco-theme');if(t==='dark'||(!t&&window.matchMedia('(prefers-color-scheme:dark)').matches)){document.documentElement.classList.add('dark')}}catch(e){}})();`;
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className="dark" suppressHydrationWarning>
+    <html lang="en" suppressHydrationWarning>
       <head>
-        <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
+        <script dangerouslySetInnerHTML={{ __html: themeScript }} />
       </head>
       <body className="font-sans">
         <QueryProvider>

@@ -28,7 +28,14 @@ interface Store {
 let _toastCounter = 0;
 
 export const useStore = create<Store>((set, get) => ({
-  theme: 'dark',
+  theme: (() => {
+    if (typeof window === 'undefined') return 'light' as const;
+    try {
+      const stored = localStorage.getItem('eco-theme');
+      if (stored === 'dark' || stored === 'light') return stored;
+      return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' as const : 'light' as const;
+    } catch { return 'light' as const; }
+  })(),
   drawerOpen: false,
   drawerContent: null,
   paletteOpen: false,
@@ -36,8 +43,7 @@ export const useStore = create<Store>((set, get) => ({
   toggleTheme: () => set(s => {
     const next = s.theme === 'dark' ? 'light' : 'dark';
     if (typeof document !== 'undefined') {
-      document.documentElement.classList.remove('dark', 'light');
-      document.documentElement.classList.add(next);
+      document.documentElement.classList.toggle('dark', next === 'dark');
       try { localStorage.setItem('eco-theme', next); } catch {}
     }
     return { theme: next };
