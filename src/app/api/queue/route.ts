@@ -6,6 +6,13 @@ import { queueActionSchema } from '@/lib/schemas/queue';
 import { notFound, badRequest } from '@/lib/api-errors';
 import { handleApproval } from '@/lib/agents/chain';
 
+/**
+ * Approval authority policy (U-04):
+ * Any MEMBER or ADMIN can approve/reject any queue item.
+ * VIEWER cannot mutate (enforced by middleware).
+ * This is intentional — no owner-based or seniority-based restrictions.
+ */
+
 export async function GET(req: NextRequest) {
   const status = req.nextUrl.searchParams.get('status') || 'pending';
   const type = req.nextUrl.searchParams.get('type');

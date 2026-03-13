@@ -5,6 +5,7 @@ import { withHandler } from '@/lib/api-handler';
 import { createAccountSchema } from '@/lib/schemas/accounts';
 import { notFound, badRequest, conflict } from '@/lib/api-errors';
 import { parsePagination, paginate } from '@/lib/schemas/pagination';
+import { auth } from '@/lib/auth';
 
 export async function GET(req: NextRequest) {
   const search = req.nextUrl.searchParams.get('q');
@@ -74,6 +75,14 @@ export async function GET(req: NextRequest) {
     ];
   }
   if (type && type !== 'all') where.type = type;
+
+  const ownerParam = req.nextUrl.searchParams.get('owner');
+  if (ownerParam === 'me') {
+    const session = await auth();
+    if (session?.user?.id) {
+      where.ownerId = session.user.id;
+    }
+  }
 
   const accounts = await db.account.findMany({
     where,

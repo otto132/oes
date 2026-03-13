@@ -237,6 +237,7 @@ export function adaptAccount(a: {
   moduleFit: string[];
   competitors: string | null;
   aiConfidence: number;
+  ownerId: string;
   owner: Parameters<typeof adaptUser>[0];
   contacts: Parameters<typeof adaptContact>[0][];
   [k: string]: unknown;
@@ -251,6 +252,7 @@ export function adaptAccount(a: {
     status: a.status as UIAccount['status'],
     schemes: a.schemes as UIAccount['schemes'],
     scores: adaptFIUAC(a),
+    ownerId: a.ownerId,
     owner: adaptUser(a.owner),
     pipe: a.pipelineValue,
     lastAct: a.lastActivityAt.toISOString(),

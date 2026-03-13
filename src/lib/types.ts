@@ -66,7 +66,7 @@ export type CertScheme = 'GoO' | 'ELcert' | 'REGO' | 'I-REC' | 'EECS';
 export interface Account {
   id: ID; name: string; type: string; country: string; cc: string;
   region: string; status: AccountStatus; schemes: CertScheme[];
-  scores: FIUACScores; owner: User; pipe: number; lastAct: string;
+  scores: FIUACScores; ownerId: string; owner: User; pipe: number; lastAct: string;
   pain: string; whyNow: string; fit: string[];
   aiConf: number | string; competitors?: string;
   contacts: Contact[];

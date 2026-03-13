@@ -466,6 +466,7 @@ describe('adaptAccount', () => {
     moduleFit: ['GoO Tracking'],
     competitors: null as string | null,
     aiConfidence: 0.91,
+    ownerId: 'u1',
     owner: makeUser(),
     contacts: [makeContact()],
   };

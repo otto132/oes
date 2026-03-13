@@ -35,6 +35,11 @@ export async function PATCH(
     return badRequest('Cannot deactivate yourself');
   }
 
+  // Prevent self-role-change
+  if (id === session.user.id && parsed.data.role) {
+    return badRequest('Cannot change your own role');
+  }
+
   // Prevent removing the last admin
   if (targetUser.role === 'ADMIN' && (role && role !== 'ADMIN' || isActive === false)) {
     const adminCount = await db.user.count({

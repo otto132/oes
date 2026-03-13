@@ -4,7 +4,7 @@ import MicrosoftEntraID from "next-auth/providers/microsoft-entra-id"
 import Google from "next-auth/providers/google"
 import { db } from "@/lib/db"
 import { env, availableProviders } from "@/lib/env"
-import { Prisma } from "@prisma/client"
+import { testSignInCallback } from "./auth-callbacks"
 
 // Build providers array based on which env vars are configured
 const providers: NextAuthConfig["providers"] = []
@@ -71,70 +71,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   },
   callbacks: {
     async signIn({ user }) {
-      if (!user.email) return false
-
-      // Existing user? Allow if active, reject if deactivated.
-      const existing = await db.user.findUnique({ where: { email: user.email } })
-      if (existing) {
-        if (!existing.isActive) return false // deactivated
-        // Update name on each login
-        await db.user.update({
-          where: { id: existing.id },
-          data: { name: user.name || user.email },
-        })
-        return true
-      }
-
-      // New user: check for a valid pending invitation.
-      const invitation = await db.invitation.findFirst({
-        where: {
-          email: user.email,
-          status: 'PENDING',
-          expiresAt: { gt: new Date() },
-        },
-      })
-
-      if (invitation) {
-        // Create user from invitation
-        await db.user.create({
-          data: {
-            email: user.email,
-            name: user.name || user.email,
-            initials: deriveInitials(user.name || user.email),
-            role: invitation.role,
-          },
-        })
-
-        // Mark invitation as accepted
-        await db.invitation.update({
-          where: { id: invitation.id },
-          data: { status: 'ACCEPTED' },
-        })
-
-        return true
-      }
-
-      // No invitation — check if open signup is enabled
-      if (env.ALLOW_OPEN_SIGNUP === "true") {
-        try {
-          await db.user.create({
-            data: {
-              email: user.email,
-              name: user.name || user.email,
-              initials: deriveInitials(user.name || user.email),
-            },
-          })
-          return true
-        } catch (e) {
-          // Race condition: another request created the user first
-          if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2002') {
-            return true
-          }
-          throw e
-        }
-      }
-
-      return false // no invitation, no open signup
+      return testSignInCallback({ user })
     },
     async jwt({ token, user }) {
       if (user?.email) {
@@ -153,9 +90,3 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     },
   },
 })
-
-function deriveInitials(name: string): string {
-  const parts = name.trim().split(/\s+/)
-  if (parts.length >= 2) return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
-  return name.slice(0, 2).toUpperCase()
-}
