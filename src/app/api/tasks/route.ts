@@ -1,42 +1,52 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { adaptTask, adaptGoal, adaptTaskComment } from '@/lib/adapters';
-import { auth } from '@/lib/auth';
+import { withHandler } from '@/lib/api-handler';
+import { taskActionSchema } from '@/lib/schemas/tasks';
+import { parsePagination, paginate } from '@/lib/schemas/pagination';
 
 export async function GET(req: NextRequest) {
   const includeCompleted = req.nextUrl.searchParams.get('completed') === 'true';
   const where: any = {};
   if (!includeCompleted) where.status = { not: 'Done' };
 
+  const pagination = parsePagination(req);
+
+  // Count overdue across all tasks
+  const overdueCount = await db.task.count({
+    where: { ...where, status: { not: 'Done' }, due: { lt: new Date() } },
+  });
+
+  // Then paginated query for tasks
   const tasks = await db.task.findMany({
     where,
     include: { owner: true, assignees: true, reviewer: true, goal: true, account: { select: { id: true, name: true } }, comments: { include: { author: true }, orderBy: { createdAt: 'asc' } } },
     orderBy: [{ due: 'asc' }],
+    take: pagination.limit + 1,
+    ...(pagination.cursor ? { cursor: { id: pagination.cursor }, skip: 1 } : {}),
   });
+
   const goals = await db.goal.findMany({
     where: { status: 'active' },
     include: { owner: true, account: { select: { id: true, name: true } } },
   });
-  const overdue = tasks.filter(t => t.status !== 'Done' && t.due && t.due < new Date()).length;
+
+  const { data: paginatedTasks, meta: pagMeta } = paginate(tasks, pagination.limit);
+
   return NextResponse.json({
-    data: { tasks: tasks.map(adaptTask), goals: goals.map(adaptGoal) },
-    meta: { overdueCount: overdue },
+    data: { tasks: paginatedTasks.map(adaptTask), goals: goals.map(adaptGoal) },
+    meta: { ...pagMeta, overdueCount },
   });
 }
 
-export async function POST(req: NextRequest) {
-  const session = await auth();
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
-  const body = await req.json();
-  const { action, id } = body;
+export const POST = withHandler(taskActionSchema, async (req, ctx) => {
+  const body = ctx.body;
+  const session = ctx.session;
 
-  if (!action) {
+  if (body.action === 'create') {
     // Create task
     const { title, accountId, priority, due, assigneeIds, reviewerId, goalId } = body;
-    const ownerId = body.ownerId || session.user.id;
-    if (!title) return NextResponse.json({ error: 'Title required' }, { status: 400 });
+    const ownerId = (body as any).ownerId || session.user.id;
     const task = await db.task.create({
       data: {
         title, priority: priority || 'Medium', due: due ? new Date(due) : new Date(Date.now() + 7 * 864e5),
@@ -49,8 +59,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ data: adaptTask(task) }, { status: 201 });
   }
 
-  if (action === 'complete') {
-    const { outcome, notes, followUpTasks } = body;
+  if (body.action === 'complete') {
+    const { id, outcome, notes, followUpTasks } = body;
     const userId = session.user.id;
     const task = await db.task.update({
       where: { id },
@@ -69,7 +79,7 @@ export async function POST(req: NextRequest) {
     if (task.accountId) {
       await db.account.update({ where: { id: task.accountId }, data: { lastActivityAt: new Date() } });
       const opp = await db.opportunity.findFirst({
-        where: { accountId: task.accountId, stage: { notIn: ['ClosedWon', 'ClosedLost'] } },
+        where: { accountId: task.accountId, stage: { notIn: ['ClosedWon', 'ClosedLost'] } as any },
       });
       if (opp) {
         await db.opportunity.update({
@@ -95,10 +105,9 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ data: { task: adaptTask(task), createdFollowUps: created } });
   }
 
-  if (action === 'comment') {
-    const { text } = body;
+  if (body.action === 'comment') {
+    const { id, text } = body;
     const userId = session.user.id;
-    if (!text) return NextResponse.json({ error: 'Text required' }, { status: 400 });
     const mentions = (text.match(/@(\w+)/g) || []).map((m: string) => m.slice(1));
     const comment = await db.taskComment.create({
       data: { text, taskId: id, authorId: userId, mentions },
@@ -107,7 +116,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ data: adaptTaskComment(comment) }, { status: 201 });
   }
 
-  if (action === 'send_for_review') {
+  if (body.action === 'send_for_review') {
+    const { id } = body;
     const task = await db.task.update({
       where: { id },
       data: { status: 'InReview' },
@@ -117,4 +127,4 @@ export async function POST(req: NextRequest) {
   }
 
   return NextResponse.json({ error: 'Invalid action' }, { status: 400 });
-}
+});
