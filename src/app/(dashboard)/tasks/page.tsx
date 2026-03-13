@@ -1,5 +1,6 @@
 'use client';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { useStore } from '@/lib/store';
 import { useTasksQuery, useCreateTask, useCompleteTask } from '@/lib/queries/tasks';
@@ -41,9 +42,11 @@ export default function TasksPage() {
   const [tab, setTab] = useState<'mine' | 'review' | 'all'>('mine');
   const [showCompleted, setShowCompleted] = useState(false);
   const [search, setSearch] = useState('');
+  const searchParams = useSearchParams();
   const createTask = useCreateTask();
   const completeTask = useCompleteTask();
   const addToast = useStore(s => s.addToast);
+  const autoCreateFired = useRef(false);
 
   // Always fetch all tasks (including completed) so goal progress bars
   // can compute done/total correctly. Client-side filtering for the
@@ -191,6 +194,14 @@ export default function TasksPage() {
       ),
     });
   }
+
+  // Auto-open create drawer when navigated with ?create=1 (from command palette)
+  useEffect(() => {
+    if (searchParams.get('create') === '1' && !autoCreateFired.current) {
+      autoCreateFired.current = true;
+      openNewTaskDrawer();
+    }
+  });
 
   function openCompleteDrawer(t: Task) {
     const state = { outcome: 'Completed', notes: '', followUps: [] as string[] };

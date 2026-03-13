@@ -127,7 +127,6 @@ export default function InboxPage() {
       footer: (
         <>
           <button className="px-3.5 py-1.5 text-sm text-sub bg-[var(--surface)] border border-[var(--border)] rounded-md hover:bg-[var(--hover)] transition-colors" onClick={closeDrawer}>Close</button>
-          {e.accId && <button className="px-3.5 py-1.5 text-sm font-medium bg-brand text-[#09090b] rounded-md hover:brightness-110 transition-colors" onClick={closeDrawer}>Draft Reply</button>}
         </>
       ),
     });

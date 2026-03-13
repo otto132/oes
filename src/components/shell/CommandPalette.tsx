@@ -67,7 +67,7 @@ const GROUP_ORDER = ['recent', 'navigation', 'actions'] as const;
 
 /* ── Component ── */
 export default function CommandPalette() {
-  const { paletteOpen, closePalette, openDrawer } = useStore();
+  const { paletteOpen, closePalette } = useStore();
   const router = useRouter();
   const inputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
@@ -92,15 +92,7 @@ export default function CommandPalette() {
         icon: Plus,
         group: 'actions',
         keywords: 'create add task todo',
-        onSelect: () => {
-          closePalette();
-          openDrawer({
-            title: 'New Task',
-            subtitle: 'Create a new task',
-            body: <div className="text-[13px] text-sub">Task creation form goes here.</div>,
-            footer: <button className="px-3 py-1.5 rounded-md bg-brand text-white text-[12px] font-medium">Create</button>,
-          });
-        },
+        onSelect: () => { closePalette(); router.push('/tasks?create=1'); },
       },
       {
         id: 'action-new-account',
@@ -108,15 +100,7 @@ export default function CommandPalette() {
         icon: Plus,
         group: 'actions',
         keywords: 'create add account company',
-        onSelect: () => {
-          closePalette();
-          openDrawer({
-            title: 'New Account',
-            subtitle: 'Create a new account',
-            body: <div className="text-[13px] text-sub">Account creation form goes here.</div>,
-            footer: <button className="px-3 py-1.5 rounded-md bg-brand text-white text-[12px] font-medium">Create</button>,
-          });
-        },
+        onSelect: () => { closePalette(); router.push('/accounts?create=1'); },
       },
     ];
 
@@ -129,7 +113,7 @@ export default function CommandPalette() {
     }));
 
     return [...recent, ...nav, ...actions];
-  }, [router, closePalette, openDrawer]);
+  }, [router, closePalette]);
 
   /* Filter */
   const filtered = useMemo(() => {

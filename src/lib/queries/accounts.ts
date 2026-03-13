@@ -58,12 +58,12 @@ export function useCreateAccount() {
   });
 }
 
-export function useUpdateAccount() {
+export function useUpdateAccount(id: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, data }: { id: string; data: Record<string, unknown> }) =>
+    mutationFn: (data: Record<string, unknown>) =>
       api.accounts.update(id, data),
-    onMutate: async ({ id, data }) => {
+    onMutate: async (data) => {
       await qc.cancelQueries({ queryKey: accountKeys.detail(id) });
       await qc.cancelQueries({ queryKey: accountKeys.all });
       const previousDetail = qc.getQueryData(accountKeys.detail(id));
@@ -73,26 +73,15 @@ export function useUpdateAccount() {
         if (!old) return old;
         return { ...old, ...data };
       });
-      return { previousDetail, previousList, id };
+      return { previousDetail, previousList };
     },
     onError: (_err, _vars, context) => {
       if (context?.previousDetail !== undefined) {
-        qc.setQueryData(accountKeys.detail(context.id), context.previousDetail);
+        qc.setQueryData(accountKeys.detail(id), context.previousDetail);
       }
       context?.previousList.forEach(([key, data]) => qc.setQueryData(key, data));
     },
-    onSettled: (_data, _err, vars) => {
-      qc.invalidateQueries({ queryKey: accountKeys.detail(vars.id) });
-      qc.invalidateQueries({ queryKey: accountKeys.all });
-    },
-  });
-}
-
-export function useUpdateAccount(id: string) {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: (data: Record<string, unknown>) => api.accounts.update(id, data),
-    onSuccess: () => {
+    onSettled: () => {
       qc.invalidateQueries({ queryKey: accountKeys.detail(id) });
       qc.invalidateQueries({ queryKey: accountKeys.all });
     },

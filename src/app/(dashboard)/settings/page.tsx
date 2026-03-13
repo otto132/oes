@@ -393,6 +393,7 @@ function IntegrationsTab() {
   const syncMutation = useSyncMutation();
   const session = useSession();
   const isAdmin = session.data?.user?.role === 'ADMIN';
+  const addToast = useStore(s => s.addToast);
 
   function handleSync() {
     syncMutation.mutate('all');
@@ -449,7 +450,16 @@ function IntegrationsTab() {
                   {i.active ? 'Connected' : i.needsReconnect ? 'Reconnect' : i.status === 'manual' ? 'Manual' : 'Disconnected'}
                 </span>
                 {i.provider !== 'linkedin' && (
-                  <button className="px-2 py-1 text-[11px] text-sub hover:bg-[var(--hover)] rounded-md transition-colors">
+                  <button
+                    className="px-2 py-1 text-[11px] text-sub hover:bg-[var(--hover)] rounded-md transition-colors"
+                    onClick={() => {
+                      if (i.active && !i.needsReconnect) {
+                        addToast({ type: 'info', message: 'Disconnect is not yet supported. Contact an admin.' });
+                      } else {
+                        window.location.href = '/api/auth/connect';
+                      }
+                    }}
+                  >
                     {i.needsReconnect ? 'Reconnect' : i.active ? 'Disconnect' : 'Connect'}
                   </button>
                 )}
@@ -511,7 +521,6 @@ function AgentsTab() {
           >
             {isPaused ? 'Resume Agent' : 'Pause Agent'}
           </button>
-          <button className="px-3.5 py-1.5 text-sm font-medium bg-brand text-[#09090b] rounded-md hover:bg-[var(--hover)] transition-colors" onClick={closeDrawer}>Save</button>
         </>
       ),
     });

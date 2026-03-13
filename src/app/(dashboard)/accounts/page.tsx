@@ -1,6 +1,7 @@
 'use client';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import { useAccountsQuery, useCreateAccount } from '@/lib/queries/accounts';
 import { useStore } from '@/lib/store';
 import { compositeScore } from '@/lib/types';
@@ -40,8 +41,10 @@ export default function AccountsPage() {
   const [typeFilter, setTypeFilter] = useState('all');
   const [ownerFilter, setOwnerFilter] = useState<'all' | 'me'>('all');
   const { data: resp, isLoading, isError, refetch } = useAccountsQuery(search || undefined, typeFilter !== 'all' ? typeFilter : undefined, ownerFilter === 'me' ? 'me' : undefined);
+  const searchParams = useSearchParams();
   const createAccount = useCreateAccount();
   const { openDrawer, closeDrawer, addToast } = useStore();
+  const autoCreateFired = useRef(false);
 
   const ACCOUNT_TYPES = ['Unknown', 'PPA Buyer', 'Certificate Trader', 'Corporate Offtaker'];
   const COUNTRIES = ['Finland', 'Denmark', 'Sweden', 'Norway', 'Germany', 'Netherlands', 'UK', 'US'];
@@ -130,6 +133,14 @@ export default function AccountsPage() {
       ),
     });
   }
+
+  // Auto-open create drawer when navigated with ?create=1 (from command palette)
+  useEffect(() => {
+    if (searchParams.get('create') === '1' && !autoCreateFired.current) {
+      autoCreateFired.current = true;
+      openNewAccountDrawer();
+    }
+  });
 
   if (isLoading) return <AccountsSkeleton />;
   if (isError) return <ErrorState onRetry={() => refetch()} />;

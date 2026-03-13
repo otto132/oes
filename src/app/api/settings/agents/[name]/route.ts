@@ -6,7 +6,7 @@ import { unauthorized, forbidden, notFound, zodError } from '@/lib/api-errors';
 
 const patchAgentSchema = z.object({
   status: z.enum(['active', 'paused']).optional(),
-  parameters: z.record(z.string()).optional(),
+  parameters: z.record(z.string(), z.string()).optional(),
 });
 
 export async function PATCH(
