@@ -1,7 +1,7 @@
 # API-04 + API-06 + UX-06: Account PATCH, Meetings API, Optimistic Updates
 
 > Date: 2026-03-13
-> Status: Draft
+> Status: Approved
 > Backlog items: API-04, API-06, UX-06
 
 ---
@@ -16,9 +16,11 @@ Allow updating any editable field on an account, including FIUAC scores and AI b
 
 `PATCH /api/accounts/[id]` in `src/app/api/accounts/[id]/route.ts`
 
+Note: Account detail GET uses query param (`/accounts?id=X`) while PATCH uses path param (`/accounts/[id]`). This is intentional — the `[id]` directory already exists for contacts (`[id]/contacts/route.ts`). The mixed pattern is acceptable; migrating GET detail to path param is out of scope.
+
 ### Zod Schema
 
-Extend `src/lib/schemas/accounts.ts` with a new `patchAccountSchema`:
+Replace the existing `updateAccountSchema` in `src/lib/schemas/accounts.ts` with a more complete `patchAccountSchema`:
 
 ```ts
 export const patchAccountSchema = z.object({
@@ -32,7 +34,7 @@ export const patchAccountSchema = z.object({
   // AI brief fields
   pain: z.string().trim().optional(),
   whyNow: z.string().trim().optional(),
-  moduleFit: z.string().trim().optional(),
+  moduleFit: z.array(z.string()).optional(),  // String[] in Prisma
   competitors: z.string().trim().optional(),
   aiConfidence: z.number().min(0).max(100).optional(),
   // FIUAC scores
@@ -56,7 +58,7 @@ export const patchAccountSchema = z.object({
 4. If `name` is being changed: case-insensitive dedup check excluding current account; return 409 if taken
 5. Determine if AI fields changed (`pain`, `whyNow`, `moduleFit`, `competitors`, `scoreFit`...`scoreCommercial`). If so, set `aiUpdatedAt: new Date()`
 6. Update account via `db.account.update()`
-7. Create Activity record: type `note`, summary `"Account updated"`, source `"user"`, with the account relation
+7. Create Activity record: type `note`, summary `"Account updated"`, detail containing changed field names (e.g. `"Changed: status, pain"`), source `"user"`, with the account relation
 8. Return adapted account via `adaptAccount()` (include owner + contacts)
 
 ### API Client Addition
@@ -130,8 +132,17 @@ Logic:
 
 File: `src/app/api/meetings/[id]/route.ts`
 
-Returns the meeting plus account context if linked:
-- Account name, contacts, recent activities (last 5)
+Response shape (mirrors accounts detail pattern with top-level keys):
+```ts
+{
+  data: Meeting,           // adapted meeting
+  account?: Account,       // adapted account (if linked)
+  contacts?: Contact[],    // account's contacts (if linked)
+  activities?: Activity[], // last 5 account activities (if linked)
+}
+```
+
+The GET handler is a bare `async function GET(req, { params })` (not wrapped with `withHandler`), consistent with the existing accounts GET pattern. Only POST/PATCH use `withHandler`.
 
 #### `PATCH /api/meetings/[id]` — Update meeting
 
@@ -145,11 +156,14 @@ export const patchMeetingSchema = z.object({
   startTime: z.string().trim().optional(),
   duration: z.string().trim().optional(),
   attendees: z.array(z.string()).optional(),
+  date: z.string().trim().optional(),  // ISO date, can reschedule
   accountId: z.string().nullable().optional(),
 }).superRefine(/* at least one field */);
 ```
 
 Logic: Standard find-by-id, validate, update, return adapted. If `accountId` changes, update `accountName` denormalization.
+
+Note: The meetings GET handler reads `date` and `range` from `req.nextUrl.searchParams` directly (not via `withHandler`), consistent with how accounts GET handles its custom query params.
 
 ### API Client Additions
 
@@ -287,7 +301,6 @@ The existing `onSuccess` callbacks move their invalidation logic into `onSettled
 | `useCreateTask` | Prepend to list with temp data |
 | `useCompleteTask` | Set `status` to `Done` / filter from active list |
 | `useCommentOnTask` | Append comment to task detail (if detail query exists) |
-| `useSendForReview` (if it exists in query hooks) | Update status field |
 
 #### Activities (`queries/activities.ts`)
 
@@ -332,7 +345,8 @@ For mutations that prepend new items to lists (create account, create task, etc.
 - `src/lib/queries/meetings.ts` — React Query hooks
 
 ### Modified Files
-- `src/lib/schemas/accounts.ts` — Add `patchAccountSchema`
+- `src/lib/schemas/accounts.ts` — Replace `updateAccountSchema` with `patchAccountSchema`
+- `src/lib/schemas/index.ts` — Update export to `patchAccountSchema`, add meetings schemas
 - `src/lib/api-client.ts` — Add `accounts.update()`, `meetings.*` methods
 - `src/lib/queries/accounts.ts` — Add `useUpdateAccount`, optimistic updates to existing hooks
 - `src/lib/queries/queue.ts` — Add optimistic updates
