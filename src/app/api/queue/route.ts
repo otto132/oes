@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { adaptQueueItem } from '@/lib/adapters';
-import { auth } from '@/lib/auth';
+import { withHandler } from '@/lib/api-handler';
+import { queueActionSchema } from '@/lib/schemas/queue';
+import { notFound, badRequest } from '@/lib/api-errors';
 
 export async function GET(req: NextRequest) {
   const status = req.nextUrl.searchParams.get('status') || 'pending';
@@ -36,18 +38,14 @@ export async function GET(req: NextRequest) {
   });
 }
 
-export async function POST(req: NextRequest) {
-  const session = await auth();
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
-  const body = await req.json();
-  const { action, id, reason, editedPayload } = body;
-  const userId = session.user.id;
+export const POST = withHandler(queueActionSchema, async (req, ctx) => {
+  const body = ctx.body;
+  const userId = ctx.session.user.id;
 
-  if (action === 'approve') {
+  if (body.action === 'approve') {
+    const { id, editedPayload } = body;
     const item = await db.queueItem.findUnique({ where: { id } });
-    if (!item) return NextResponse.json({ error: 'Not found' }, { status: 404 });
+    if (!item) return notFound('Queue item not found');
 
     const updated = await db.queueItem.update({
       where: { id },
@@ -55,7 +53,7 @@ export async function POST(req: NextRequest) {
         status: 'approved',
         reviewedById: userId,
         reviewedAt: new Date(),
-        ...(editedPayload ? { originalPayload: item.payload ?? undefined, payload: editedPayload } : {}),
+        ...(editedPayload ? { originalPayload: item.payload ?? undefined, payload: editedPayload as any } : {}),
       },
     });
 
@@ -138,7 +136,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ data: adapted });
   }
 
-  if (action === 'reject') {
+  if (body.action === 'reject') {
+    const { id, reason } = body;
     const updated = await db.queueItem.update({
       where: { id },
       data: { status: 'rejected', reviewedById: userId, reviewedAt: new Date(), rejReason: reason },
@@ -151,5 +150,5 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ data: adapted });
   }
 
-  return NextResponse.json({ error: 'Invalid action' }, { status: 400 });
-}
+  return badRequest('Invalid action');
+});
