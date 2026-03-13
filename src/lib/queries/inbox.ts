@@ -1,4 +1,4 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import { api } from '@/lib/api-client';
 import { accountKeys } from './accounts';
 import { taskKeys } from './tasks';
@@ -12,6 +12,7 @@ export function useInboxQuery() {
   return useQuery({
     queryKey: inboxKeys.list(),
     queryFn: () => api.inbox.list(),
+    placeholderData: keepPreviousData,
   });
 }
 

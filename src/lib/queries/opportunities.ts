@@ -1,4 +1,4 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import { api } from '@/lib/api-client';
 
 export const oppKeys = {
@@ -11,6 +11,7 @@ export function useOpportunitiesQuery() {
   return useQuery({
     queryKey: oppKeys.list(),
     queryFn: () => api.opportunities.list(),
+    placeholderData: keepPreviousData,
   });
 }
 

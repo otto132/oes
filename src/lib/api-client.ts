@@ -24,11 +24,15 @@ export class ApiError extends Error {
 
 const BASE = '/api';
 
+function extractErrorMessage(err: any, fallback: string): string {
+  return err.error?.message || err.error || err.message || fallback;
+}
+
 async function get<T>(path: string): Promise<T> {
   const res = await fetch(`${BASE}${path}`);
   if (!res.ok) {
     const err = await res.json().catch(() => ({ error: res.statusText }));
-    throw new ApiError(res.status, err.error?.message || err.error || `API ${path}: ${res.status}`);
+    throw new ApiError(res.status, extractErrorMessage(err, `API ${path}: ${res.status}`));
   }
   return res.json();
 }
@@ -41,7 +45,7 @@ async function post<T>(path: string, body: any): Promise<T> {
   });
   if (!res.ok) {
     const err = await res.json().catch(() => ({ error: res.statusText }));
-    throw new ApiError(res.status, err.error?.message || err.error || `API ${path}: ${res.status}`);
+    throw new ApiError(res.status, extractErrorMessage(err, `API ${path}: ${res.status}`));
   }
   return res.json();
 }
@@ -64,7 +68,14 @@ export const api = {
 
   // ── Signals ────────────────────────────────────
   signals: {
-    list: (type?: string) => get<any>(`/signals${type && type !== 'all' ? `?type=${type}` : ''}`),
+    list: (type?: string, cursor?: string, limit?: number) => {
+      const params = new URLSearchParams();
+      if (type && type !== 'all') params.set('type', type);
+      if (cursor) params.set('cursor', cursor);
+      if (limit) params.set('limit', String(limit));
+      const qs = params.toString();
+      return get<any>(`/signals${qs ? `?${qs}` : ''}`);
+    },
     dismiss: (id: string) => post<any>('/signals', { action: 'dismiss', id }),
     convert: (id: string, company: string, type?: string, country?: string) =>
       post<any>('/signals', { action: 'convert', id, company, type, country }),
@@ -72,9 +83,15 @@ export const api = {
 
   // ── Leads ──────────────────────────────────────
   leads: {
-    list: () => get<any>('/leads'),
+    list: (cursor?: string, limit?: number) => {
+      const params = new URLSearchParams();
+      if (cursor) params.set('cursor', cursor);
+      if (limit) params.set('limit', String(limit));
+      const qs = params.toString();
+      return get<any>(`/leads${qs ? `?${qs}` : ''}`);
+    },
     create: (data: { company: string; type?: string; country?: string; pain?: string }) =>
-      post<any>('/leads', data),
+      post<any>('/leads', { action: 'create', ...data }),
     advance: (id: string) => post<any>('/leads', { action: 'advance', id }),
     disqualify: (id: string) => post<any>('/leads', { action: 'disqualify', id }),
     convert: (id: string, data: any) => post<any>('/leads', { action: 'convert', id, ...data }),
@@ -82,11 +99,14 @@ export const api = {
 
   // ── Accounts ───────────────────────────────────
   accounts: {
-    list: (opts?: { q?: string; type?: string }) => {
+    list: (opts?: { q?: string; type?: string; cursor?: string; limit?: number }) => {
       const params = new URLSearchParams();
       if (opts?.q) params.set('q', opts.q);
       if (opts?.type) params.set('type', opts.type);
-      return get<any>(`/accounts?${params}`);
+      if (opts?.cursor) params.set('cursor', opts.cursor);
+      if (opts?.limit) params.set('limit', String(opts.limit));
+      const qs = params.toString();
+      return get<any>(`/accounts${qs ? `?${qs}` : ''}`);
     },
     detail: (id: string) => get<any>(`/accounts?id=${id}`),
     create: (data: { name: string; type?: string; country?: string; notes?: string }) =>
@@ -95,9 +115,15 @@ export const api = {
 
   // ── Opportunities ──────────────────────────────
   opportunities: {
-    list: () => get<any>('/opportunities'),
+    list: (cursor?: string, limit?: number) => {
+      const params = new URLSearchParams();
+      if (cursor) params.set('cursor', cursor);
+      if (limit) params.set('limit', String(limit));
+      const qs = params.toString();
+      return get<any>(`/opportunities${qs ? `?${qs}` : ''}`);
+    },
     detail: (id: string) => get<any>(`/opportunities?id=${id}`),
-    create: (data: any) => post<any>('/opportunities', data),
+    create: (data: any) => post<any>('/opportunities', { action: 'create', ...data }),
     move: (id: string, stage: string) => post<any>('/opportunities', { action: 'move', id, stage }),
     closeWon: (id: string, data: any) => post<any>('/opportunities', { action: 'close_won', id, ...data }),
     closeLost: (id: string, data: any) => post<any>('/opportunities', { action: 'close_lost', id, ...data }),
@@ -105,7 +131,13 @@ export const api = {
 
   // ── Inbox ──────────────────────────────────────
   inbox: {
-    list: () => get<any>('/inbox'),
+    list: (cursor?: string, limit?: number) => {
+      const params = new URLSearchParams();
+      if (cursor) params.set('cursor', cursor);
+      if (limit) params.set('limit', String(limit));
+      const qs = params.toString();
+      return get<any>(`/inbox${qs ? `?${qs}` : ''}`);
+    },
     markRead: (id: string) => post<any>('/inbox', { action: 'read', id }),
     archive: (id: string) => post<any>('/inbox', { action: 'archive', id }),
     createTask: (id: string) => post<any>('/inbox', { action: 'create_task', id }),
@@ -114,8 +146,15 @@ export const api = {
 
   // ── Tasks ──────────────────────────────────────
   tasks: {
-    list: (includeCompleted = false) => get<any>(`/tasks${includeCompleted ? '?completed=true' : ''}`),
-    create: (data: any) => post<any>('/tasks', data),
+    list: (includeCompleted = false, cursor?: string, limit?: number) => {
+      const params = new URLSearchParams();
+      if (includeCompleted) params.set('completed', 'true');
+      if (cursor) params.set('cursor', cursor);
+      if (limit) params.set('limit', String(limit));
+      const qs = params.toString();
+      return get<any>(`/tasks${qs ? `?${qs}` : ''}`);
+    },
+    create: (data: any) => post<any>('/tasks', { action: 'create', ...data }),
     complete: (id: string, data?: any) => post<any>('/tasks', { action: 'complete', id, ...data }),
     comment: (id: string, text: string) => post<any>('/tasks', { action: 'comment', id, text }),
     sendForReview: (id: string) => post<any>('/tasks', { action: 'send_for_review', id }),
@@ -123,7 +162,14 @@ export const api = {
 
   // ── Activities ─────────────────────────────────
   activities: {
-    list: (accountId?: string) => get<any>(`/activities${accountId ? `?accountId=${accountId}` : ''}`),
+    list: (accountId?: string, cursor?: string, limit?: number) => {
+      const params = new URLSearchParams();
+      if (accountId) params.set('accountId', accountId);
+      if (cursor) params.set('cursor', cursor);
+      if (limit) params.set('limit', String(limit));
+      const qs = params.toString();
+      return get<any>(`/activities${qs ? `?${qs}` : ''}`);
+    },
     log: (data: { type?: string; summary: string; detail?: string; source?: string; noteType?: string; accountId?: string }) =>
       post<any>('/activities', data),
   },

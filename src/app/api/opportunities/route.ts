@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { adaptOpportunity, adaptActivity, adaptContact } from '@/lib/adapters';
-import { auth } from '@/lib/auth';
+import { withHandler } from '@/lib/api-handler';
+import { opportunityActionSchema } from '@/lib/schemas/opportunities';
+import { notFound } from '@/lib/api-errors';
+import { parsePagination, paginate } from '@/lib/schemas/pagination';
 
 const PROB: Record<string, number> = { Identified: 5, Contacted: 10, Discovery: 20, Qualified: 35, SolutionFit: 50, Proposal: 65, Negotiation: 80, VerbalCommit: 90, ClosedWon: 100, ClosedLost: 0 };
 
@@ -13,7 +16,7 @@ export async function GET(req: NextRequest) {
       where: { id },
       include: { owner: true, account: { include: { contacts: true } } },
     });
-    if (!opp) return NextResponse.json({ error: 'Not found' }, { status: 404 });
+    if (!opp) return notFound('Opportunity not found');
 
     const activities = await db.activity.findMany({
       where: { accountId: opp.accountId },
@@ -29,32 +32,36 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ data: { opportunity: adaptedOpp, activities: adaptedActivities, contacts: adaptedContacts } });
   }
 
+  const pagination = parsePagination(req);
+  const where: any = { stage: { notIn: ['ClosedWon', 'ClosedLost'] } };
+
+  // Aggregates across ALL records
+  const allOpps = await db.opportunity.findMany({ where, select: { amount: true, stage: true } });
+  const total = allOpps.reduce((s, o) => s + o.amount, 0);
+  const weighted = allOpps.reduce((s, o) => s + Math.round(o.amount * (PROB[o.stage] || 0) / 100), 0);
+
+  // Then paginated query
   const opps = await db.opportunity.findMany({
-    where: { stage: { notIn: ['ClosedWon', 'ClosedLost'] } },
-    include: { owner: true, account: { select: { id: true, name: true } } },
+    where, include: { owner: true, account: { select: { id: true, name: true } } },
     orderBy: { amount: 'desc' },
+    take: pagination.limit + 1,
+    ...(pagination.cursor ? { cursor: { id: pagination.cursor }, skip: 1 } : {}),
   });
-  const total = opps.reduce((s, o) => s + o.amount, 0);
-  const weighted = opps.reduce((s, o) => s + Math.round(o.amount * (PROB[o.stage] || 0) / 100), 0);
-  return NextResponse.json({ data: opps.map(adaptOpportunity), meta: { totalPipeline: total, weightedPipeline: weighted } });
+  const { data, meta } = paginate(opps, pagination.limit);
+  return NextResponse.json({ data: data.map(adaptOpportunity), meta: { ...meta, totalPipeline: total, weightedPipeline: weighted } });
 }
 
-export async function POST(req: NextRequest) {
-  const session = await auth();
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
-  const body = await req.json();
-  const { action, id } = body;
+export const POST = withHandler(opportunityActionSchema, async (req, ctx) => {
+  const body = ctx.body;
+  const session = ctx.session;
 
   // Create
-  if (!action) {
+  if (body.action === 'create') {
     const { name, accountId, stage, amount, closeDate } = body;
     const ownerId = body.ownerId || session.user.id;
-    if (!name || !accountId) return NextResponse.json({ error: 'Name and account required' }, { status: 400 });
     const opp = await db.opportunity.create({
       data: {
-        name, accountId, stage: stage || 'Contacted',
+        name, accountId, stage: (stage || 'Contacted') as any,
         amount: amount || 0, probability: PROB[stage || 'Contacted'] || 10,
         closeDate: closeDate ? new Date(closeDate) : undefined,
         ownerId,
@@ -65,11 +72,11 @@ export async function POST(req: NextRequest) {
   }
 
   // Move stage
-  if (action === 'move') {
-    const { stage } = body;
+  if (body.action === 'move') {
+    const { id, stage } = body;
     const opp = await db.opportunity.update({
       where: { id },
-      data: { stage, probability: PROB[stage] || 0 },
+      data: { stage: stage as any, probability: PROB[stage] || 0 },
       include: { owner: true, account: { select: { id: true, name: true } } },
     });
     await db.activity.create({
@@ -83,8 +90,8 @@ export async function POST(req: NextRequest) {
   }
 
   // Close Won
-  if (action === 'close_won') {
-    const { winNotes, competitorBeaten } = body;
+  if (body.action === 'close_won') {
+    const { id, winNotes, competitorBeaten } = body;
     const opp = await db.opportunity.update({
       where: { id },
       data: { stage: 'ClosedWon', probability: 100, winNotes, competitorBeaten },
@@ -102,8 +109,8 @@ export async function POST(req: NextRequest) {
   }
 
   // Close Lost
-  if (action === 'close_lost') {
-    const { lossReason, lossCompetitor, lossNotes } = body;
+  if (body.action === 'close_lost') {
+    const { id, lossReason, lossCompetitor, lossNotes } = body;
     const opp = await db.opportunity.update({
       where: { id },
       data: { stage: 'ClosedLost', probability: 0, lossReason, lossCompetitor, lossNotes },
@@ -119,5 +126,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ data: adaptOpportunity(opp) });
   }
 
+  // Exhaustive — discriminatedUnion guarantees one of the above matched
   return NextResponse.json({ error: 'Invalid action' }, { status: 400 });
-}
+});

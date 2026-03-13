@@ -1,24 +1,30 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { adaptEmail } from '@/lib/adapters';
-import { auth } from '@/lib/auth';
+import { withHandler } from '@/lib/api-handler';
+import { inboxActionSchema } from '@/lib/schemas/inbox';
+import { notFound } from '@/lib/api-errors';
+import { parsePagination, paginate } from '@/lib/schemas/pagination';
 
-export async function GET() {
+export async function GET(req: NextRequest) {
+  const pagination = parsePagination(req);
+
+  const totalCount = await db.inboxEmail.count({ where: { isArchived: false } });
+  const unreadCount = await db.inboxEmail.count({ where: { isArchived: false, isUnread: true } });
+
   const emails = await db.inboxEmail.findMany({
-    where: { isArchived: false },
-    orderBy: { receivedAt: 'desc' },
+    where: { isArchived: false }, orderBy: { receivedAt: 'desc' },
+    take: pagination.limit + 1,
+    ...(pagination.cursor ? { cursor: { id: pagination.cursor }, skip: 1 } : {}),
   });
-  const unread = emails.filter(e => e.isUnread).length;
-  return NextResponse.json({ data: emails.map(adaptEmail), meta: { unreadCount: unread, totalCount: emails.length } });
+  const { data, meta } = paginate(emails, pagination.limit);
+  return NextResponse.json({ data: data.map(adaptEmail), meta: { ...meta, unreadCount, totalCount } });
 }
 
-export async function POST(req: NextRequest) {
-  const session = await auth();
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
-  const body = await req.json();
+export const POST = withHandler(inboxActionSchema, async (req, ctx) => {
+  const body = ctx.body;
   const { action, id } = body;
+  const session = ctx.session;
 
   if (action === 'read') {
     const email = await db.inboxEmail.update({ where: { id }, data: { isUnread: false } });
@@ -30,7 +36,7 @@ export async function POST(req: NextRequest) {
   }
   if (action === 'create_task') {
     const email = await db.inboxEmail.findUnique({ where: { id } });
-    if (!email) return NextResponse.json({ error: 'Not found' }, { status: 404 });
+    if (!email) return notFound('Email not found');
     const task = await db.task.create({
       data: {
         title: 'Follow up: ' + email.subject.slice(0, 50),
@@ -46,7 +52,7 @@ export async function POST(req: NextRequest) {
   }
   if (action === 'create_account') {
     const email = await db.inboxEmail.findUnique({ where: { id } });
-    if (!email || !email.domain) return NextResponse.json({ error: 'No domain' }, { status: 400 });
+    if (!email || !email.domain) return notFound('Email not found');
     const domName = email.domain.split('.')[0].replace(/(^|\s)\S/g, (l: string) => l.toUpperCase());
     const name = email.accountName || domName;
     const dup = await db.account.findFirst({ where: { name: { equals: name, mode: 'insensitive' } } });
@@ -71,4 +77,4 @@ export async function POST(req: NextRequest) {
   }
 
   return NextResponse.json({ error: 'Invalid action' }, { status: 400 });
-}
+});

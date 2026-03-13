@@ -1,4 +1,4 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import { api } from '@/lib/api-client';
 import { accountKeys } from './accounts';
 import { oppKeys } from './opportunities';
@@ -12,6 +12,7 @@ export function useLeadsQuery() {
   return useQuery({
     queryKey: leadKeys.list(),
     queryFn: () => api.leads.list(),
+    placeholderData: keepPreviousData,
   });
 }
 

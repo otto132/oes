@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { ZodError } from 'zod';
 
 export type ApiErrorCode =
   | 'BAD_REQUEST'
@@ -6,7 +7,8 @@ export type ApiErrorCode =
   | 'FORBIDDEN'
   | 'NOT_FOUND'
   | 'CONFLICT'
-  | 'INTERNAL_ERROR';
+  | 'INTERNAL_ERROR'
+  | 'VALIDATION_ERROR';
 
 const DEFAULT_STATUS: Record<ApiErrorCode, number> = {
   BAD_REQUEST: 400,
@@ -15,6 +17,7 @@ const DEFAULT_STATUS: Record<ApiErrorCode, number> = {
   NOT_FOUND: 404,
   CONFLICT: 409,
   INTERNAL_ERROR: 500,
+  VALIDATION_ERROR: 400,
 };
 
 /**
@@ -57,4 +60,17 @@ export function conflict(message = 'Conflict') {
 
 export function internalError(message = 'Internal server error') {
   return apiError('INTERNAL_ERROR', message);
+}
+
+export function zodError(err: ZodError) {
+  return NextResponse.json(
+    {
+      error: {
+        code: 'VALIDATION_ERROR' as const,
+        message: 'Validation failed',
+        details: err.flatten().fieldErrors,
+      },
+    },
+    { status: 400 },
+  );
 }

@@ -1,36 +1,38 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { auth } from '@/lib/auth';
+import { withHandler } from '@/lib/api-handler';
+import { createActivitySchema } from '@/lib/schemas/activities';
+import { parsePagination, paginate } from '@/lib/schemas/pagination';
 
 export async function GET(req: NextRequest) {
   const accountId = req.nextUrl.searchParams.get('accountId');
   const where: any = {};
   if (accountId) where.accountId = accountId;
 
+  const pagination = parsePagination(req);
+
   const activities = await db.activity.findMany({
     where,
     orderBy: { createdAt: 'desc' },
-    take: 50,
+    take: pagination.limit + 1,
     include: { author: true },
+    ...(pagination.cursor ? { cursor: { id: pagination.cursor }, skip: 1 } : {}),
   });
-  return NextResponse.json({ data: activities });
+
+  const { data, meta } = paginate(activities, pagination.limit);
+  return NextResponse.json({ data, meta });
 }
 
-export async function POST(req: NextRequest) {
-  const session = await auth();
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
-  const body = await req.json();
+export const POST = withHandler(createActivitySchema, async (req, ctx) => {
+  const body = ctx.body;
   const { type, summary, detail, source, noteType, accountId } = body;
-  const authorId = body.authorId || session.user.id;
-  if (!summary) return NextResponse.json({ error: 'Summary required' }, { status: 400 });
+  const authorId = body.authorId || ctx.session.user.id;
 
   const activity = await db.activity.create({
-    data: { type: type || 'Note', summary, detail: detail || '', source: source || 'Manual', noteType, accountId: accountId || undefined, authorId },
+    data: { type: (type || 'Note') as any, summary, detail: detail || '', source: source || 'Manual', noteType, accountId: accountId || undefined, authorId },
   });
   if (accountId) {
     await db.account.update({ where: { id: accountId }, data: { lastActivityAt: new Date() } });
   }
   return NextResponse.json({ data: activity }, { status: 201 });
-}
+});
