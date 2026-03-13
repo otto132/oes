@@ -1,112 +1,80 @@
 'use client';
 import Link from 'next/link';
 import { Shield, AlertTriangle, TrendingUp, ArrowRight, Zap, Signal, Calendar, Activity } from 'lucide-react';
+import { useSession } from 'next-auth/react';
 import { useHomeSummary } from '@/lib/queries/home';
 import { healthAvg } from '@/lib/types';
 import { fmt, fRelative } from '@/lib/utils';
-import { Badge, HealthBar, AgentTag } from '@/components/ui';
+import { Badge, HealthBar, AgentTag, Skeleton, SkeletonCard, SkeletonText, ErrorState } from '@/components/ui';
 
 import type { Signal as UISignal, Opportunity as UIOpportunity, Meeting as UIMeeting, Activity as UIActivity } from '@/lib/types';
 
+function HomeSkeleton() {
+  return (
+    <div className="page-enter max-w-[1100px] mx-auto w-full space-y-6">
+      <div className="space-y-1">
+        <Skeleton className="h-8 w-72" />
+        <Skeleton className="h-3.5 w-48" />
+      </div>
+      <div className="hidden md:grid grid-cols-5 gap-3">
+        {Array.from({ length: 5 }).map((_, i) => (
+          <SkeletonCard key={i} className="space-y-2">
+            <SkeletonText className="w-1/2 h-2" />
+            <Skeleton className="h-5 w-12" />
+          </SkeletonCard>
+        ))}
+      </div>
+      <div className="md:hidden flex flex-wrap gap-3">
+        {Array.from({ length: 5 }).map((_, i) => (
+          <Skeleton key={i} className="h-14 w-[calc(50%-6px)] rounded-xl" />
+        ))}
+      </div>
+      <div className="grid md:grid-cols-[1fr,320px] gap-4">
+        <div className="space-y-4">
+          {Array.from({ length: 2 }).map((_, s) => (
+            <div key={s} className="space-y-2">
+              <SkeletonText className="w-24 h-2" />
+              {Array.from({ length: 3 }).map((_, i) => (
+                <SkeletonCard key={i} className="h-14" />
+              ))}
+            </div>
+          ))}
+        </div>
+        <div className="space-y-4">
+          <div className="space-y-2">
+            <SkeletonText className="w-24 h-2" />
+            {Array.from({ length: 2 }).map((_, i) => (
+              <SkeletonCard key={i} className="h-14" />
+            ))}
+          </div>
+          <div className="space-y-2">
+            <SkeletonText className="w-24 h-2" />
+            {Array.from({ length: 3 }).map((_, i) => (
+              <SkeletonCard key={i} className="h-10" />
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function HomePage() {
+  const { data: session } = useSession();
   const { data, isLoading, error, refetch } = useHomeSummary();
 
   const h = new Date().getHours();
   const greeting = h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening';
+  const firstName = session?.user?.name?.split(' ')[0] ?? 'there';
 
   if (isLoading || (!data && !error)) {
-    return (
-      <div className="max-w-[1100px] page-enter">
-        {/* Hero skeleton */}
-        <div className="mb-5">
-          <div className="h-8 w-72 bg-[var(--card-hover)] rounded-lg animate-pulse" />
-          <div className="h-3.5 w-48 bg-[var(--card-hover)] rounded mt-1.5 animate-pulse" />
-        </div>
-
-        {/* Stats skeleton — desktop */}
-        <div className="hidden md:grid grid-cols-5 gap-2 mb-4">
-          {Array.from({ length: 5 }).map((_, i) => (
-            <div key={i} className="p-3.5 rounded-lg bg-[var(--elevated)] border border-[var(--border)]">
-              <div className="h-3 w-16 bg-[var(--card-hover)] rounded animate-pulse mb-2" />
-              <div className="h-6 w-20 bg-[var(--card-hover)] rounded animate-pulse" />
-              <div className="h-3 w-24 bg-[var(--card-hover)] rounded animate-pulse mt-1" />
-            </div>
-          ))}
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-[1fr_320px] gap-3">
-          {/* Left column skeleton */}
-          <div className="flex flex-col gap-3">
-            <div className="rounded-lg bg-[var(--elevated)] border border-[var(--border)] overflow-hidden">
-              <div className="px-4 py-3 border-b border-[var(--border)]">
-                <div className="h-4 w-40 bg-[var(--card-hover)] rounded animate-pulse" />
-              </div>
-              {Array.from({ length: 3 }).map((_, i) => (
-                <div key={i} className="px-4 py-3 border-b border-[var(--border)] flex items-center gap-3">
-                  <div className="w-7 h-7 rounded-md bg-[var(--card-hover)] animate-pulse flex-shrink-0" />
-                  <div className="flex-1">
-                    <div className="h-3.5 w-48 bg-[var(--card-hover)] rounded animate-pulse" />
-                    <div className="h-3 w-32 bg-[var(--card-hover)] rounded animate-pulse mt-1" />
-                  </div>
-                </div>
-              ))}
-            </div>
-            <div className="rounded-lg bg-[var(--elevated)] border border-[var(--border)] overflow-hidden">
-              <div className="px-4 py-3 border-b border-[var(--border)]">
-                <div className="h-4 w-32 bg-[var(--card-hover)] rounded animate-pulse" />
-              </div>
-              {Array.from({ length: 3 }).map((_, i) => (
-                <div key={i} className="px-4 py-3 border-b border-[var(--border)] flex items-start gap-3">
-                  <div className="w-7 h-7 rounded-md bg-[var(--card-hover)] animate-pulse flex-shrink-0" />
-                  <div className="flex-1">
-                    <div className="h-3.5 w-44 bg-[var(--card-hover)] rounded animate-pulse" />
-                    <div className="h-3 w-24 bg-[var(--card-hover)] rounded animate-pulse mt-1.5" />
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Right column skeleton */}
-          <div className="flex flex-col gap-3">
-            <div className="rounded-lg bg-[var(--elevated)] border border-[var(--border)] overflow-hidden">
-              <div className="px-4 py-3 border-b border-[var(--border)]">
-                <div className="h-4 w-36 bg-[var(--card-hover)] rounded animate-pulse" />
-              </div>
-              {Array.from({ length: 2 }).map((_, i) => (
-                <div key={i} className="px-4 py-3 border-b border-[var(--border)]">
-                  <div className="h-3 w-32 bg-[var(--card-hover)] rounded animate-pulse mb-1" />
-                  <div className="h-3.5 w-48 bg-[var(--card-hover)] rounded animate-pulse" />
-                </div>
-              ))}
-            </div>
-            <div className="rounded-lg bg-[var(--elevated)] border border-[var(--border)] overflow-hidden">
-              <div className="px-4 py-3 border-b border-[var(--border)]">
-                <div className="h-4 w-32 bg-[var(--card-hover)] rounded animate-pulse" />
-              </div>
-              {Array.from({ length: 3 }).map((_, i) => (
-                <div key={i} className="px-4 py-2.5 border-b border-[var(--border)]">
-                  <div className="h-2.5 w-20 bg-[var(--card-hover)] rounded animate-pulse" />
-                  <div className="h-3.5 w-44 bg-[var(--card-hover)] rounded animate-pulse mt-0.5" />
-                  <div className="h-2.5 w-28 bg-[var(--card-hover)] rounded animate-pulse mt-0.5" />
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      </div>
-    );
+    return <HomeSkeleton />;
   }
 
   if (error) {
     return (
       <div className="max-w-[1100px] page-enter flex flex-col items-center justify-center py-20">
-        <AlertTriangle className="w-10 h-10 text-danger mb-3" />
-        <p className="text-[14px] font-medium mb-1">Failed to load dashboard</p>
-        <p className="text-[12px] text-muted mb-4">{error.message}</p>
-        <button onClick={() => refetch()} className="text-[12px] font-semibold text-brand border border-brand/30 rounded-lg px-4 py-2 hover:bg-brand/[.06] transition-colors">
-          Retry
-        </button>
+        <ErrorState onRetry={() => refetch()} />
       </div>
     );
   }
@@ -142,7 +110,7 @@ export default function HomePage() {
   return (
     <div className="max-w-[1100px] page-enter">
       <div className="mb-5">
-        <h1 className="text-[24px] md:text-[28px] font-semibold tracking-tight">{greeting}, <span className="text-brand">Juuso</span></h1>
+        <h1 className="text-[24px] md:text-[28px] font-semibold tracking-tight">{greeting}, <span className="text-brand">{firstName}</span></h1>
         <p className="text-[12px] text-muted mt-1">{new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' })} · {nextBestActions.length} actions pending</p>
       </div>
 
