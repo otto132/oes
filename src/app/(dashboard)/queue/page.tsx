@@ -5,6 +5,7 @@ import { useQueueQuery, useApproveQueueItem, useRejectQueueItem } from '@/lib/qu
 import { fRelative, queueTypeLabel, cn } from '@/lib/utils';
 import { Badge, ConfBadge, AgentTag, ScorePill, FIUACBars, EmptyState } from '@/components/ui';
 import type { QueueItem } from '@/lib/types';
+import { useStore } from '@/lib/store';
 
 const TYPE_STYLE: Record<string, string> = {
   outreach_draft: 'text-info bg-info/[.06] border-info/[.10]',
@@ -22,6 +23,15 @@ export default function QueuePage() {
   const { data: response, isLoading, error, refetch } = useQueueQuery(tab, typeFilter !== 'all' ? typeFilter : undefined);
   const approve = useApproveQueueItem();
   const reject = useRejectQueueItem();
+
+  const addToast = useStore(s => s.addToast);
+
+  const SIDE_EFFECT_MSG: Record<string, string> = {
+    lead_qualification: 'Lead created in pipeline',
+    task_creation: 'Task created',
+    enrichment: 'Account field updated',
+    outreach_draft: 'Outreach logged as activity',
+  };
 
   const items = response?.data ?? [];
   const pendingCount = response?.meta.pendingCount ?? 0;
@@ -132,13 +142,41 @@ export default function QueuePage() {
               {isRej && (
                 <div className="absolute bottom-full left-0 mb-1 bg-[var(--overlay)] border border-[var(--border-strong)] rounded-lg shadow-md min-w-[180px] z-10 p-1">
                   {REJECT_REASONS.map(r => (
-                    <button key={r} onClick={() => { reject.mutate({ id: q.id, reason: r }); setRejectOpen(null); }} disabled={reject.isPending} className="block w-full text-left px-2.5 py-1.5 text-[11px] text-sub rounded-md hover:bg-[var(--hover)] hover:text-[var(--text)] disabled:opacity-50 transition-colors">{r}</button>
+                    <button
+                      key={r}
+                      onClick={() => {
+                        reject.mutate(
+                          { id: q.id, reason: r },
+                          {
+                            onSuccess: () => addToast({ type: 'info', message: `Rejected — ${r}` }),
+                            onError: (err) => addToast({ type: 'error', message: `Reject failed: ${err.message}` }),
+                          }
+                        );
+                        setRejectOpen(null);
+                      }}
+                      disabled={reject.isPending}
+                      className="block w-full text-left px-2.5 py-1.5 text-[11px] text-sub rounded-md hover:bg-[var(--hover)] hover:text-[var(--text)] disabled:opacity-50 transition-colors"
+                    >
+                      {r}
+                    </button>
                   ))}
                 </div>
               )}
             </div>
             <button className="px-2 py-1 text-[11px] font-medium rounded-md text-[var(--text)] bg-[var(--surface)] border border-[var(--border)] hover:border-[var(--border-strong)] transition-colors">Edit & Approve</button>
-            <button onClick={() => approve.mutate({ id: q.id })} disabled={approve.isPending} className="px-2.5 py-1 text-[11px] font-medium rounded-md bg-brand text-[#09090b] hover:brightness-110 ml-auto flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed transition-all">
+            <button
+              onClick={() =>
+                approve.mutate(
+                  { id: q.id },
+                  {
+                    onSuccess: () => addToast({ type: 'success', message: `Approved — ${SIDE_EFFECT_MSG[q.type] || 'Done'}` }),
+                    onError: (err) => addToast({ type: 'error', message: `Approve failed: ${err.message}` }),
+                  }
+                )
+              }
+              disabled={approve.isPending}
+              className="px-2.5 py-1 text-[11px] font-medium rounded-md bg-brand text-[#09090b] hover:brightness-110 ml-auto flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+            >
               <Check className="w-3 h-3" /> Approve
             </button>
           </div>
