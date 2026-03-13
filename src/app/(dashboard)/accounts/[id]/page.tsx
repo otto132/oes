@@ -2,7 +2,9 @@
 import { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
-import { useAccountDetail, useCreateContact } from '@/lib/queries/accounts';
+import { useAccountDetail, useCreateContact, useUpdateAccount } from '@/lib/queries/accounts';
+import { useTeamQuery } from '@/lib/queries/settings';
+import { useSession } from 'next-auth/react';
 import { useCreateOpportunity } from '@/lib/queries/opportunities';
 import { useLogActivity } from '@/lib/queries/activities';
 import { useStore } from '@/lib/store';
@@ -169,6 +171,10 @@ export default function AccountDetailPage() {
   const createOpp = useCreateOpportunity();
   const createContact = useCreateContact(id);
   const { openDrawer, closeDrawer, addToast } = useStore();
+  const updateAccount = useUpdateAccount(id);
+  const { data: teamData } = useTeamQuery();
+  const teamMembers = (teamData?.data ?? []).filter((u: any) => u.isActive);
+  const { data: session } = useSession();
 
   /* ── Loading skeleton ── */
   if (isLoading) {
@@ -519,6 +525,7 @@ export default function AccountDetailPage() {
             { l: 'Open Opps', v: accOpps.filter(o => !['Closed Won', 'Closed Lost'].includes(o.stage)).length },
             { l: 'Contacts', v: a.contacts.length },
             { l: 'Confidence', v: `${Math.round(conf * 100)}%` },
+            { l: 'Owner', v: a.owner?.name ?? 'Unassigned' },
           ].map(s => (
             <div key={s.l} className="flex-1 min-w-[80px] p-2 rounded-md bg-[var(--surface)] border border-[var(--border)]">
               <div className="text-[9px] font-semibold tracking-[0.1em] uppercase text-muted mb-0.5">{s.l}</div>
@@ -526,6 +533,28 @@ export default function AccountDetailPage() {
             </div>
           ))}
         </div>
+        {session?.user?.role === 'ADMIN' && (
+          <div className="flex items-center gap-2 mt-2 pt-2 border-t border-[var(--border)]">
+            <span className="text-[10px] font-semibold uppercase tracking-wide text-[var(--muted)]">Reassign Owner</span>
+            <select
+              value={a.ownerId}
+              onChange={(e) => {
+                updateAccount.mutate(
+                  { ownerId: e.target.value },
+                  {
+                    onSuccess: () => addToast({ type: 'success', message: 'Owner reassigned' }),
+                    onError: (err: Error) => addToast({ type: 'error', message: err.message }),
+                  },
+                );
+              }}
+              className="px-2 py-1 text-[11px] rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)]"
+            >
+              {teamMembers.map((u: any) => (
+                <option key={u.id} value={u.id}>{u.name}</option>
+              ))}
+            </select>
+          </div>
+        )}
       </div>
 
       {/* ── Tabs ── */}
