@@ -1,6 +1,8 @@
 import prisma from '@/lib/prisma';
 import type { AgentRun } from '@prisma/client';
 import type { Agent, AgentEventData } from './types';
+import { consumePendingEvents, markProcessed, expireOldEvents } from './events';
+import { getAllAgents, getAgentsByTrigger } from './registry';
 
 const STALE_RUN_TIMEOUT_MS = 10 * 60 * 1000; // 10 minutes
 
@@ -118,4 +120,72 @@ export async function runAgent(
     });
     return run;
   }
+}
+
+export async function runDueAgents(): Promise<AgentRun[]> {
+  const results: AgentRun[] = [];
+
+  // 1. Expire old events
+  await expireOldEvents();
+
+  // 2. Process pending events
+  const events = await consumePendingEvents();
+  for (const evt of events) {
+    const eventData: AgentEventData = {
+      id: evt.id,
+      event: evt.event,
+      payload: evt.payload as Record<string, unknown>,
+    };
+
+    let agents: Agent[] = [];
+    if (evt.event === 'queue_item_approved') {
+      const itemType = (evt.payload as Record<string, unknown>).type as string;
+      agents = getAgentsByTrigger('chain', itemType);
+    } else {
+      agents = getAgentsByTrigger('event', evt.event);
+    }
+
+    for (const agent of agents) {
+      const run = await runAgent(agent, `event:${evt.event}`, eventData);
+      if (run) results.push(run);
+    }
+
+    await markProcessed(evt.id);
+  }
+
+  // 3. Check cron-triggered agents
+  const cronAgents = getAgentsByTrigger('cron');
+  for (const agent of cronAgents) {
+    const config = await prisma.agentConfig.findUnique({
+      where: { name: agent.name },
+    });
+    if (!config || !isDue(config, agent)) continue;
+    const run = await runAgent(agent, 'cron');
+    if (run) results.push(run);
+  }
+
+  return results;
+}
+
+function isDue(config: { lastRunAt: Date | null }, agent: Agent): boolean {
+  if (!config.lastRunAt) return true;
+  const cronTrigger = agent.triggers.find((t) => t.type === 'cron');
+  if (!cronTrigger || cronTrigger.type !== 'cron') return false;
+  const intervalMs = parseCronIntervalMs(cronTrigger.schedule);
+  return Date.now() - config.lastRunAt.getTime() >= intervalMs;
+}
+
+function parseCronIntervalMs(schedule: string): number {
+  const parts = schedule.split(' ');
+  const minute = parts[0];
+  const hour = parts[1];
+
+  if (minute.startsWith('*/')) {
+    return parseInt(minute.slice(2), 10) * 60 * 1000;
+  }
+  if (hour.startsWith('*/')) {
+    return parseInt(hour.slice(2), 10) * 60 * 60 * 1000;
+  }
+  // Daily or weekly: default to 24h
+  return 24 * 60 * 60 * 1000;
 }

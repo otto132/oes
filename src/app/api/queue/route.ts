@@ -4,6 +4,7 @@ import { adaptQueueItem } from '@/lib/adapters';
 import { withHandler } from '@/lib/api-handler';
 import { queueActionSchema } from '@/lib/schemas/queue';
 import { notFound, badRequest } from '@/lib/api-errors';
+import { handleApproval } from '@/lib/agents/chain';
 
 export async function GET(req: NextRequest) {
   const status = req.nextUrl.searchParams.get('status') || 'pending';
@@ -98,6 +99,20 @@ export const POST = withHandler(queueActionSchema, async (req, ctx) => {
           assignees: { connect: [{ id: userId }] },
         },
       });
+    } else if (item.type === 'signal_review') {
+      const payload = item.payload as any;
+      await db.signal.create({
+        data: {
+          type: String(payload.signalType || 'market'),
+          title: String(payload.headline || item.title),
+          summary: String(payload.summary || ''),
+          source: String(payload.sourceName || ''),
+          sourceUrl: payload.sourceUrl ? String(payload.sourceUrl) : null,
+          relevance: Number(payload.relevanceScore || item.confidence * 100),
+          status: 'active',
+          companies: payload.matchedAccounts || [],
+        },
+      });
     } else if (item.type === 'outreach_draft') {
       const payload = item.payload as any;
       await db.activity.create({
@@ -125,6 +140,11 @@ export const POST = withHandler(queueActionSchema, async (req, ctx) => {
         accountId: item.accId || undefined,
         authorId: userId,
       },
+    });
+
+    // Trigger chain agents (fire-and-forget)
+    handleApproval(updated, (editedPayload || item.payload) as Record<string, unknown>).catch((err) => {
+      console.error('Chain coordinator error:', err);
     });
 
     const adapted = adaptQueueItem(updated);
