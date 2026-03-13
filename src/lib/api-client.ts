@@ -50,6 +50,19 @@ async function post<T>(path: string, body: any): Promise<T> {
   return res.json();
 }
 
+async function patch<T>(path: string, body: any): Promise<T> {
+  const res = await fetch(`${BASE}${path}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: res.statusText }));
+    throw new ApiError(res.status, extractErrorMessage(err, `API ${path}: ${res.status}`));
+  }
+  return res.json();
+}
+
 export const api = {
   // ── Home ───────────────────────────────────────
   home: {
@@ -99,18 +112,19 @@ export const api = {
 
   // ── Accounts ───────────────────────────────────
   accounts: {
-    list: (opts?: { q?: string; type?: string; cursor?: string; limit?: number }) => {
+    list: (opts?: { q?: string; type?: string; cursor?: string; limit?: number; owner?: string }) => {
       const params = new URLSearchParams();
       if (opts?.q) params.set('q', opts.q);
       if (opts?.type) params.set('type', opts.type);
       if (opts?.cursor) params.set('cursor', opts.cursor);
       if (opts?.limit) params.set('limit', String(opts.limit));
-      const qs = params.toString();
-      return get<any>(`/accounts${qs ? `?${qs}` : ''}`);
+      if (opts?.owner) params.set('owner', opts.owner);
+      return get<any>(`/accounts?${params}`);
     },
     detail: (id: string) => get<any>(`/accounts?id=${id}`),
     create: (data: { name: string; type?: string; country?: string; notes?: string }) =>
       post<any>('/accounts', data),
+    update: (id: string, data: Record<string, unknown>) => patch<any>(`/accounts/${id}`, data),
   },
 
   // ── Opportunities ──────────────────────────────
@@ -194,5 +208,17 @@ export const api = {
   // ── Badge Counts ──────────────────────────────
   badgeCounts: {
     get: () => get<{ queue: number; signals: number; leads: number; inbox: number; tasks: number }>('/badge-counts'),
+  },
+
+  // ── Settings ───────────────────────────────────
+  settings: {
+    team: () => get<any>('/settings/team'),
+    invitations: () => get<any>('/settings/team/invitations'),
+    invite: (data: { email: string; role?: string }) => post<any>('/settings/team/invite', data),
+    revokeInvite: (id: string) => patch<any>(`/settings/team/invite/${id}`, { status: 'REVOKED' }),
+    updateUser: (id: string, data: { role?: string; isActive?: boolean }) => patch<any>(`/settings/team/${id}`, data),
+    profile: () => get<any>('/settings/profile'),
+    updateProfile: (data: { name?: string; initials?: string; notificationPrefs?: { emailAlerts: boolean; queueAlerts: boolean } }) =>
+      patch<any>('/settings/profile', data),
   },
 };
