@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { adaptAccount, adaptOpportunity, adaptActivity, adaptTask, adaptGoal } from '@/lib/adapters';
-import { auth } from '@/lib/auth';
+import { withHandler } from '@/lib/api-handler';
+import { createAccountSchema } from '@/lib/schemas/accounts';
+import { notFound, badRequest, conflict } from '@/lib/api-errors';
+import { parsePagination, paginate } from '@/lib/schemas/pagination';
 
 export async function GET(req: NextRequest) {
   const search = req.nextUrl.searchParams.get('q');
@@ -30,7 +33,7 @@ export async function GET(req: NextRequest) {
         goals: { include: { owner: true } },
       },
     });
-    if (!account) return NextResponse.json({ error: 'Not found' }, { status: 404 });
+    if (!account) return notFound('Account not found');
 
     const adaptedAccount = adaptAccount(account);
 
@@ -59,7 +62,9 @@ export async function GET(req: NextRequest) {
     });
   }
 
-  // List
+  // List with pagination
+  const pagination = parsePagination(req);
+
   const where: any = {};
   if (search) {
     where.OR = [
@@ -74,28 +79,28 @@ export async function GET(req: NextRequest) {
     where,
     include: { owner: true, contacts: true },
     orderBy: { scoreFit: 'desc' },
+    take: pagination.limit + 1,
+    ...(pagination.cursor ? { cursor: { id: pagination.cursor }, skip: 1 } : {}),
   });
-  return NextResponse.json({ data: accounts.map(adaptAccount) });
+
+  const { data, meta } = paginate(accounts, pagination.limit);
+  return NextResponse.json({ data: data.map(adaptAccount), meta });
 }
 
-export async function POST(req: NextRequest) {
-  const session = await auth();
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
-  const body = await req.json();
+export const POST = withHandler(createAccountSchema, async (req, ctx) => {
+  const body = ctx.body;
   const { name, type, country, notes } = body;
-  const ownerId = body.ownerId || session.user.id;
-  if (!name) return NextResponse.json({ error: 'Name required' }, { status: 400 });
+  const ownerId = body.ownerId || ctx.session.user.id;
+  if (!name) return badRequest('Name required');
 
   // Dedup
   const dup = await db.account.findFirst({ where: { name: { equals: name, mode: 'insensitive' } } });
-  if (dup) return NextResponse.json({ error: `Account "${dup.name}" already exists` }, { status: 409 });
+  if (dup) return conflict(`Account "${dup.name}" already exists`);
 
   const account = await db.account.create({
     data: {
       name,
-      type: type || 'Unknown',
+      type: (type || 'Unknown') as any,
       country: country || '',
       status: 'Prospect',
       ownerId,
@@ -103,4 +108,4 @@ export async function POST(req: NextRequest) {
     },
   });
   return NextResponse.json({ data: account }, { status: 201 });
-}
+});
