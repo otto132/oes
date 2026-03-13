@@ -8,9 +8,14 @@ export const metadata: Metadata = {
   description: 'AI-assisted Revenue OS for the GoO / renewable certificates market',
 };
 
+const themeScript = `(function(){try{var t=localStorage.getItem('eco-theme');if(t==='dark'||(!t&&window.matchMedia('(prefers-color-scheme:dark)').matches)){document.documentElement.classList.add('dark')}}catch(e){}})();`;
+
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className="dark">
+    <html lang="en" suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: themeScript }} />
+      </head>
       <body className="font-sans">
         <QueryProvider>
           <ThemeInit />
