@@ -1,11 +1,46 @@
 'use client';
 import { useLeadsQuery } from '@/lib/queries/leads';
-import { Badge, Avatar, FIUACBars, ScorePill, EmptyState } from '@/components/ui';
+import { Badge, Avatar, FIUACBars, ScorePill, EmptyState, Skeleton, SkeletonCard, SkeletonText, ErrorState } from '@/components/ui';
 import { compositeScore } from '@/lib/utils';
 import type { Lead } from '@/lib/types';
 
+function LeadsSkeleton() {
+  return (
+    <div className="page-enter space-y-4">
+      <div className="hidden md:grid grid-cols-3 gap-4">
+        {Array.from({ length: 3 }).map((_, col) => (
+          <div key={col} className="space-y-3">
+            <Skeleton className="h-4 w-20" />
+            {Array.from({ length: 2 }).map((_, i) => (
+              <SkeletonCard key={i} className="space-y-2">
+                <SkeletonText className="w-2/3" />
+                <SkeletonText className="w-full h-2" />
+                <div className="flex gap-2">
+                  <Skeleton className="h-4 w-12 rounded-full" />
+                  <Skeleton className="h-4 w-12 rounded-full" />
+                </div>
+              </SkeletonCard>
+            ))}
+          </div>
+        ))}
+      </div>
+      <div className="md:hidden space-y-3">
+        {Array.from({ length: 4 }).map((_, i) => (
+          <SkeletonCard key={i} className="space-y-2">
+            <SkeletonText className="w-2/3" />
+            <SkeletonText className="w-full h-2" />
+          </SkeletonCard>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export default function LeadsPage() {
-  const { data: resp } = useLeadsQuery();
+  const { data: resp, isLoading, isError, refetch } = useLeadsQuery();
+
+  if (isLoading) return <LeadsSkeleton />;
+  if (isError) return <ErrorState onRetry={() => refetch()} />;
   const leads: Lead[] = resp?.data ?? [];
 
   const stageMeta: Record<string, { variant: 'info' | 'warn' | 'ok' }> = {
