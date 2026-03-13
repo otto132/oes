@@ -17,7 +17,29 @@ export function useLogActivity() {
       accountId: string;
       source?: string;
     }) => api.activities.log(data),
-    onSuccess: (_data, vars) => {
+    onMutate: async (data) => {
+      await qc.cancelQueries({ queryKey: accountKeys.detail(data.accountId) });
+      const previousDetail = qc.getQueryData(accountKeys.detail(data.accountId));
+      const tempActivity = {
+        id: `temp-${Date.now()}`,
+        type: data.type || 'note',
+        summary: data.summary,
+        detail: data.detail || '',
+        source: data.source || 'user',
+        date: new Date().toISOString(),
+      };
+      qc.setQueryData(accountKeys.detail(data.accountId), (old: any) => {
+        if (!old?.activities) return old;
+        return { ...old, activities: [tempActivity, ...old.activities] };
+      });
+      return { previousDetail, accountId: data.accountId };
+    },
+    onError: (_err, _vars, context) => {
+      if (context?.previousDetail) {
+        qc.setQueryData(accountKeys.detail(context.accountId), context.previousDetail);
+      }
+    },
+    onSettled: (_data, _err, vars) => {
       qc.invalidateQueries({ queryKey: activityKeys.all });
       qc.invalidateQueries({ queryKey: accountKeys.detail(vars.accountId) });
       qc.invalidateQueries({ queryKey: oppKeys.all });
