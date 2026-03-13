@@ -35,7 +35,7 @@ The Settings page currently renders team, agents, and integrations in a single c
 - **Agents** — agent configuration and status
 - **Profile** — current user's profile settings (U-05)
 
-All tabs live under `/settings` using client-side tab state (no separate routes).
+All tabs live under `/settings` using React state (no separate routes, no URL params). Default tab: Team.
 
 ### Team List
 
@@ -44,9 +44,14 @@ All tabs live under `/settings` using client-side tab state (no separate routes)
 - **Admin view**: role dropdown (ADMIN/MEMBER/VIEWER), deactivate/reactivate toggle
 - **Non-admin view**: read-only list (no dropdowns, no action buttons)
 - Role change triggers confirmation dialog before calling `PATCH /api/settings/team/[id]`
-- Self-demotion disabled (dropdown disabled on own row)
+- Self-demotion disabled (dropdown disabled on own row); also enforced at the API level — add self-role-change guard to `PATCH /api/settings/team/[id]`
 - Last-admin removal disabled (API enforces, UI disables the option)
 - Deactivation is clearly labeled as reversible — "Deactivate" button, with "Reactivate" shown for inactive users
+
+**Existing API modifications required:**
+- `GET /api/settings/team`: change from admin-only to any authenticated user (team list visible to all, but actions gated by role in UI + API)
+- `GET /api/settings/team`: add `lastLoginAt` to the select fields returned
+- `PATCH /api/settings/team/[id]`: add guard preventing users from changing their own role (self-demotion prevention)
 
 ### Invite Section (Admin Only)
 
@@ -184,17 +189,19 @@ integrationTokens IntegrationToken[]
 
 ### OAuth Callback Update (`/api/auth/callback/route.ts`)
 
-- Require active session (user must be logged in)
-- Link token to `session.user.id`
-- Upsert keyed on `[provider, userId]`
+**Behavioral change from current implementation:** The callback currently operates as a public GET endpoint that identifies users by email via `getGraphUser()`. It must change to:
+- Require active session (user must be logged in to connect Outlook)
+- Link token to `session.user.id` instead of email lookup
+- Change upsert key from `provider_userEmail` to `provider_userId` (matches the new unique constraint)
 
 ### Sync Job Updates (`email-sync.ts`, `calendar-sync.ts`)
 
-- Query: `findMany({ where: { provider: 'microsoft' }, include: { user: true } })`
+**Depends on:** Migration must complete before these changes (the `user` relation does not exist until the schema is updated).
+
+- Replace `findFirst` with `findMany({ where: { provider: 'microsoft', user: { isActive: true } }, include: { user: true } })`
 - Loop over each connected user's token
 - Per-user: refresh if expired, fetch emails/events, store records
 - If one user's token fails, log error and continue to next user
-- Skip tokens for inactive users (`user.isActive = false`)
 
 ### Settings Integrations Tab (Per-User)
 
@@ -231,11 +238,15 @@ Ownership is informational only — no access restrictions. All authenticated no
 
 ### API Changes
 
-**`PATCH /api/accounts/:id`** (new — API-04)
+**`PATCH /api/accounts/[id]`** (new file: `src/app/api/accounts/[id]/route.ts` — implements API-04)
 - Any authenticated MEMBER or ADMIN
 - Accepts partial account fields including `ownerId`
 - Zod validated
 - Returns updated account
+- Note: the existing accounts route uses `?id=xxx` query param for GET detail. The new PATCH uses a proper `[id]` dynamic segment. The GET detail should also move to `[id]/route.ts` for consistency, but that refactor is optional for this Epic.
+
+**Existing API modification required:**
+- `GET /api/accounts`: add session access to support `?owner=me` filtering (currently does not call `auth()`); when `owner=me` is passed, filter by `ownerId = session.user.id`
 
 ### Scope Limitation
 
@@ -249,7 +260,7 @@ All Prisma schema changes in one place:
 
 1. **User model** — add `notificationPrefs Json?`, `lastLoginAt DateTime?`, `integrationTokens IntegrationToken[]`
 2. **IntegrationToken model** — add `userId String` FK, change unique constraint to `[provider, userId]`, add `user` relation
-3. **Single migration** covering all changes
+3. **Two-phase migration**: (a) add `userId` as nullable, `notificationPrefs`, `lastLoginAt`; (b) backfill `userId` from email match; (c) make `userId` non-nullable and update unique constraint. Can be a single migration file with sequential SQL statements.
 
 ---
 
