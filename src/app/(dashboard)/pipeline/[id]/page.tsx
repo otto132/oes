@@ -7,7 +7,6 @@ import { fmt, fDate, fR, isOverdue, weightedValue, cn } from '@/lib/utils';
 import { STAGES, STAGE_COLOR, healthAvg } from '@/lib/types';
 import type { Activity, Contact } from '@/lib/types';
 import { useStore } from '@/lib/store';
-import { mapOppStage } from '@/lib/adapters';
 
 function riskHex(h: { eng: number; stake: number; comp: number; time: number }): string {
   const a = healthAvg(h);
