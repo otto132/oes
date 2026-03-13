@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useRef, useState } from 'react';
+import { Suspense, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { useAccountsQuery, useCreateAccount } from '@/lib/queries/accounts';
@@ -37,6 +37,14 @@ function AccountsSkeleton() {
 }
 
 export default function AccountsPage() {
+  return (
+    <Suspense>
+      <AccountsPageInner />
+    </Suspense>
+  );
+}
+
+function AccountsPageInner() {
   const [search, setSearch] = useState('');
   const [typeFilter, setTypeFilter] = useState('all');
   const [ownerFilter, setOwnerFilter] = useState<'all' | 'me'>('all');

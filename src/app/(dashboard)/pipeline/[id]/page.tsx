@@ -1,7 +1,7 @@
 'use client';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
-import { useOpportunityDetail, useMoveStage, useCloseWon, useCloseLost } from '@/lib/queries/opportunities';
+import { useOpportunityDetail, useMoveStage, useCloseWon, useCloseLost, useUpdateOpportunity } from '@/lib/queries/opportunities';
 import { Badge, Avatar, HealthBar, StageBadge, AgentTag, Skeleton, SkeletonCard, ErrorState } from '@/components/ui';
 import { fmt, fDate, fR, isOverdue, weightedValue, cn } from '@/lib/utils';
 import { STAGES, STAGE_COLOR, healthAvg } from '@/lib/types';
@@ -112,6 +112,7 @@ export default function OppDetailPage() {
   const move = useMoveStage();
   const closeWon = useCloseWon();
   const closeLost = useCloseLost();
+  const updateOpp = useUpdateOpportunity();
   const { openDrawer, closeDrawer } = useStore();
   const addToast = useStore(s => s.addToast);
 
@@ -133,7 +134,7 @@ export default function OppDetailPage() {
 
   const sIdx = STAGES.indexOf(o.stage);
   const hAvg = healthAvg(o.health);
-  const isMutating = move.isPending || closeWon.isPending || closeLost.isPending;
+  const isMutating = move.isPending || closeWon.isPending || closeLost.isPending || updateOpp.isPending;
 
   function openCloseWonDrawer() {
     const state = { winNotes: '', competitorBeaten: '' };
@@ -286,6 +287,83 @@ export default function OppDetailPage() {
     });
   }
 
+  function openEditDrawer() {
+    const state = { name: o!.name, amount: o!.amt, closeDate: o!.close ? o!.close.slice(0, 10) : '' };
+    openDrawer({
+      title: 'Edit Opportunity',
+      subtitle: o!.name,
+      body: (
+        <div className="flex flex-col gap-3">
+          <label className="flex flex-col gap-1">
+            <span className="text-[10px] font-semibold uppercase tracking-wide text-[var(--muted)]">Name</span>
+            <input
+              defaultValue={state.name}
+              onChange={e => { state.name = e.target.value; }}
+              className="px-2.5 py-1.5 text-[12px] rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] placeholder:text-[var(--muted)] focus:outline-none focus:border-brand/40"
+            />
+          </label>
+          <label className="flex flex-col gap-1">
+            <span className="text-[10px] font-semibold uppercase tracking-wide text-[var(--muted)]">Amount</span>
+            <input
+              type="number"
+              min={0}
+              defaultValue={state.amount}
+              onChange={e => { state.amount = Number(e.target.value) || 0; }}
+              className="px-2.5 py-1.5 text-[12px] rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] placeholder:text-[var(--muted)] focus:outline-none focus:border-brand/40"
+            />
+          </label>
+          <label className="flex flex-col gap-1">
+            <span className="text-[10px] font-semibold uppercase tracking-wide text-[var(--muted)]">Close Date</span>
+            <input
+              type="date"
+              defaultValue={state.closeDate}
+              onChange={e => { state.closeDate = e.target.value; }}
+              className="px-2.5 py-1.5 text-[12px] rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] focus:outline-none focus:border-brand/40"
+            />
+          </label>
+        </div>
+      ),
+      footer: (
+        <>
+          <button
+            className="px-3.5 py-1.5 text-[12px] text-[var(--sub)] bg-[var(--surface)] border border-[var(--border)] rounded-md hover:bg-[var(--hover)] transition-colors"
+            onClick={closeDrawer}
+          >
+            Cancel
+          </button>
+          <button
+            disabled={updateOpp.isPending}
+            className="px-3.5 py-1.5 text-[12px] font-medium bg-brand text-[#09090b] rounded-md hover:brightness-110 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            onClick={() => {
+              const data: Record<string, unknown> = {};
+              if (state.name !== o!.name) data.name = state.name;
+              if (state.amount !== o!.amt) data.amount = state.amount;
+              if (state.closeDate !== (o!.close ? o!.close.slice(0, 10) : '')) data.closeDate = state.closeDate;
+
+              if (Object.keys(data).length === 0) {
+                closeDrawer();
+                return;
+              }
+
+              updateOpp.mutate(
+                { id: o!.id, data },
+                {
+                  onSuccess: () => {
+                    addToast({ type: 'success', message: 'Opportunity updated' });
+                    closeDrawer();
+                  },
+                  onError: (err) => addToast({ type: 'error', message: `Update failed: ${err.message}` }),
+                }
+              );
+            }}
+          >
+            Save
+          </button>
+        </>
+      ),
+    });
+  }
+
   const healthDims = [
     { l: 'Engagement', v: o.health.eng }, { l: 'Stakeholders', v: o.health.stake },
     { l: 'Competitive', v: o.health.comp }, { l: 'Timeline', v: o.health.time },
@@ -298,7 +376,16 @@ export default function OppDetailPage() {
         <div className="flex items-start justify-between flex-col md:flex-row gap-3 mb-3">
           <div>
             <Link href={`/accounts/${o.accId}`} className="text-[12px] text-brand hover:underline mb-0.5 block">{o.accName} →</Link>
-            <h1 className="text-[18px] font-semibold tracking-tight text-[var(--text)]">{o.name}</h1>
+            <div className="flex items-center gap-2">
+              <h1 className="text-[18px] font-semibold tracking-tight text-[var(--text)]">{o.name}</h1>
+              <button
+                onClick={openEditDrawer}
+                disabled={isMutating}
+                className="px-2 py-0.5 text-[10px] font-medium text-[var(--sub)] bg-[var(--surface)] border border-[var(--border)] rounded-md hover:bg-[var(--hover)] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Edit
+              </button>
+            </div>
             <div className="flex items-center gap-1.5 mt-1 flex-wrap">
               <StageBadge stage={o.stage} />
               <Badge variant="neutral">{o.prob}%</Badge>

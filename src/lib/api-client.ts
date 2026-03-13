@@ -142,6 +142,8 @@ export const api = {
     move: (id: string, stage: string) => post<any>('/opportunities', { action: 'move', id, stage }),
     closeWon: (id: string, data: any) => post<any>('/opportunities', { action: 'close_won', id, ...data }),
     closeLost: (id: string, data: any) => post<any>('/opportunities', { action: 'close_lost', id, ...data }),
+    update: (id: string, data: Record<string, unknown>) =>
+      patch<any>(`/opportunities/${id}`, data),
   },
 
   // ── Inbox ──────────────────────────────────────
@@ -173,6 +175,8 @@ export const api = {
     complete: (id: string, data?: any) => post<any>('/tasks', { action: 'complete', id, ...data }),
     comment: (id: string, text: string) => post<any>('/tasks', { action: 'comment', id, text }),
     sendForReview: (id: string) => post<any>('/tasks', { action: 'send_for_review', id }),
+    update: (id: string, data: Record<string, unknown>) =>
+      patch<any>(`/tasks/${id}`, data),
   },
 
   // ── Activities ─────────────────────────────────

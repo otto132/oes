@@ -141,3 +141,41 @@ export function useCreateContact(accountId: string) {
     },
   });
 }
+
+export function useUpdateContact(accountId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ contactId, data }: { contactId: string; data: Record<string, unknown> }) => {
+      const res = await fetch(`/api/accounts/${accountId}/contacts/${contactId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ error: res.statusText }));
+        throw new Error(err.error || 'Failed to update contact');
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: accountKeys.detail(accountId) });
+    },
+  });
+}
+
+export function useDeleteContact(accountId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (contactId: string) => {
+      const res = await fetch(`/api/accounts/${accountId}/contacts/${contactId}`, { method: 'DELETE' });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ error: res.statusText }));
+        throw new Error(err.error || 'Failed to delete contact');
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: accountKeys.detail(accountId) });
+    },
+  });
+}

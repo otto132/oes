@@ -1,5 +1,17 @@
 import { z } from 'zod';
 
+export const patchTaskSchema = z.object({
+  title: z.string().trim().min(1).optional(),
+  priority: z.enum(['High', 'Medium', 'Low']).optional(),
+  due: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+  assigneeIds: z.array(z.string()).optional(),
+  reviewerId: z.string().nullable().optional(),
+}).superRefine((obj, ctx) => {
+  if (!Object.values(obj).some(v => v !== undefined)) {
+    ctx.addIssue({ code: 'custom', message: 'At least one field is required' });
+  }
+});
+
 export const taskActionSchema = z.discriminatedUnion('action', [
   z.object({
     action: z.literal('create'),

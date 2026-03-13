@@ -1,12 +1,12 @@
 'use client';
-import { useEffect, useRef, useState } from 'react';
+import { Suspense, useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { useStore } from '@/lib/store';
-import { useTasksQuery, useCreateTask, useCompleteTask } from '@/lib/queries/tasks';
+import { useTasksQuery, useCreateTask, useCompleteTask, useUpdateTask } from '@/lib/queries/tasks';
 import { Badge, Avatar, AgentTag, EmptyState, Skeleton, SkeletonCard, SkeletonText, ErrorState } from '@/components/ui';
 import { fDate, isOverdue, cn, fR } from '@/lib/utils';
-import type { Task, Goal } from '@/lib/types';
+import type { Task, TaskPriority, Goal } from '@/lib/types';
 
 function TasksSkeleton() {
   return (
@@ -37,6 +37,14 @@ function TasksSkeleton() {
 }
 
 export default function TasksPage() {
+  return (
+    <Suspense>
+      <TasksPageInner />
+    </Suspense>
+  );
+}
+
+function TasksPageInner() {
   const { openDrawer, closeDrawer } = useStore();
   const { data: session } = useSession();
   const [tab, setTab] = useState<'mine' | 'review' | 'all'>('mine');
@@ -45,6 +53,7 @@ export default function TasksPage() {
   const searchParams = useSearchParams();
   const createTask = useCreateTask();
   const completeTask = useCompleteTask();
+  const updateTask = useUpdateTask();
   const addToast = useStore(s => s.addToast);
   const autoCreateFired = useRef(false);
 
@@ -112,7 +121,7 @@ export default function TasksPage() {
               <span className="text-[10px] font-semibold uppercase tracking-wide text-muted">Priority</span>
               <select
                 defaultValue="Medium"
-                onChange={e => { state.priority = e.target.value; }}
+                onChange={e => { state.priority = e.target.value as TaskPriority; }}
                 className="px-2.5 py-1.5 text-[12px] rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] focus:outline-none focus:border-brand/40"
               >
                 <option value="High">High</option>
@@ -331,6 +340,110 @@ export default function TasksPage() {
     render();
   }
 
+  function openEditTaskDrawer(t: Task) {
+    const state = {
+      title: t.title,
+      priority: t.pri,
+      due: t.due ? t.due.split('T')[0] : '',
+    };
+
+    openDrawer({
+      title: 'Edit Task',
+      subtitle: t.title,
+      body: (
+        <div className="flex flex-col gap-3">
+          <label className="flex flex-col gap-1">
+            <span className="text-[10px] font-semibold uppercase tracking-wide text-muted">Title</span>
+            <input
+              autoFocus
+              defaultValue={state.title}
+              onChange={e => { state.title = e.target.value; }}
+              className="px-2.5 py-1.5 text-[12px] rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] placeholder:text-muted focus:outline-none focus:border-brand/40"
+            />
+          </label>
+          <div className="flex gap-2">
+            <label className="flex flex-col gap-1 flex-1">
+              <span className="text-[10px] font-semibold uppercase tracking-wide text-muted">Priority</span>
+              <select
+                defaultValue={state.priority}
+                onChange={e => { state.priority = e.target.value as TaskPriority; }}
+                className="px-2.5 py-1.5 text-[12px] rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] focus:outline-none focus:border-brand/40"
+              >
+                <option value="High">High</option>
+                <option value="Medium">Medium</option>
+                <option value="Low">Low</option>
+              </select>
+            </label>
+            <label className="flex flex-col gap-1 flex-1">
+              <span className="text-[10px] font-semibold uppercase tracking-wide text-muted">Due Date</span>
+              <input
+                type="date"
+                defaultValue={state.due}
+                onChange={e => { state.due = e.target.value; }}
+                className="px-2.5 py-1.5 text-[12px] rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] focus:outline-none focus:border-brand/40"
+              />
+            </label>
+          </div>
+          {(t.assignees && t.assignees.length > 0) && (
+            <div className="flex flex-col gap-1">
+              <span className="text-[10px] font-semibold uppercase tracking-wide text-muted">Assignees</span>
+              <div className="px-2.5 py-1.5 text-[12px] rounded-md bg-[var(--surface)] border border-[var(--border)] text-sub">
+                {t.assignees.map(u => u.name).join(', ')}
+              </div>
+            </div>
+          )}
+          {t.reviewer && (
+            <div className="flex flex-col gap-1">
+              <span className="text-[10px] font-semibold uppercase tracking-wide text-muted">Reviewer</span>
+              <div className="px-2.5 py-1.5 text-[12px] rounded-md bg-[var(--surface)] border border-[var(--border)] text-sub">
+                {t.reviewer.name}
+              </div>
+            </div>
+          )}
+        </div>
+      ),
+      footer: (
+        <>
+          <button
+            className="px-3.5 py-1.5 text-[12px] text-sub bg-[var(--surface)] border border-[var(--border)] rounded-md hover:bg-[var(--hover)] transition-colors"
+            onClick={closeDrawer}
+          >
+            Cancel
+          </button>
+          <button
+            disabled={updateTask.isPending}
+            className="px-3.5 py-1.5 text-[12px] font-medium bg-brand text-[#09090b] rounded-md hover:brightness-110 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            onClick={() => {
+              if (!state.title.trim()) {
+                addToast({ type: 'error', message: 'Title is required' });
+                return;
+              }
+              updateTask.mutate(
+                {
+                  id: t.id,
+                  data: {
+                    title: state.title.trim(),
+                    priority: state.priority,
+                    ...(state.due ? { due: state.due } : {}),
+                  },
+                },
+                {
+                  onSuccess: () => {
+                    addToast({ type: 'success', message: `Task updated: ${state.title}` });
+                    closeDrawer();
+                  },
+                  onError: (err) => addToast({ type: 'error', message: `Failed: ${err.message}` }),
+                }
+              );
+            }}
+          >
+            Save Changes
+          </button>
+        </>
+      ),
+    });
+  }
+
   function openTaskDetail(t: Task) {
     const goal = t.goalId ? goals.find(g => g.id === t.goalId) : null;
     const siblings = t.goalId ? tasks.filter(x => x.goalId === t.goalId && x.id !== t.id) : [];
@@ -386,7 +499,17 @@ export default function TasksPage() {
         </div>
       ),
       footer: (
-        <button className="px-3.5 py-1.5 text-[12.5px] text-sub bg-[var(--surface)] border border-[var(--border)] rounded-md hover:bg-[var(--hover)] transition-colors" onClick={closeDrawer}>Close</button>
+        <>
+          <button className="px-3.5 py-1.5 text-[12.5px] text-sub bg-[var(--surface)] border border-[var(--border)] rounded-md hover:bg-[var(--hover)] transition-colors" onClick={closeDrawer}>Close</button>
+          {t.status !== 'Done' && (
+            <button
+              className="px-3.5 py-1.5 text-[12px] font-medium bg-brand text-[#09090b] rounded-md hover:brightness-110 transition-colors"
+              onClick={() => openEditTaskDrawer(t)}
+            >
+              Edit
+            </button>
+          )}
+        </>
       ),
     });
   }
