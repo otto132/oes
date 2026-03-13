@@ -25,9 +25,28 @@ interface Toast {
 }
 ```
 
-The `ToastContainer` renders the action as a clickable link (using `next/link`) styled as an underlined text after the message. Clicking the link dismisses the toast and navigates.
+The `ToastContainer` renders the action as a clickable link (using `next/link`) styled as an underlined text after the message. Clicking the link dismisses the toast, clears the auto-dismiss timer, and navigates. Toasts with an action link use a longer auto-dismiss duration (8s instead of 5s) to give users time to read and click.
 
 **Files:** `src/components/ui/Toast.tsx`, `src/lib/store.ts` (update `addToast` signature)
+
+## Shared Enhancement: Typed API Errors
+
+**Current state:** The `post()` helper in `api-client.ts` throws a generic `Error` with the response message string. Status codes (e.g. 409 Conflict) are lost.
+
+**Change:** Add an `ApiError` class that preserves the HTTP status code:
+
+```typescript
+export class ApiError extends Error {
+  constructor(public status: number, message: string) {
+    super(message);
+    this.name = 'ApiError';
+  }
+}
+```
+
+Update `post()` and `get()` in `api-client.ts` to throw `ApiError` instead of plain `Error`. Mutation `onError` callbacks can then check `error instanceof ApiError && error.status === 409` to handle conflicts specifically.
+
+**Files:** `src/lib/api-client.ts`
 
 ---
 
@@ -54,7 +73,13 @@ After `approve.mutate()` succeeds, fire a contextual toast based on the queue it
 
 2. **Mutation `onSuccess` callback:** In the queue page (or in `useApproveQueueItem`), read the returned item and call `addToast()` with the appropriate message and action link.
 
-3. **Also invalidate related queries:** After approving a `lead_qualification` item, invalidate `leadKeys.all` so the Leads page shows the new lead. Similarly invalidate `taskKeys.all` for `task_creation`, and `accountKeys.detail(accId)` for `enrichment`.
+3. **Defensive payload fallbacks:** Toast message construction must handle missing payload fields gracefully. Use `payload.company || item.accName || 'item'` for lead_qualification, `payload.task || item.title || 'task'` for task_creation, `payload.field || 'field'` for enrichment.
+
+4. **Cross-query invalidation:** After approving, invalidate related queries so other pages reflect the change:
+   - `lead_qualification` → invalidate `leadKeys.all`
+   - `task_creation` → invalidate `taskKeys.all`
+   - `enrichment` → invalidate `accountKeys.detail(accId)`
+   - `outreach_draft` → invalidate `accountKeys.detail(accId)` (activity created, lastActivityAt updated)
 
 ### Files Changed
 
@@ -87,10 +112,13 @@ The "→ Lead" button on signal cards and the "Convert to Lead" button in the si
 **Submit flow:**
 1. Call `convertSignal.mutate({ id: signal.id, company, type, country })`
 2. On success: toast "Lead created for {company}" with action `{ label: 'View Leads →', href: '/leads' }`, close drawer
-3. On 409 error: toast (error) "Lead or account already exists for {company}"
+3. On 409 error (detected via `ApiError.status === 409`): toast (error) "Lead or account already exists for {company}"
 4. On other error: toast (error) "Failed to convert signal"
+5. Invalidate `leadKeys.all` on success so the Leads page shows the new lead immediately.
 
-**Detail drawer footer:** The existing "Convert to Lead" button in the signal detail drawer footer should also open the same conversion form (replace the current drawer content).
+**"→ Lead" button visibility:** Hide the button on signals with status `converted` (they already show a green check icon and reduced opacity).
+
+**Detail drawer footer:** The "Convert to Lead" button in the signal detail drawer footer should close the detail drawer and open a new conversion drawer (simpler than swapping content in-place; consistent with re-calling `openDrawer()`).
 
 ### Files Changed
 
@@ -127,7 +155,8 @@ The "Closed Won" and "Closed Lost" buttons on the opportunity detail page work b
 ### Files Changed
 
 - `src/app/(dashboard)/pipeline/[id]/page.tsx` — replace direct mutation calls with drawer-opening handlers
-- `src/lib/queries/opportunities.ts` — verify `useCloseWon` and `useCloseLost` pass through form fields (may need minor updates)
+
+Note: The existing `useCloseWon` and `useCloseLost` hooks already accept the correct fields (`winNotes`, `competitorBeaten`, `lossReason`, `lossCompetitor`, `lossNotes`). No changes needed to mutation hooks. All submit buttons must be disabled while `isPending` is true (consistent with existing queue approve pattern).
 
 ---
 
@@ -146,7 +175,9 @@ There is no UI to create tasks. The API endpoint `POST /api/tasks` exists and ac
 - Due date (date input, default: 7 days from now)
 - Priority (dropdown: "High", "Medium", "Low"; default: "Medium")
 - Account (optional dropdown, populated from accounts list via `useAccountsQuery`)
-- Goal (optional dropdown, populated from existing goals extracted from current tasks data)
+- Goal (optional dropdown, populated from `goals` array returned by `useTasksQuery` response — the GET `/api/tasks` endpoint already returns `{ data: { tasks, goals }, meta }`)
+
+**Out of scope for v1:** Assignee selection and reviewer assignment. Tasks are auto-assigned to the current user (the API defaults `assigneeIds` to `[ownerId]`).
 
 **Submit flow:**
 1. Add `useCreateTask` mutation hook in `src/lib/queries/tasks.ts`
