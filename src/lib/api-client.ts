@@ -15,11 +15,21 @@ interface QueueMutationResponse {
   data: QueueItem;
 }
 
+export class ApiError extends Error {
+  constructor(public status: number, message: string) {
+    super(message);
+    this.name = 'ApiError';
+  }
+}
+
 const BASE = '/api';
 
 async function get<T>(path: string): Promise<T> {
   const res = await fetch(`${BASE}${path}`);
-  if (!res.ok) throw new Error(`API ${path}: ${res.status}`);
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: res.statusText }));
+    throw new ApiError(res.status, err.error?.message || err.error || `API ${path}: ${res.status}`);
+  }
   return res.json();
 }
 
@@ -31,7 +41,7 @@ async function post<T>(path: string, body: any): Promise<T> {
   });
   if (!res.ok) {
     const err = await res.json().catch(() => ({ error: res.statusText }));
-    throw new Error(err.error || `API ${path}: ${res.status}`);
+    throw new ApiError(res.status, err.error?.message || err.error || `API ${path}: ${res.status}`);
   }
   return res.json();
 }

@@ -7,6 +7,7 @@ export interface Toast {
   id: string;
   type: 'success' | 'error' | 'info';
   message: string;
+  action?: { label: string; href: string };
 }
 
 interface Store {
@@ -17,7 +18,7 @@ interface Store {
   toggleTheme: () => void;
   openDrawer: (c: { title: string; subtitle: string; body: React.ReactNode; footer: React.ReactNode }) => void;
   closeDrawer: () => void;
-  addToast: (toast: { type: Toast['type']; message: string }) => void;
+  addToast: (toast: { type: Toast['type']; message: string; action?: Toast['action'] }) => void;
   removeToast: (id: string) => void;
 }
 
@@ -43,8 +44,8 @@ export const useStore = create<Store>((set, get) => ({
       // Keep max 3 visible — dismiss oldest if exceeded
       return { toasts: next.length > 3 ? next.slice(next.length - 3) : next };
     });
-    // Auto-remove after 5s
-    setTimeout(() => get().removeToast(id), 5000);
+    // Longer timeout for toasts with action links
+    setTimeout(() => get().removeToast(id), toast.action ? 8000 : 5000);
   },
   removeToast: (id) => set(s => ({ toasts: s.toasts.filter(t => t.id !== id) })),
 }));
