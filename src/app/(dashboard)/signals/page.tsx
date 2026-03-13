@@ -2,7 +2,7 @@
 import { useState } from 'react';
 import { useStore } from '@/lib/store';
 import { useSignalsQuery } from '@/lib/queries/signals';
-import { Badge, ConfBadge, AgentTag, EmptyState } from '@/components/ui';
+import { Badge, ConfBadge, AgentTag, EmptyState, Skeleton, SkeletonCard, SkeletonText, ErrorState } from '@/components/ui';
 import { signalLabel, signalColor, fR, cn, confNum } from '@/lib/utils';
 import { Zap, Check } from 'lucide-react';
 import type { Signal } from '@/lib/types';
@@ -13,11 +13,37 @@ const FILTERS = [
   { k: 'registry_pain', l: 'Registry Pain' }, { k: 'conference', l: 'Conference' },
 ];
 
+function SignalsSkeleton() {
+  return (
+    <div className="page-enter space-y-4">
+      <div className="flex gap-2">
+        {Array.from({ length: 5 }).map((_, i) => (
+          <Skeleton key={i} className="h-7 w-16 rounded-full" />
+        ))}
+      </div>
+      {Array.from({ length: 4 }).map((_, i) => (
+        <SkeletonCard key={i} className="space-y-2.5">
+          <div className="flex items-center gap-2">
+            <Skeleton className="h-4 w-16 rounded-full" />
+            <Skeleton className="h-4 w-12 rounded-full" />
+          </div>
+          <SkeletonText className="w-3/4" />
+          <SkeletonText className="w-full" />
+          <SkeletonText className="w-1/2" />
+        </SkeletonCard>
+      ))}
+    </div>
+  );
+}
+
 export default function SignalsPage() {
   const { openDrawer, closeDrawer } = useStore();
   const [filter, setFilter] = useState('all');
-  const { data: resp } = useSignalsQuery(filter !== 'all' ? filter : undefined);
+  const { data: resp, isLoading, isError, refetch } = useSignalsQuery(filter !== 'all' ? filter : undefined);
   const signals: Signal[] = resp?.data ?? [];
+
+  if (isLoading) return <SignalsSkeleton />;
+  if (isError) return <ErrorState onRetry={() => refetch()} />;
 
   const filtered = signals;
 
