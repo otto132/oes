@@ -194,6 +194,88 @@ export default function OppDetailPage() {
     });
   }
 
+  function openCloseLostDrawer() {
+    const state = { lossReason: '', lossCompetitor: '', lossNotes: '' };
+
+    openDrawer({
+      title: 'Close Lost',
+      subtitle: o!.name,
+      body: (
+        <div className="flex flex-col gap-3">
+          <label className="flex flex-col gap-1">
+            <span className="text-[10px] font-semibold uppercase tracking-wide text-[var(--muted)]">Loss Reason *</span>
+            <select
+              defaultValue=""
+              onChange={e => { state.lossReason = e.target.value; }}
+              className="px-2.5 py-1.5 text-[12px] rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] focus:outline-none focus:border-brand/40"
+            >
+              <option value="" disabled>Select a reason</option>
+              <option value="Price">Price</option>
+              <option value="Competitor">Competitor</option>
+              <option value="Timing">Timing</option>
+              <option value="No Decision">No Decision</option>
+              <option value="Other">Other</option>
+            </select>
+          </label>
+          <label className="flex flex-col gap-1">
+            <span className="text-[10px] font-semibold uppercase tracking-wide text-[var(--muted)]">Loss Competitor (optional)</span>
+            <input
+              placeholder="Who won the deal?"
+              onChange={e => { state.lossCompetitor = e.target.value; }}
+              className="px-2.5 py-1.5 text-[12px] rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] focus:outline-none focus:border-brand/40"
+            />
+          </label>
+          <label className="flex flex-col gap-1">
+            <span className="text-[10px] font-semibold uppercase tracking-wide text-[var(--muted)]">Loss Notes (optional)</span>
+            <textarea
+              placeholder="Additional context"
+              onChange={e => { state.lossNotes = e.target.value; }}
+              rows={3}
+              className="px-2.5 py-1.5 text-[12px] rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] focus:outline-none focus:border-brand/40 resize-none"
+            />
+          </label>
+        </div>
+      ),
+      footer: (
+        <>
+          <button
+            className="px-3.5 py-1.5 text-[12px] text-[var(--sub)] bg-[var(--surface)] border border-[var(--border)] rounded-md hover:bg-[var(--hover)] transition-colors"
+            onClick={closeDrawer}
+          >
+            Cancel
+          </button>
+          <button
+            disabled={closeLost.isPending}
+            className="px-3.5 py-1.5 text-[12px] font-medium bg-danger text-white rounded-md hover:brightness-110 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            onClick={() => {
+              if (!state.lossReason) {
+                addToast({ type: 'error', message: 'Loss reason is required' });
+                return;
+              }
+              closeLost.mutate(
+                {
+                  id: o!.id,
+                  lossReason: state.lossReason,
+                  lossCompetitor: state.lossCompetitor.trim() || undefined,
+                  lossNotes: state.lossNotes.trim() || undefined,
+                },
+                {
+                  onSuccess: () => {
+                    addToast({ type: 'info', message: `Deal closed: ${o!.name}` });
+                    closeDrawer();
+                  },
+                  onError: (err) => addToast({ type: 'error', message: `Close failed: ${err.message}` }),
+                }
+              );
+            }}
+          >
+            Confirm Loss
+          </button>
+        </>
+      ),
+    });
+  }
+
   const sIdx = STAGES.indexOf(o.stage);
   const hAvg = healthAvg(o.health);
   const isMutating = move.isPending || closeWon.isPending || closeLost.isPending;
@@ -353,7 +435,7 @@ export default function OppDetailPage() {
               </button>
               <button
                 disabled={isMutating}
-                onClick={() => closeLost.mutate({ id: o.id, lossReason: 'Unknown' })}
+                onClick={openCloseLostDrawer}
                 className="text-left px-2 py-1.5 rounded-md text-[11.5px] text-danger hover:bg-[var(--hover)] transition-colors disabled:opacity-50"
               >
                 Closed Lost
