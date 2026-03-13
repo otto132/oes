@@ -37,3 +37,31 @@ export function useCreateAccount() {
     },
   });
 }
+
+export function useCreateContact(accountId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (data: {
+      name: string;
+      title?: string;
+      role?: string;
+      warmth?: string;
+      email?: string;
+      phone?: string;
+    }) => {
+      const res = await fetch(`/api/accounts/${accountId}/contacts`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ error: res.statusText }));
+        throw new Error(err.error || 'Failed to create contact');
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: accountKeys.detail(accountId) });
+    },
+  });
+}

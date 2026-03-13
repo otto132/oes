@@ -1,6 +1,6 @@
 'use client';
 import { useStore } from '@/lib/store';
-import { useInboxQuery } from '@/lib/queries/inbox';
+import { useInboxQuery, useCreateTaskFromEmail, useCreateAccountFromEmail, useMarkEmailRead } from '@/lib/queries/inbox';
 import { Badge, ConfBadge, AgentTag, EmptyState, Skeleton, SkeletonCard, SkeletonText, ErrorState } from '@/components/ui';
 import { fR, clsLabel, cn, confNum } from '@/lib/utils';
 import type { Email } from '@/lib/types';
@@ -37,7 +37,11 @@ function InboxSkeleton() {
 
 export default function InboxPage() {
   const { openDrawer, closeDrawer } = useStore();
+  const addToast = useStore(s => s.addToast);
   const { data: resp, isLoading, isError, refetch } = useInboxQuery();
+  const createTaskFromEmail = useCreateTaskFromEmail();
+  const createAccountFromEmail = useCreateAccountFromEmail();
+  const markRead = useMarkEmailRead();
 
   if (isLoading) return <InboxSkeleton />;
   if (isError) return <ErrorState onRetry={() => refetch()} />;
@@ -81,11 +85,40 @@ export default function InboxPage() {
             <div className="ai-box">
               <div className="text-[9px] font-semibold tracking-widest uppercase text-brand mb-1">New Domain Detected</div>
               <p className="text-[12px] text-sub">{e.domain} does not match any existing account.</p>
+              <button
+                className="mt-2 px-2.5 py-1.5 text-[11px] font-medium bg-brand text-[#09090b] rounded-md hover:brightness-110 transition-colors disabled:opacity-50"
+                disabled={createAccountFromEmail.isPending}
+                onClick={(ev) => {
+                  ev.stopPropagation();
+                  createAccountFromEmail.mutate(e.id, {
+                    onSuccess: () => {
+                      addToast({ type: 'success', message: `Account created from ${e.domain}`, action: { label: 'View Accounts →', href: '/accounts' } });
+                      closeDrawer();
+                    },
+                    onError: () => addToast({ type: 'error', message: 'Failed to create account' }),
+                  });
+                }}
+              >
+                Create Account
+              </button>
             </div>
           )}
           <div className="text-[9px] font-semibold tracking-widest uppercase text-muted mt-1">Quick Actions</div>
           <div className="grid grid-cols-2 gap-1.5">
-            <button className="px-2.5 py-1.5 text-[11.5px] font-medium bg-[var(--surface)] text-[var(--text)] border border-[var(--border)] rounded-md hover:bg-[var(--hover)] transition-colors">Create Task</button>
+            <button
+              className="px-2.5 py-1.5 text-[11.5px] font-medium bg-[var(--surface)] text-[var(--text)] border border-[var(--border)] rounded-md hover:bg-[var(--hover)] transition-colors disabled:opacity-50"
+              disabled={createTaskFromEmail.isPending}
+              onClick={(ev) => {
+                ev.stopPropagation();
+                createTaskFromEmail.mutate(e.id, {
+                  onSuccess: () => {
+                    addToast({ type: 'success', message: `Task created from: ${e.subj}`, action: { label: 'View Tasks →', href: '/tasks' } });
+                    markRead.mutate(e.id);
+                  },
+                  onError: () => addToast({ type: 'error', message: 'Failed to create task' }),
+                });
+              }}
+            >Create Task</button>
             <button className="px-2.5 py-1.5 text-[11.5px] text-sub bg-[var(--surface)] border border-[var(--border)] rounded-md hover:bg-[var(--hover)] transition-colors" onClick={closeDrawer}>Archive</button>
             {e.accId && <button className="px-2.5 py-1.5 text-[11.5px] text-sub bg-[var(--surface)] border border-[var(--border)] rounded-md hover:bg-[var(--hover)] transition-colors col-span-2" onClick={() => { closeDrawer(); window.location.href = `/accounts/${e.accId}`; }}>View Account</button>}
           </div>

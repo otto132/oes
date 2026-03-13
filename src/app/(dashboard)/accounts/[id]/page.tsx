@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
-import { useAccountDetail } from '@/lib/queries/accounts';
+import { useAccountDetail, useCreateContact } from '@/lib/queries/accounts';
 import { useCreateOpportunity } from '@/lib/queries/opportunities';
 import { useLogActivity } from '@/lib/queries/activities';
 import { useStore } from '@/lib/store';
@@ -167,6 +167,7 @@ export default function AccountDetailPage() {
   const [tab, setTab] = useState('overview');
   const logActivity = useLogActivity();
   const createOpp = useCreateOpportunity();
+  const createContact = useCreateContact(id);
   const { openDrawer, closeDrawer, addToast } = useStore();
 
   /* ── Loading skeleton ── */
@@ -319,6 +320,122 @@ export default function AccountDetailPage() {
             }}
           >
             Log Activity
+          </button>
+        </>
+      ),
+    });
+  }
+
+  function openAddContactDrawer() {
+    const state = { name: '', title: '', role: 'Influencer', warmth: 'Cold', email: '', phone: '' };
+
+    openDrawer({
+      title: 'Add Contact',
+      subtitle: a.name,
+      body: (
+        <div
+          className="flex flex-col gap-3"
+          onKeyDown={e => { if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') (document.querySelector('[data-submit-contact]') as HTMLButtonElement)?.click(); }}
+        >
+          <label className="flex flex-col gap-1">
+            <span className="text-[10px] font-semibold uppercase tracking-wide text-muted">Name *</span>
+            <input
+              autoFocus
+              onChange={e => { state.name = e.target.value; }}
+              placeholder="Full name"
+              className="px-2.5 py-1.5 text-[12px] rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] placeholder:text-muted focus:outline-none focus:border-brand/40"
+            />
+          </label>
+          <label className="flex flex-col gap-1">
+            <span className="text-[10px] font-semibold uppercase tracking-wide text-muted">Job Title</span>
+            <input
+              onChange={e => { state.title = e.target.value; }}
+              placeholder="e.g. VP of Energy Trading"
+              className="px-2.5 py-1.5 text-[12px] rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] placeholder:text-muted focus:outline-none focus:border-brand/40"
+            />
+          </label>
+          <div className="flex gap-2">
+            <label className="flex flex-col gap-1 flex-1">
+              <span className="text-[10px] font-semibold uppercase tracking-wide text-muted">Role</span>
+              <select
+                defaultValue="Influencer"
+                onChange={e => { state.role = e.target.value; }}
+                className="px-2.5 py-1.5 text-[12px] rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] focus:outline-none focus:border-brand/40"
+              >
+                <option value="Champion">Champion</option>
+                <option value="EconomicBuyer">Economic Buyer</option>
+                <option value="TechnicalBuyer">Technical Buyer</option>
+                <option value="Influencer">Influencer</option>
+                <option value="Blocker">Blocker</option>
+              </select>
+            </label>
+            <label className="flex flex-col gap-1 flex-1">
+              <span className="text-[10px] font-semibold uppercase tracking-wide text-muted">Warmth</span>
+              <select
+                defaultValue="Cold"
+                onChange={e => { state.warmth = e.target.value; }}
+                className="px-2.5 py-1.5 text-[12px] rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] focus:outline-none focus:border-brand/40"
+              >
+                <option value="Strong">Strong</option>
+                <option value="Warm">Warm</option>
+                <option value="Cold">Cold</option>
+              </select>
+            </label>
+          </div>
+          <label className="flex flex-col gap-1">
+            <span className="text-[10px] font-semibold uppercase tracking-wide text-muted">Email</span>
+            <input
+              type="email"
+              onChange={e => { state.email = e.target.value; }}
+              placeholder="email@company.com"
+              className="px-2.5 py-1.5 text-[12px] rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] placeholder:text-muted focus:outline-none focus:border-brand/40"
+            />
+          </label>
+          <label className="flex flex-col gap-1">
+            <span className="text-[10px] font-semibold uppercase tracking-wide text-muted">Phone</span>
+            <input
+              type="tel"
+              onChange={e => { state.phone = e.target.value; }}
+              placeholder="+358 40 123 4567"
+              className="px-2.5 py-1.5 text-[12px] rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] placeholder:text-muted focus:outline-none focus:border-brand/40"
+            />
+          </label>
+        </div>
+      ),
+      footer: (
+        <>
+          <button
+            className="px-3.5 py-1.5 text-[12px] text-sub bg-[var(--surface)] border border-[var(--border)] rounded-md hover:bg-[var(--hover)] transition-colors"
+            onClick={closeDrawer}
+          >
+            Cancel
+          </button>
+          <button
+            data-submit-contact
+            disabled={createContact.isPending}
+            className="px-3.5 py-1.5 text-[12px] font-medium bg-brand text-[#09090b] rounded-md hover:brightness-110 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            onClick={() => {
+              if (!state.name.trim()) {
+                addToast({ type: 'error', message: 'Name is required' });
+                return;
+              }
+              createContact.mutate(
+                {
+                  name: state.name.trim(),
+                  title: state.title.trim() || undefined,
+                  role: state.role,
+                  warmth: state.warmth,
+                  email: state.email.trim() || undefined,
+                  phone: state.phone.trim() || undefined,
+                },
+                {
+                  onSuccess: () => { addToast({ type: 'success', message: `Contact added: ${state.name}` }); closeDrawer(); },
+                  onError: () => addToast({ type: 'error', message: 'Failed to add contact' }),
+                }
+              );
+            }}
+          >
+            Add Contact
           </button>
         </>
       ),
@@ -501,6 +618,15 @@ export default function AccountDetailPage() {
 
       {/* ── Contacts ── */}
       {tab === 'contacts' && (
+        <>
+        <div className="flex justify-end mb-2">
+          <button
+            onClick={openAddContactDrawer}
+            className="px-3 py-1.5 text-[12px] font-medium bg-brand text-[#09090b] rounded-md hover:brightness-110 transition-colors"
+          >
+            + Add Contact
+          </button>
+        </div>
         <div className="rounded-lg bg-[var(--elevated)] border border-[var(--border)] p-3.5">
           {a.contacts.length === 0 ? (
             <EmptyState icon="\uD83D\uDC65" title="No contacts" description="Add contacts to build the buying committee map." />
@@ -521,6 +647,7 @@ export default function AccountDetailPage() {
             ))
           )}
         </div>
+        </>
       )}
 
       {/* ── Opportunities ── */}

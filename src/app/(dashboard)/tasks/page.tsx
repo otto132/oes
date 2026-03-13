@@ -2,7 +2,7 @@
 import { useState } from 'react';
 import { useSession } from 'next-auth/react';
 import { useStore } from '@/lib/store';
-import { useTasksQuery, useCreateTask } from '@/lib/queries/tasks';
+import { useTasksQuery, useCreateTask, useCompleteTask } from '@/lib/queries/tasks';
 import { Badge, Avatar, AgentTag, EmptyState, Skeleton, SkeletonCard, SkeletonText, ErrorState } from '@/components/ui';
 import { fDate, isOverdue, cn, fR } from '@/lib/utils';
 import type { Task, Goal } from '@/lib/types';
@@ -42,6 +42,7 @@ export default function TasksPage() {
   const [showCompleted, setShowCompleted] = useState(false);
   const [search, setSearch] = useState('');
   const createTask = useCreateTask();
+  const completeTask = useCompleteTask();
   const addToast = useStore(s => s.addToast);
 
   // Always fetch all tasks (including completed) so goal progress bars
@@ -191,6 +192,134 @@ export default function TasksPage() {
     });
   }
 
+  function openCompleteDrawer(t: Task) {
+    const state = { outcome: 'Completed', notes: '', followUps: [] as string[] };
+
+    function render() {
+      openDrawer({
+        title: 'Complete Task',
+        subtitle: t.title,
+        body: (
+          <div
+            className="flex flex-col gap-3"
+            onKeyDown={e => { if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') (document.querySelector('[data-submit-complete]') as HTMLButtonElement)?.click(); }}
+          >
+            <label className="flex flex-col gap-1">
+              <span className="text-[10px] font-semibold uppercase tracking-wide text-muted">Outcome</span>
+              <select
+                defaultValue={state.outcome}
+                onChange={e => { state.outcome = e.target.value; }}
+                className="px-2.5 py-1.5 text-[12px] rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] focus:outline-none focus:border-brand/40"
+              >
+                <option value="Completed">Completed</option>
+                <option value="Deferred">Deferred</option>
+                <option value="Cancelled">Cancelled</option>
+              </select>
+            </label>
+            <label className="flex flex-col gap-1">
+              <span className="text-[10px] font-semibold uppercase tracking-wide text-muted">Notes</span>
+              <textarea
+                rows={3}
+                defaultValue={state.notes}
+                onChange={e => { state.notes = e.target.value; }}
+                placeholder="Any notes on the outcome…"
+                className="px-2.5 py-1.5 text-[12px] rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] placeholder:text-muted focus:outline-none focus:border-brand/40 resize-none"
+              />
+            </label>
+            <div>
+              <span className="text-[10px] font-semibold uppercase tracking-wide text-muted">Follow-up Tasks</span>
+              <div className="flex gap-1.5 mt-1">
+                <input
+                  id="followup-input"
+                  placeholder="Follow-up title…"
+                  className="flex-1 px-2.5 py-1.5 text-[12px] rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] placeholder:text-muted focus:outline-none focus:border-brand/40"
+                  onKeyDown={e => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      const input = e.currentTarget;
+                      if (input.value.trim()) {
+                        state.followUps.push(input.value.trim());
+                        input.value = '';
+                        render();
+                      }
+                    }
+                  }}
+                />
+                <button
+                  type="button"
+                  className="px-2.5 py-1.5 text-[11px] font-medium bg-[var(--surface)] border border-[var(--border)] rounded-md hover:bg-[var(--hover)] transition-colors"
+                  onClick={() => {
+                    const input = document.getElementById('followup-input') as HTMLInputElement;
+                    if (input?.value.trim()) {
+                      state.followUps.push(input.value.trim());
+                      input.value = '';
+                      render();
+                    }
+                  }}
+                >
+                  Add
+                </button>
+              </div>
+              {state.followUps.length > 0 && (
+                <div className="flex flex-col gap-1 mt-1.5">
+                  {state.followUps.map((fu, i) => (
+                    <div key={i} className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-[var(--surface)] border border-[var(--border)]">
+                      <span className="text-[11px] flex-1">{fu}</span>
+                      <button
+                        className="text-[10px] text-danger hover:text-danger/80"
+                        onClick={() => { state.followUps.splice(i, 1); render(); }}
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        ),
+        footer: (
+          <>
+            <button
+              className="px-3.5 py-1.5 text-[12px] text-sub bg-[var(--surface)] border border-[var(--border)] rounded-md hover:bg-[var(--hover)] transition-colors"
+              onClick={closeDrawer}
+            >
+              Cancel
+            </button>
+            <button
+              data-submit-complete
+              disabled={completeTask.isPending}
+              className="px-3.5 py-1.5 text-[12px] font-medium bg-brand text-[#09090b] rounded-md hover:brightness-110 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              onClick={() => {
+                completeTask.mutate(
+                  {
+                    id: t.id,
+                    data: {
+                      outcome: state.outcome,
+                      notes: state.notes || undefined,
+                      followUpTasks: state.followUps.map(title => ({ title, source: 'Manual' })),
+                    },
+                  },
+                  {
+                    onSuccess: () => {
+                      addToast({ type: 'success', message: `Task completed: ${t.title}`, action: { label: 'View Tasks →', href: '/tasks' } });
+                      closeDrawer();
+                    },
+                    onError: () => addToast({ type: 'error', message: 'Failed to complete task' }),
+                  }
+                );
+              }}
+            >
+              Complete Task
+            </button>
+          </>
+        ),
+      });
+    }
+
+    render();
+  }
+
   function openTaskDetail(t: Task) {
     const goal = t.goalId ? goals.find(g => g.id === t.goalId) : null;
     const siblings = t.goalId ? tasks.filter(x => x.goalId === t.goalId && x.id !== t.id) : [];
@@ -256,7 +385,10 @@ export default function TasksPage() {
     const done = t.status === 'Done';
     return (
       <div className={cn('flex items-center gap-2.5 px-3.5 py-2.5 rounded-lg bg-[var(--elevated)] border border-[var(--border)] hover:bg-[var(--hover)] transition-colors', done && 'opacity-50')}>
-        <div className={cn('w-4 h-4 rounded border-[1.5px] flex-shrink-0 flex items-center justify-center', done ? 'border-brand bg-brand-dim text-brand text-[9px]' : od ? 'border-danger' : 'border-[var(--border-strong)]')}>{done ? '✓' : ''}</div>
+        <div
+          className={cn('w-4 h-4 rounded border-[1.5px] flex-shrink-0 flex items-center justify-center cursor-pointer', done ? 'border-brand bg-brand-dim text-brand text-[9px]' : od ? 'border-danger' : 'border-[var(--border-strong)]')}
+          onClick={e => { e.stopPropagation(); if (!done) openCompleteDrawer(t); }}
+        >{done ? '✓' : ''}</div>
         <div className="flex-1 min-w-0 cursor-pointer" onClick={() => openTaskDetail(t)}>
           <div className={cn('text-[12.5px] font-medium', done && 'line-through text-muted')}>{t.title}</div>
           <div className="flex items-center gap-1 mt-0.5 flex-wrap">

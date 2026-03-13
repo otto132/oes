@@ -1,5 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api-client';
+import { accountKeys } from './accounts';
+import { taskKeys } from './tasks';
 
 export const inboxKeys = {
   all: ['inbox'] as const,
@@ -33,7 +35,10 @@ export function useCreateTaskFromEmail() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (id: string) => api.inbox.createTask(id),
-    onSuccess: () => qc.invalidateQueries({ queryKey: inboxKeys.all }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: inboxKeys.all });
+      qc.invalidateQueries({ queryKey: taskKeys.all });
+    },
   });
 }
 
@@ -41,6 +46,9 @@ export function useCreateAccountFromEmail() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (id: string) => api.inbox.createAccount(id),
-    onSuccess: () => qc.invalidateQueries({ queryKey: inboxKeys.all }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: inboxKeys.all });
+      qc.invalidateQueries({ queryKey: accountKeys.all });
+    },
   });
 }
