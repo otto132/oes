@@ -418,11 +418,135 @@ export async function runSync({ type, syncFn }: RunSyncOptions): Promise<SyncRes
 }
 ```
 
-- [ ] **Step 2: Commit**
+- [ ] **Step 2: Write runSync unit tests**
+
+Create `src/lib/integrations/__tests__/run-sync.test.ts`:
+
+```typescript
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+
+const { mockDb, mockRefresh } = vi.hoisted(() => {
+  const fn = vi.fn;
+  return {
+    mockDb: {
+      integrationToken: { findMany: fn(), update: fn() },
+      syncLog: { create: fn() },
+    },
+    mockRefresh: fn(),
+  };
+});
+
+vi.mock('@/lib/db', () => ({ db: mockDb }));
+vi.mock('../microsoft-graph', () => ({ refreshAccessToken: mockRefresh }));
+
+import { runSync } from '../run-sync';
+
+const activeToken = {
+  id: 't1',
+  provider: 'microsoft',
+  accessToken: 'access',
+  refreshToken: 'refresh',
+  expiresAt: new Date(Date.now() + 3600_000),
+  userEmail: 'test@example.com',
+  userId: 'user-1',
+  status: 'active',
+  user: { id: 'user-1', isActive: true },
+};
+
+describe('runSync', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockDb.syncLog.create.mockResolvedValue({});
+  });
+
+  it('returns early with message when no tokens found', async () => {
+    mockDb.integrationToken.findMany.mockResolvedValue([]);
+    const result = await runSync({ type: 'email', syncFn: vi.fn() });
+    expect(result.synced).toBe(0);
+    expect(result.errors[0]).toContain('No active Microsoft tokens');
+  });
+
+  it('calls syncFn for each active user token', async () => {
+    mockDb.integrationToken.findMany.mockResolvedValue([activeToken]);
+    const syncFn = vi.fn().mockResolvedValue({ synced: 3, errors: [] });
+
+    const result = await runSync({ type: 'email', syncFn });
+
+    expect(syncFn).toHaveBeenCalledOnce();
+    expect(syncFn).toHaveBeenCalledWith(activeToken, 'access');
+    expect(result.synced).toBe(3);
+  });
+
+  it('refreshes expired tokens', async () => {
+    const expired = { ...activeToken, expiresAt: new Date(Date.now() - 1000) };
+    mockDb.integrationToken.findMany.mockResolvedValue([expired]);
+    mockDb.integrationToken.update.mockResolvedValue({});
+    mockRefresh.mockResolvedValue({ access_token: 'new', refresh_token: 'new-r', expires_in: 3600 });
+    const syncFn = vi.fn().mockResolvedValue({ synced: 1, errors: [] });
+
+    await runSync({ type: 'email', syncFn });
+
+    expect(mockRefresh).toHaveBeenCalledWith('refresh');
+    expect(syncFn).toHaveBeenCalledWith(expired, 'new');
+  });
+
+  it('marks token as error on refresh failure and creates failed SyncLog', async () => {
+    const expired = { ...activeToken, expiresAt: new Date(Date.now() - 1000) };
+    mockDb.integrationToken.findMany.mockResolvedValue([expired]);
+    mockDb.integrationToken.update.mockResolvedValue({});
+    mockRefresh.mockRejectedValue(new Error('invalid_grant'));
+
+    const result = await runSync({ type: 'email', syncFn: vi.fn() });
+
+    expect(mockDb.integrationToken.update).toHaveBeenCalledWith(
+      expect.objectContaining({ data: expect.objectContaining({ status: 'error' }) })
+    );
+    expect(mockDb.syncLog.create).toHaveBeenCalledWith(
+      expect.objectContaining({ data: expect.objectContaining({ status: 'failed' }) })
+    );
+    expect(result.errors[0]).toContain('Token refresh failed');
+  });
+
+  it('creates SyncLog entry on successful sync', async () => {
+    mockDb.integrationToken.findMany.mockResolvedValue([activeToken]);
+    const syncFn = vi.fn().mockResolvedValue({ synced: 5, errors: [] });
+
+    await runSync({ type: 'calendar', syncFn });
+
+    expect(mockDb.syncLog.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ type: 'calendar', status: 'success', itemsSynced: 5 }),
+      })
+    );
+  });
+
+  it('creates partial SyncLog when syncFn has errors', async () => {
+    mockDb.integrationToken.findMany.mockResolvedValue([activeToken]);
+    const syncFn = vi.fn().mockResolvedValue({ synced: 2, errors: ['one failed'] });
+
+    await runSync({ type: 'email', syncFn });
+
+    expect(mockDb.syncLog.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ status: 'partial', itemsSynced: 2 }),
+      })
+    );
+  });
+});
+```
+
+- [ ] **Step 3: Run tests to verify they pass**
+
+Run: `npx vitest run src/lib/integrations/__tests__/run-sync.test.ts --reporter=verbose`
+Expected: All tests PASS.
+
+- [ ] **Step 4: Commit**
 
 ```bash
-git add src/lib/integrations/run-sync.ts
-git commit -m "feat(sync): add runSync helper for shared token iteration and SyncLog"
+git add src/lib/integrations/run-sync.ts src/lib/integrations/__tests__/run-sync.test.ts
+git commit -m "feat(sync): add runSync helper with unit tests
+
+Handles multi-user token iteration, refresh, error marking, SyncLog."
 ```
 
 ---
@@ -458,25 +582,6 @@ export async function syncEmails(): Promise<{ synced: number; errors: string[] }
         try {
           const graphId = ge.id;
 
-          // Dedup by externalId (Graph message ID) using upsert for race safety
-          if (graphId) {
-            const existing = await db.inboxEmail.findUnique({
-              where: { externalId: graphId },
-              select: { id: true },
-            });
-            if (existing) continue;
-          } else {
-            // Fallback dedup for emails without Graph ID (backward compat)
-            const existing = await db.inboxEmail.findFirst({
-              where: {
-                subject: ge.subject,
-                fromEmail: ge.from.emailAddress.address,
-                receivedAt: new Date(ge.receivedDateTime),
-              },
-            });
-            if (existing) continue;
-          }
-
           // Match to account
           const match = await matchDomainToAccount(ge.from.emailAddress.address);
           const domain = ge.from.emailAddress.address.split('@')[1];
@@ -487,25 +592,46 @@ export async function syncEmails(): Promise<{ synced: number; errors: string[] }
             cls = 'new_domain';
           }
 
-          // Store
-          await db.inboxEmail.create({
-            data: {
-              externalId: graphId || null,
-              subject: ge.subject,
-              fromEmail: ge.from.emailAddress.address,
-              fromName: ge.from.emailAddress.name,
-              preview: ge.bodyPreview.slice(0, 500),
-              receivedAt: new Date(ge.receivedDateTime),
-              isUnread: !ge.isRead,
-              classification: cls,
-              classificationConf: conf,
-              isLinked: !!match,
-              accountId: match?.accountId || null,
-              accountName: match?.accountName || null,
-              domain: !match ? domain : null,
-            },
-          });
-          synced++;
+          const emailData = {
+            subject: ge.subject,
+            fromEmail: ge.from.emailAddress.address,
+            fromName: ge.from.emailAddress.name,
+            preview: ge.bodyPreview.slice(0, 500),
+            receivedAt: new Date(ge.receivedDateTime),
+            isUnread: !ge.isRead,
+            classification: cls,
+            classificationConf: conf,
+            isLinked: !!match,
+            accountId: match?.accountId || null,
+            accountName: match?.accountName || null,
+            domain: !match ? domain : null,
+          };
+
+          // Dedup by externalId using upsert (race-condition safe)
+          if (graphId) {
+            const result = await db.inboxEmail.upsert({
+              where: { externalId: graphId },
+              update: {},  // no-op on duplicate
+              create: { externalId: graphId, ...emailData },
+            });
+            // upsert returns existing record on duplicate — only count new ones
+            if (result.createdAt.getTime() >= new Date(Date.now() - 5000).getTime()) {
+              synced++;
+            }
+          } else {
+            // Fallback dedup for emails without Graph ID (backward compat)
+            const existing = await db.inboxEmail.findFirst({
+              where: {
+                subject: ge.subject,
+                fromEmail: ge.from.emailAddress.address,
+                receivedAt: new Date(ge.receivedDateTime),
+              },
+            });
+            if (existing) continue;
+
+            await db.inboxEmail.create({ data: emailData });
+            synced++;
+          }
         } catch (err) {
           errors.push(`Failed to sync email "${ge.subject}": ${err}`);
         }
@@ -597,28 +723,14 @@ export async function syncCalendar(): Promise<{ synced: number; errors: string[]
 
           const graphId = ev.id;
 
-          // Dedup by externalId (Graph event ID)
-          if (graphId) {
-            const existing = await db.meeting.findUnique({
-              where: { externalId: graphId },
-              select: { id: true },
-            });
-            if (existing) continue;
-          } else {
-            // Fallback dedup by title + date
-            const evDate = new Date(ev.start.dateTime);
-            const startOfDay = new Date(evDate); startOfDay.setHours(0, 0, 0, 0);
-            const endOfDay = new Date(evDate); endOfDay.setHours(23, 59, 59, 999);
-            const existing = await db.meeting.findFirst({
-              where: { title: ev.subject, date: { gte: startOfDay, lte: endOfDay } },
-            });
-            if (existing) continue;
-          }
-
           // Parse start/end times
           const startTime = new Date(ev.start.dateTime);
           const endTime = new Date(ev.end.dateTime);
           const duration = Math.round((endTime.getTime() - startTime.getTime()) / 60000);
+
+          // Date at midnight for consistent date-range queries
+          const dateOnly = new Date(startTime);
+          dateOnly.setUTCHours(0, 0, 0, 0);
 
           // Match attendees to accounts
           const externalAttendees = ev.attendees.filter(a => a.type !== 'organizer');
@@ -631,21 +743,40 @@ export async function syncCalendar(): Promise<{ synced: number; errors: string[]
             if (match) { accountMatch = match; break; }
           }
 
-          await db.meeting.create({
-            data: {
-              externalId: graphId || null,
-              title: ev.subject,
-              startTime,
-              duration,
-              date: new Date(ev.start.dateTime),
-              attendees: attendeeNames,
-              attendeeEmails,
-              prepStatus: 'draft',
-              accountId: accountMatch?.accountId || null,
-              accountName: accountMatch?.accountName || null,
-            },
-          });
-          synced++;
+          const meetingData = {
+            title: ev.subject,
+            startTime,
+            duration,
+            date: dateOnly,
+            attendees: attendeeNames,
+            attendeeEmails,
+            prepStatus: 'draft' as const,
+            accountId: accountMatch?.accountId || null,
+            accountName: accountMatch?.accountName || null,
+          };
+
+          // Dedup by externalId using upsert (race-condition safe)
+          if (graphId) {
+            const result = await db.meeting.upsert({
+              where: { externalId: graphId },
+              update: {},  // no-op on duplicate
+              create: { externalId: graphId, ...meetingData },
+            });
+            if (result.createdAt.getTime() >= new Date(Date.now() - 5000).getTime()) {
+              synced++;
+            }
+          } else {
+            // Fallback dedup by title + date
+            const startOfDay = new Date(dateOnly);
+            const endOfDay = new Date(dateOnly); endOfDay.setUTCHours(23, 59, 59, 999);
+            const existing = await db.meeting.findFirst({
+              where: { title: ev.subject, date: { gte: startOfDay, lte: endOfDay } },
+            });
+            if (existing) continue;
+
+            await db.meeting.create({ data: meetingData });
+            synced++;
+          }
         } catch (err) {
           errors.push(`Failed to sync event "${ev.subject}": ${err}`);
         }
@@ -824,13 +955,14 @@ export async function GET() {
     select: { id: true, type: true, status: true, itemsSynced: true, errors: true, startedAt: true, completedAt: true },
   });
 
-  // Counts
+  // Counts (org-wide — InboxEmail/Meeting models don't have per-user ownership)
   const [emailCount, meetingCount] = await Promise.all([
     db.inboxEmail.count(),
     db.meeting.count(),
   ]);
 
-  const isConnected = msToken !== null && msToken.status === 'active' && msToken.expiresAt > new Date();
+  // Token with active status is considered connected — runSync handles refresh transparently
+  const isConnected = msToken !== null && msToken.status === 'active';
   const needsReconnect = msToken?.status === 'error' || msToken?.status === 'revoked';
 
   const lastEmailError = lastEmailSync?.status === 'failed' || lastEmailSync?.status === 'partial'
@@ -1068,7 +1200,7 @@ Add at the end of `src/lib/queries/settings.ts`, before the closing of the file:
 export function useSyncMutation() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (type: string = 'all') => api.sync.trigger(type),
+    mutationFn: (type: string) => api.sync.trigger(type),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: settingsKeys.integrations() });
     },
