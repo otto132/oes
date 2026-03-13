@@ -1,7 +1,11 @@
 'use client';
 import { useState } from 'react';
 import { Shield, Eye, Check } from 'lucide-react';
+import { useQueryClient } from '@tanstack/react-query';
 import { useQueueQuery, useApproveQueueItem, useRejectQueueItem } from '@/lib/queries/queue';
+import { leadKeys } from '@/lib/queries/leads';
+import { taskKeys } from '@/lib/queries/tasks';
+import { accountKeys } from '@/lib/queries/accounts';
 import { fRelative, queueTypeLabel, cn } from '@/lib/utils';
 import { Badge, ConfBadge, AgentTag, ScorePill, FIUACBars, EmptyState, Skeleton, SkeletonCard, SkeletonText, ErrorState } from '@/components/ui';
 import type { QueueItem } from '@/lib/types';
@@ -25,13 +29,47 @@ export default function QueuePage() {
   const reject = useRejectQueueItem();
 
   const { addToast, openDrawer, closeDrawer } = useStore();
+  const qc = useQueryClient();
 
-  const SIDE_EFFECT_MSG: Record<string, string> = {
-    lead_qualification: 'Lead created in pipeline',
-    task_creation: 'Task created',
-    enrichment: 'Account field updated',
-    outreach_draft: 'Outreach logged as activity',
-  };
+  function handleApproveSuccess(q: QueueItem) {
+    const p = q.payload || {};
+    switch (q.type) {
+      case 'lead_qualification':
+        addToast({
+          type: 'success',
+          message: `Lead created for ${p.company || q.accName || 'company'}`,
+          action: { label: 'View Leads →', href: '/leads' },
+        });
+        qc.invalidateQueries({ queryKey: leadKeys.all });
+        break;
+      case 'task_creation':
+        addToast({
+          type: 'success',
+          message: `Task created: ${p.task || q.title || 'task'}`,
+          action: { label: 'View Tasks →', href: '/tasks' },
+        });
+        qc.invalidateQueries({ queryKey: taskKeys.all });
+        break;
+      case 'enrichment':
+        addToast({
+          type: 'success',
+          message: `Account updated: ${p.field || 'field'}`,
+          action: q.accId ? { label: 'View Account →', href: `/accounts/${q.accId}` } : undefined,
+        });
+        if (q.accId) qc.invalidateQueries({ queryKey: accountKeys.detail(q.accId) });
+        break;
+      case 'outreach_draft':
+        addToast({
+          type: 'success',
+          message: `Outreach logged for ${q.accName || 'account'}`,
+          action: q.accId ? { label: 'View Account →', href: `/accounts/${q.accId}` } : undefined,
+        });
+        if (q.accId) qc.invalidateQueries({ queryKey: accountKeys.detail(q.accId) });
+        break;
+      default:
+        addToast({ type: 'success', message: 'Approved' });
+    }
+  }
 
   function openEditDrawer(q: QueueItem) {
     const p = q.payload || {};
@@ -103,7 +141,7 @@ export default function QueuePage() {
                 { id: q.id, editedPayload },
                 {
                   onSuccess: () => {
-                    addToast({ type: 'success', message: `Approved (edited) — ${SIDE_EFFECT_MSG[q.type] || 'Done'}` });
+                    handleApproveSuccess(q);
                     closeDrawer();
                   },
                   onError: (err) => addToast({ type: 'error', message: `Approve failed: ${err.message}` }),
@@ -259,7 +297,7 @@ export default function QueuePage() {
                 approve.mutate(
                   { id: q.id },
                   {
-                    onSuccess: () => addToast({ type: 'success', message: `Approved — ${SIDE_EFFECT_MSG[q.type] || 'Done'}` }),
+                    onSuccess: () => handleApproveSuccess(q),
                     onError: (err) => addToast({ type: 'error', message: `Approve failed: ${err.message}` }),
                   }
                 )

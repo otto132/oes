@@ -279,6 +279,157 @@ export default function OppDetailPage() {
   const hAvg = healthAvg(o.health);
   const isMutating = move.isPending || closeWon.isPending || closeLost.isPending;
 
+  function openCloseWonDrawer() {
+    const state = { winNotes: '', competitorBeaten: '' };
+    openDrawer({
+      title: 'Close Won',
+      subtitle: o!.name,
+      body: (
+        <div className="flex flex-col gap-3">
+          <label className="flex flex-col gap-1">
+            <span className="text-[10px] font-semibold uppercase tracking-wide text-[var(--muted)]">What made us win this deal?</span>
+            <textarea
+              onChange={e => { state.winNotes = e.target.value; }}
+              rows={3}
+              placeholder="Key factors, differentiators, timing..."
+              className="px-2.5 py-1.5 text-[12px] rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] placeholder:text-[var(--muted)] focus:outline-none focus:border-brand/40 resize-y"
+            />
+          </label>
+          <label className="flex flex-col gap-1">
+            <span className="text-[10px] font-semibold uppercase tracking-wide text-[var(--muted)]">Competitor Beaten (optional)</span>
+            <input
+              onChange={e => { state.competitorBeaten = e.target.value; }}
+              placeholder="e.g. Salesforce, HubSpot"
+              className="px-2.5 py-1.5 text-[12px] rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] placeholder:text-[var(--muted)] focus:outline-none focus:border-brand/40"
+            />
+          </label>
+        </div>
+      ),
+      footer: (
+        <>
+          <button
+            className="px-3.5 py-1.5 text-[12px] text-[var(--sub)] bg-[var(--surface)] border border-[var(--border)] rounded-md hover:bg-[var(--hover)] transition-colors"
+            onClick={closeDrawer}
+          >
+            Cancel
+          </button>
+          <button
+            disabled={closeWon.isPending}
+            className="px-3.5 py-1.5 text-[12px] font-medium bg-brand text-[#09090b] rounded-md hover:brightness-110 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            onClick={() => {
+              closeWon.mutate(
+                {
+                  id: o!.id,
+                  winNotes: state.winNotes || undefined,
+                  competitorBeaten: state.competitorBeaten || undefined,
+                },
+                {
+                  onSuccess: () => {
+                    addToast({ type: 'success', message: 'Deal closed as Won ✓' });
+                    closeDrawer();
+                  },
+                  onError: (err) => addToast({ type: 'error', message: `Failed to close deal: ${err.message}` }),
+                }
+              );
+            }}
+          >
+            Close as Won
+          </button>
+        </>
+      ),
+    });
+  }
+
+  function openCloseLostDrawer() {
+    const state = { lossReason: '', lossCompetitor: '', lossNotes: '' };
+    let competitorEl: HTMLDivElement | null = null;
+
+    openDrawer({
+      title: 'Close Lost',
+      subtitle: o!.name,
+      body: (
+        <div className="flex flex-col gap-3">
+          <label className="flex flex-col gap-1">
+            <span className="text-[10px] font-semibold uppercase tracking-wide text-[var(--muted)]">Loss Reason</span>
+            <select
+              defaultValue=""
+              onChange={e => {
+                state.lossReason = e.target.value;
+                if (competitorEl) competitorEl.style.display = e.target.value === 'Competitor' ? 'flex' : 'none';
+              }}
+              className="px-2.5 py-1.5 text-[12px] rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] focus:outline-none focus:border-brand/40"
+            >
+              <option value="" disabled>Select a reason…</option>
+              <option value="Price">Price</option>
+              <option value="Timing">Timing</option>
+              <option value="Competitor">Competitor</option>
+              <option value="No Budget">No Budget</option>
+              <option value="No Decision">No Decision</option>
+              <option value="Champion Left">Champion Left</option>
+              <option value="Other">Other</option>
+            </select>
+          </label>
+          <div ref={el => { competitorEl = el; }} className="flex flex-col gap-1" style={{ display: 'none' }}>
+            <label className="flex flex-col gap-1">
+              <span className="text-[10px] font-semibold uppercase tracking-wide text-[var(--muted)]">Who did we lose to?</span>
+              <input
+                onChange={e => { state.lossCompetitor = e.target.value; }}
+                placeholder="e.g. Competitor name"
+                className="px-2.5 py-1.5 text-[12px] rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] placeholder:text-[var(--muted)] focus:outline-none focus:border-brand/40"
+              />
+            </label>
+          </div>
+          <label className="flex flex-col gap-1">
+            <span className="text-[10px] font-semibold uppercase tracking-wide text-[var(--muted)]">What can we learn? (optional)</span>
+            <textarea
+              onChange={e => { state.lossNotes = e.target.value; }}
+              rows={3}
+              placeholder="Lessons learned, what to improve..."
+              className="px-2.5 py-1.5 text-[12px] rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] placeholder:text-[var(--muted)] focus:outline-none focus:border-brand/40 resize-y"
+            />
+          </label>
+        </div>
+      ),
+      footer: (
+        <>
+          <button
+            className="px-3.5 py-1.5 text-[12px] text-[var(--sub)] bg-[var(--surface)] border border-[var(--border)] rounded-md hover:bg-[var(--hover)] transition-colors"
+            onClick={closeDrawer}
+          >
+            Cancel
+          </button>
+          <button
+            disabled={closeLost.isPending}
+            className="px-3.5 py-1.5 text-[12px] font-medium bg-red-500/[.15] text-red-400 border border-red-500/[.2] rounded-md hover:bg-red-500/[.25] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            onClick={() => {
+              if (!state.lossReason) {
+                addToast({ type: 'error', message: 'Please select a loss reason' });
+                return;
+              }
+              closeLost.mutate(
+                {
+                  id: o!.id,
+                  lossReason: state.lossReason,
+                  lossCompetitor: state.lossCompetitor || undefined,
+                  lossNotes: state.lossNotes || undefined,
+                },
+                {
+                  onSuccess: () => {
+                    addToast({ type: 'info', message: 'Deal closed as Lost' });
+                    closeDrawer();
+                  },
+                  onError: (err) => addToast({ type: 'error', message: `Failed to close deal: ${err.message}` }),
+                }
+              );
+            }}
+          >
+            Close as Lost
+          </button>
+        </>
+      ),
+    });
+  }
+
   const healthDims = [
     { l: 'Engagement', v: o.health.eng }, { l: 'Stakeholders', v: o.health.stake },
     { l: 'Competitive', v: o.health.comp }, { l: 'Timeline', v: o.health.time },
