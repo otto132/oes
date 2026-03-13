@@ -1,12 +1,15 @@
 'use client';
+import { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { useOpportunityDetail, useMoveStage, useCloseWon, useCloseLost } from '@/lib/queries/opportunities';
+import { useLogActivity } from '@/lib/queries/activities';
 import { Badge, Avatar, HealthBar, StageBadge, AgentTag, Skeleton, SkeletonCard, ErrorState } from '@/components/ui';
 import { fmt, fDate, fR, isOverdue, weightedValue, cn } from '@/lib/utils';
 import { STAGES, STAGE_COLOR, healthAvg } from '@/lib/types';
 import type { Activity, Contact } from '@/lib/types';
 import { useStore } from '@/lib/store';
+import { api } from '@/lib/api-client';
 
 function riskHex(h: { eng: number; stake: number; comp: number; time: number }): string {
   const a = healthAvg(h);
@@ -105,6 +108,95 @@ function LoadingSkeleton() {
   );
 }
 
+function CloseLostForm({ opp, onSubmit, registerSubmit }: {
+  opp: { id: string; name: string; amt: number; accId: string; accName: string };
+  onSubmit: (data: { lossReason: string; lossCompetitor?: string; lossNotes?: string; revisitDate?: string }) => void;
+  registerSubmit: (fn: () => void) => void;
+}) {
+  const [reason, setReason] = useState('');
+  const [competitor, setCompetitor] = useState('');
+  const [notes, setNotes] = useState('');
+  const [revisitDate, setRevisitDate] = useState('');
+
+  const handleSubmit = () => {
+    onSubmit({
+      lossReason: reason,
+      lossCompetitor: reason === 'Competitor' ? competitor || undefined : undefined,
+      lossNotes: notes || undefined,
+      revisitDate: revisitDate || undefined,
+    });
+  };
+
+  // Register the submit function so the footer button can call it
+  useEffect(() => { registerSubmit(handleSubmit); });
+
+  return (
+    <div
+      className="flex flex-col gap-3"
+      onKeyDown={e => { if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') handleSubmit(); }}
+    >
+      {/* Context header */}
+      <div className="p-3 rounded-md bg-[var(--surface)] border border-[var(--border)]">
+        <div className="text-[13px] font-semibold text-[var(--text)]">{opp.name}</div>
+        <div className="font-mono text-[18px] font-semibold text-danger mt-0.5">{fmt(opp.amt)}</div>
+      </div>
+
+      <label className="flex flex-col gap-1">
+        <span className="text-[10px] font-semibold uppercase tracking-wide text-[var(--muted)]">Loss Reason *</span>
+        <select
+          value={reason}
+          onChange={e => setReason(e.target.value)}
+          className="px-2.5 py-1.5 text-[12px] rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] focus:outline-none focus:border-brand/40"
+        >
+          <option value="">Select reason...</option>
+          <option value="Price">Price</option>
+          <option value="Timing">Timing</option>
+          <option value="Competitor">Competitor</option>
+          <option value="No Budget">No Budget</option>
+          <option value="No Decision">No Decision</option>
+          <option value="Other">Other</option>
+        </select>
+      </label>
+
+      {reason === 'Competitor' && (
+        <label className="flex flex-col gap-1">
+          <span className="text-[10px] font-semibold uppercase tracking-wide text-[var(--muted)]">Lost To</span>
+          <input
+            value={competitor}
+            onChange={e => setCompetitor(e.target.value)}
+            placeholder="Who won the deal?"
+            className="px-2.5 py-1.5 text-[12px] rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] placeholder:text-[var(--muted)] focus:outline-none focus:border-brand/40"
+          />
+        </label>
+      )}
+
+      <label className="flex flex-col gap-1">
+        <span className="text-[10px] font-semibold uppercase tracking-wide text-[var(--muted)]">Notes</span>
+        <textarea
+          rows={3}
+          value={notes}
+          onChange={e => setNotes(e.target.value)}
+          placeholder="What could we have done differently?"
+          className="px-2.5 py-1.5 text-[12px] rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] placeholder:text-[var(--muted)] focus:outline-none focus:border-brand/40 resize-none"
+        />
+      </label>
+
+      <div className="border-t border-[var(--border)] pt-3 mt-1">
+        <label className="flex flex-col gap-1">
+          <span className="text-[10px] font-semibold uppercase tracking-wide text-[var(--muted)]">Revisit On (optional)</span>
+          <input
+            type="date"
+            value={revisitDate}
+            onChange={e => setRevisitDate(e.target.value)}
+            className="px-2.5 py-1.5 text-[12px] rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] focus:outline-none focus:border-brand/40"
+          />
+          <span className="text-[10px] text-[var(--muted)]">Creates a reminder task to revisit this prospect</span>
+        </label>
+      </div>
+    </div>
+  );
+}
+
 export default function OppDetailPage() {
   const params = useParams();
   const id = params.id as string;
@@ -112,8 +204,8 @@ export default function OppDetailPage() {
   const move = useMoveStage();
   const closeWon = useCloseWon();
   const closeLost = useCloseLost();
-  const { openDrawer, closeDrawer } = useStore();
-  const addToast = useStore(s => s.addToast);
+  const logActivity = useLogActivity();
+  const { openDrawer, closeDrawer, addToast } = useStore();
 
   if (isLoading) return <LoadingSkeleton />;
 
@@ -131,178 +223,88 @@ export default function OppDetailPage() {
 
   if (!o) return <div className="rounded-lg bg-[var(--elevated)] border border-[var(--border)] p-5 text-[var(--sub)]">Opportunity not found.</div>;
 
+  const sIdx = STAGES.indexOf(o.stage);
+  const hAvg = healthAvg(o.health);
+  const isMutating = move.isPending || closeWon.isPending || closeLost.isPending || logActivity.isPending;
+
+  const healthDims = [
+    { l: 'Engagement', v: o.health.eng }, { l: 'Stakeholders', v: o.health.stake },
+    { l: 'Competitive', v: o.health.comp }, { l: 'Timeline', v: o.health.time },
+  ];
+
   function openCloseWonDrawer() {
-    const state = { winNotes: '', competitorBeaten: '' };
+    const defaultDue = new Date(Date.now() + 7 * 864e5).toISOString().split('T')[0];
+    const state = {
+      winNotes: '',
+      competitorBeaten: '',
+      createTask: true,
+      taskTitle: `Onboarding kickoff: ${o.accName}`,
+      taskDue: defaultDue,
+    };
 
     openDrawer({
       title: 'Close Won',
-      subtitle: o!.name,
+      subtitle: 'Mark this deal as won',
       body: (
-        <div className="flex flex-col gap-3">
+        <div
+          className="flex flex-col gap-3"
+          onKeyDown={e => { if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') (document.querySelector('[data-submit-won]') as HTMLButtonElement)?.click(); }}
+        >
+          {/* Context header */}
+          <div className="p-3 rounded-md bg-[var(--surface)] border border-[var(--border)]">
+            <div className="text-[13px] font-semibold text-[var(--text)]">{o.name}</div>
+            <div className="font-mono text-[18px] font-semibold text-brand mt-0.5">{fmt(o.amt)}</div>
+          </div>
+
           <label className="flex flex-col gap-1">
             <span className="text-[10px] font-semibold uppercase tracking-wide text-[var(--muted)]">Win Notes</span>
             <textarea
-              placeholder="What helped us win?"
+              rows={3}
               onChange={e => { state.winNotes = e.target.value; }}
-              rows={3}
-              className="px-2.5 py-1.5 text-[12px] rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] focus:outline-none focus:border-brand/40 resize-none"
+              placeholder="What made us win this deal?"
+              className="px-2.5 py-1.5 text-[12px] rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] placeholder:text-[var(--muted)] focus:outline-none focus:border-brand/40 resize-none"
             />
           </label>
-          <label className="flex flex-col gap-1">
-            <span className="text-[10px] font-semibold uppercase tracking-wide text-[var(--muted)]">Competitor Beaten (optional)</span>
-            <input
-              placeholder="Which competitor?"
-              onChange={e => { state.competitorBeaten = e.target.value; }}
-              className="px-2.5 py-1.5 text-[12px] rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] focus:outline-none focus:border-brand/40"
-            />
-          </label>
-        </div>
-      ),
-      footer: (
-        <>
-          <button
-            className="px-3.5 py-1.5 text-[12px] text-[var(--sub)] bg-[var(--surface)] border border-[var(--border)] rounded-md hover:bg-[var(--hover)] transition-colors"
-            onClick={closeDrawer}
-          >
-            Cancel
-          </button>
-          <button
-            disabled={closeWon.isPending}
-            className="px-3.5 py-1.5 text-[12px] font-medium bg-[var(--brand)] text-[#09090b] rounded-md hover:brightness-110 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            onClick={() => {
-              closeWon.mutate(
-                {
-                  id: o!.id,
-                  winNotes: state.winNotes.trim() || undefined,
-                  competitorBeaten: state.competitorBeaten.trim() || undefined,
-                },
-                {
-                  onSuccess: () => {
-                    addToast({ type: 'success', message: `Deal won! ${o!.name}` });
-                    closeDrawer();
-                  },
-                  onError: (err) => addToast({ type: 'error', message: `Close failed: ${err.message}` }),
-                }
-              );
-            }}
-          >
-            Confirm Win
-          </button>
-        </>
-      ),
-    });
-  }
 
-  function openCloseLostDrawer() {
-    const state = { lossReason: '', lossCompetitor: '', lossNotes: '' };
-
-    openDrawer({
-      title: 'Close Lost',
-      subtitle: o!.name,
-      body: (
-        <div className="flex flex-col gap-3">
           <label className="flex flex-col gap-1">
-            <span className="text-[10px] font-semibold uppercase tracking-wide text-[var(--muted)]">Loss Reason *</span>
-            <select
-              defaultValue=""
-              onChange={e => { state.lossReason = e.target.value; }}
-              className="px-2.5 py-1.5 text-[12px] rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] focus:outline-none focus:border-brand/40"
-            >
-              <option value="" disabled>Select a reason</option>
-              <option value="Price">Price</option>
-              <option value="Competitor">Competitor</option>
-              <option value="Timing">Timing</option>
-              <option value="No Decision">No Decision</option>
-              <option value="Other">Other</option>
-            </select>
-          </label>
-          <label className="flex flex-col gap-1">
-            <span className="text-[10px] font-semibold uppercase tracking-wide text-[var(--muted)]">Loss Competitor (optional)</span>
-            <input
-              placeholder="Who won the deal?"
-              onChange={e => { state.lossCompetitor = e.target.value; }}
-              className="px-2.5 py-1.5 text-[12px] rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] focus:outline-none focus:border-brand/40"
-            />
-          </label>
-          <label className="flex flex-col gap-1">
-            <span className="text-[10px] font-semibold uppercase tracking-wide text-[var(--muted)]">Loss Notes (optional)</span>
-            <textarea
-              placeholder="Additional context"
-              onChange={e => { state.lossNotes = e.target.value; }}
-              rows={3}
-              className="px-2.5 py-1.5 text-[12px] rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] focus:outline-none focus:border-brand/40 resize-none"
-            />
-          </label>
-        </div>
-      ),
-      footer: (
-        <>
-          <button
-            className="px-3.5 py-1.5 text-[12px] text-[var(--sub)] bg-[var(--surface)] border border-[var(--border)] rounded-md hover:bg-[var(--hover)] transition-colors"
-            onClick={closeDrawer}
-          >
-            Cancel
-          </button>
-          <button
-            disabled={closeLost.isPending}
-            className="px-3.5 py-1.5 text-[12px] font-medium bg-danger text-white rounded-md hover:brightness-110 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            onClick={() => {
-              if (!state.lossReason) {
-                addToast({ type: 'error', message: 'Loss reason is required' });
-                return;
-              }
-              closeLost.mutate(
-                {
-                  id: o!.id,
-                  lossReason: state.lossReason,
-                  lossCompetitor: state.lossCompetitor.trim() || undefined,
-                  lossNotes: state.lossNotes.trim() || undefined,
-                },
-                {
-                  onSuccess: () => {
-                    addToast({ type: 'info', message: `Deal closed: ${o!.name}` });
-                    closeDrawer();
-                  },
-                  onError: (err) => addToast({ type: 'error', message: `Close failed: ${err.message}` }),
-                }
-              );
-            }}
-          >
-            Confirm Loss
-          </button>
-        </>
-      ),
-    });
-  }
-
-  const sIdx = STAGES.indexOf(o.stage);
-  const hAvg = healthAvg(o.health);
-  const isMutating = move.isPending || closeWon.isPending || closeLost.isPending;
-
-  function openCloseWonDrawer() {
-    const state = { winNotes: '', competitorBeaten: '' };
-    openDrawer({
-      title: 'Close Won',
-      subtitle: o!.name,
-      body: (
-        <div className="flex flex-col gap-3">
-          <label className="flex flex-col gap-1">
-            <span className="text-[10px] font-semibold uppercase tracking-wide text-[var(--muted)]">What made us win this deal?</span>
-            <textarea
-              onChange={e => { state.winNotes = e.target.value; }}
-              rows={3}
-              placeholder="Key factors, differentiators, timing..."
-              className="px-2.5 py-1.5 text-[12px] rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] placeholder:text-[var(--muted)] focus:outline-none focus:border-brand/40 resize-y"
-            />
-          </label>
-          <label className="flex flex-col gap-1">
-            <span className="text-[10px] font-semibold uppercase tracking-wide text-[var(--muted)]">Competitor Beaten (optional)</span>
+            <span className="text-[10px] font-semibold uppercase tracking-wide text-[var(--muted)]">Competitor Beaten</span>
             <input
               onChange={e => { state.competitorBeaten = e.target.value; }}
               placeholder="e.g. Salesforce, HubSpot"
               className="px-2.5 py-1.5 text-[12px] rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] placeholder:text-[var(--muted)] focus:outline-none focus:border-brand/40"
             />
           </label>
+
+          <div className="border-t border-[var(--border)] pt-3 mt-1">
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                defaultChecked
+                onChange={e => { state.createTask = e.target.checked; }}
+                className="rounded border-[var(--border)]"
+              />
+              <span className="text-[11px] font-medium text-[var(--text)]">Create follow-up task</span>
+            </label>
+            <div className="mt-2 flex gap-2">
+              <label className="flex flex-col gap-1 flex-1">
+                <span className="text-[10px] font-semibold uppercase tracking-wide text-[var(--muted)]">Task Title</span>
+                <input
+                  defaultValue={state.taskTitle}
+                  onChange={e => { state.taskTitle = e.target.value; }}
+                  className="px-2.5 py-1.5 text-[12px] rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] focus:outline-none focus:border-brand/40"
+                />
+              </label>
+              <label className="flex flex-col gap-1 w-[130px]">
+                <span className="text-[10px] font-semibold uppercase tracking-wide text-[var(--muted)]">Due Date</span>
+                <input
+                  type="date"
+                  defaultValue={defaultDue}
+                  onChange={e => { state.taskDue = e.target.value; }}
+                  className="px-2.5 py-1.5 text-[12px] rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] focus:outline-none focus:border-brand/40"
+                />
+              </label>
+            </div>
+          </div>
         </div>
       ),
       footer: (
@@ -314,26 +316,32 @@ export default function OppDetailPage() {
             Cancel
           </button>
           <button
+            data-submit-won
             disabled={closeWon.isPending}
             className="px-3.5 py-1.5 text-[12px] font-medium bg-brand text-[#09090b] rounded-md hover:brightness-110 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             onClick={() => {
               closeWon.mutate(
+                { id: o.id, winNotes: state.winNotes || undefined, competitorBeaten: state.competitorBeaten || undefined },
                 {
-                  id: o!.id,
-                  winNotes: state.winNotes || undefined,
-                  competitorBeaten: state.competitorBeaten || undefined,
-                },
-                {
-                  onSuccess: () => {
-                    addToast({ type: 'success', message: 'Deal closed as Won ✓' });
+                  onSuccess: async () => {
+                    let taskMsg = '';
+                    if (state.createTask && state.taskTitle.trim()) {
+                      try {
+                        await api.tasks.create({ title: state.taskTitle.trim(), due: state.taskDue || undefined, accountId: o.accId });
+                        taskMsg = ' Follow-up task created.';
+                      } catch (err: any) {
+                        addToast({ type: 'error', message: `Task failed: ${err.message}` });
+                      }
+                    }
+                    addToast({ type: 'success', message: `Deal won! 🎉${taskMsg}` });
                     closeDrawer();
                   },
-                  onError: (err) => addToast({ type: 'error', message: `Failed to close deal: ${err.message}` }),
+                  onError: (err) => addToast({ type: 'error', message: err.message }),
                 }
               );
             }}
           >
-            Close as Won
+            Mark as Won
           </button>
         </>
       ),
@@ -341,99 +349,111 @@ export default function OppDetailPage() {
   }
 
   function openCloseLostDrawer() {
-    const state = { lossReason: '', lossCompetitor: '', lossNotes: '' };
-    let competitorEl: HTMLDivElement | null = null;
+    const submitRef = { current: () => {} };
 
     openDrawer({
       title: 'Close Lost',
-      subtitle: o!.name,
+      subtitle: 'Record why this deal was lost',
       body: (
-        <div className="flex flex-col gap-3">
-          <label className="flex flex-col gap-1">
-            <span className="text-[10px] font-semibold uppercase tracking-wide text-[var(--muted)]">Loss Reason</span>
-            <select
-              defaultValue=""
-              onChange={e => {
-                state.lossReason = e.target.value;
-                if (competitorEl) competitorEl.style.display = e.target.value === 'Competitor' ? 'flex' : 'none';
-              }}
-              className="px-2.5 py-1.5 text-[12px] rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] focus:outline-none focus:border-brand/40"
-            >
-              <option value="" disabled>Select a reason…</option>
-              <option value="Price">Price</option>
-              <option value="Timing">Timing</option>
-              <option value="Competitor">Competitor</option>
-              <option value="No Budget">No Budget</option>
-              <option value="No Decision">No Decision</option>
-              <option value="Champion Left">Champion Left</option>
-              <option value="Other">Other</option>
-            </select>
-          </label>
-          <div ref={el => { competitorEl = el; }} className="flex flex-col gap-1" style={{ display: 'none' }}>
-            <label className="flex flex-col gap-1">
-              <span className="text-[10px] font-semibold uppercase tracking-wide text-[var(--muted)]">Who did we lose to?</span>
-              <input
-                onChange={e => { state.lossCompetitor = e.target.value; }}
-                placeholder="e.g. Competitor name"
-                className="px-2.5 py-1.5 text-[12px] rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] placeholder:text-[var(--muted)] focus:outline-none focus:border-brand/40"
-              />
-            </label>
-          </div>
-          <label className="flex flex-col gap-1">
-            <span className="text-[10px] font-semibold uppercase tracking-wide text-[var(--muted)]">What can we learn? (optional)</span>
-            <textarea
-              onChange={e => { state.lossNotes = e.target.value; }}
-              rows={3}
-              placeholder="Lessons learned, what to improve..."
-              className="px-2.5 py-1.5 text-[12px] rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] placeholder:text-[var(--muted)] focus:outline-none focus:border-brand/40 resize-y"
-            />
-          </label>
-        </div>
+        <CloseLostForm
+          opp={{ id: o.id, name: o.name, amt: o.amt, accId: o.accId, accName: o.accName }}
+          onSubmit={(data) => {
+            if (!data.lossReason) {
+              addToast({ type: 'error', message: 'Loss reason is required' });
+              return;
+            }
+            closeLost.mutate(
+              { id: o.id, lossReason: data.lossReason, lossCompetitor: data.lossCompetitor, lossNotes: data.lossNotes },
+              {
+                onSuccess: async () => {
+                  let taskMsg = '';
+                  if (data.revisitDate) {
+                    try {
+                      await api.tasks.create({ title: `Revisit: ${o.name}`, due: data.revisitDate, accountId: o.accId });
+                      taskMsg = ` Revisit task created for ${fDate(data.revisitDate)}.`;
+                    } catch (err: any) {
+                      addToast({ type: 'error', message: `Revisit task failed: ${err.message}` });
+                    }
+                  }
+                  addToast({ type: 'info', message: `Deal marked as lost.${taskMsg}` });
+                  closeDrawer();
+                },
+                onError: (err) => addToast({ type: 'error', message: err.message }),
+              }
+            );
+          }}
+          registerSubmit={(fn) => { submitRef.current = fn; }}
+        />
       ),
       footer: (
         <>
-          <button
-            className="px-3.5 py-1.5 text-[12px] text-[var(--sub)] bg-[var(--surface)] border border-[var(--border)] rounded-md hover:bg-[var(--hover)] transition-colors"
-            onClick={closeDrawer}
-          >
-            Cancel
-          </button>
+          <button className="px-3.5 py-1.5 text-[12px] text-[var(--sub)] bg-[var(--surface)] border border-[var(--border)] rounded-md hover:bg-[var(--hover)] transition-colors" onClick={closeDrawer}>Cancel</button>
           <button
             disabled={closeLost.isPending}
-            className="px-3.5 py-1.5 text-[12px] font-medium bg-red-500/[.15] text-red-400 border border-red-500/[.2] rounded-md hover:bg-red-500/[.25] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            onClick={() => {
-              if (!state.lossReason) {
-                addToast({ type: 'error', message: 'Please select a loss reason' });
-                return;
-              }
-              closeLost.mutate(
-                {
-                  id: o!.id,
-                  lossReason: state.lossReason,
-                  lossCompetitor: state.lossCompetitor || undefined,
-                  lossNotes: state.lossNotes || undefined,
-                },
-                {
-                  onSuccess: () => {
-                    addToast({ type: 'info', message: 'Deal closed as Lost' });
-                    closeDrawer();
-                  },
-                  onError: (err) => addToast({ type: 'error', message: `Failed to close deal: ${err.message}` }),
-                }
-              );
-            }}
+            className="px-3.5 py-1.5 text-[12px] font-medium bg-danger text-white rounded-md hover:brightness-110 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            onClick={() => submitRef.current()}
           >
-            Close as Lost
+            Mark as Lost
           </button>
         </>
       ),
     });
   }
 
-  const healthDims = [
-    { l: 'Engagement', v: o.health.eng }, { l: 'Stakeholders', v: o.health.stake },
-    { l: 'Competitive', v: o.health.comp }, { l: 'Timeline', v: o.health.time },
-  ];
+  function openLogActivityDrawer(preselectedType?: string) {
+    const state = { type: preselectedType || 'Note', summary: '', detail: '' };
+
+    openDrawer({
+      title: 'Log Activity',
+      subtitle: `${o.accName}`,
+      body: (
+        <div
+          className="flex flex-col gap-3"
+          onKeyDown={e => { if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') (document.querySelector('[data-submit-activity]') as HTMLButtonElement)?.click(); }}
+        >
+          <label className="flex flex-col gap-1">
+            <span className="text-[10px] font-semibold uppercase tracking-wide text-[var(--muted)]">Type</span>
+            <select defaultValue={state.type} onChange={e => { state.type = e.target.value; }} className="px-2.5 py-1.5 text-[12px] rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] focus:outline-none focus:border-brand/40">
+              <option value="Note">Note</option>
+              <option value="Call">Call</option>
+              <option value="Meeting">Meeting</option>
+              <option value="Email">Email</option>
+            </select>
+          </label>
+          <label className="flex flex-col gap-1">
+            <span className="text-[10px] font-semibold uppercase tracking-wide text-[var(--muted)]">Summary *</span>
+            <input autoFocus onChange={e => { state.summary = e.target.value; }} placeholder="Brief summary of the activity" className="px-2.5 py-1.5 text-[12px] rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] placeholder:text-[var(--muted)] focus:outline-none focus:border-brand/40" />
+          </label>
+          <label className="flex flex-col gap-1">
+            <span className="text-[10px] font-semibold uppercase tracking-wide text-[var(--muted)]">Detail</span>
+            <textarea rows={4} onChange={e => { state.detail = e.target.value; }} placeholder="Additional details..." className="px-2.5 py-1.5 text-[12px] rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] placeholder:text-[var(--muted)] focus:outline-none focus:border-brand/40 resize-none" />
+          </label>
+        </div>
+      ),
+      footer: (
+        <>
+          <button className="px-3.5 py-1.5 text-[12px] text-[var(--sub)] bg-[var(--surface)] border border-[var(--border)] rounded-md hover:bg-[var(--hover)] transition-colors" onClick={closeDrawer}>Cancel</button>
+          <button
+            data-submit-activity
+            disabled={logActivity.isPending}
+            className="px-3.5 py-1.5 text-[12px] font-medium bg-brand text-[#09090b] rounded-md hover:brightness-110 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            onClick={() => {
+              if (!state.summary.trim()) { addToast({ type: 'error', message: 'Summary is required' }); return; }
+              logActivity.mutate(
+                { type: state.type, summary: state.summary.trim(), detail: state.detail || undefined, accountId: o.accId, source: 'Manual' },
+                {
+                  onSuccess: () => { addToast({ type: 'success', message: 'Activity logged' }); closeDrawer(); },
+                  onError: (err) => addToast({ type: 'error', message: err.message }),
+                }
+              );
+            }}
+          >
+            Log Activity
+          </button>
+        </>
+      ),
+    });
+  }
 
   return (
     <div className="max-w-[1100px] page-enter">
@@ -500,7 +520,15 @@ export default function OppDetailPage() {
       <div className="grid grid-cols-1 md:grid-cols-[2fr_1fr] gap-3">
         {/* Activity */}
         <div className="rounded-lg bg-[var(--elevated)] border border-[var(--border)] overflow-hidden">
-          <div className="px-3.5 py-2.5 border-b border-[var(--border)] bg-[var(--surface)]"><span className="text-[12.5px] font-semibold text-[var(--text)]">Activity</span></div>
+          <div className="px-3.5 py-2.5 border-b border-[var(--border)] bg-[var(--surface)] flex items-center justify-between">
+            <span className="text-[12.5px] font-semibold text-[var(--text)]">Activity</span>
+            <button
+              onClick={() => openLogActivityDrawer()}
+              className="px-2 py-1 text-[10px] font-medium bg-brand text-[#09090b] rounded-md hover:brightness-110 transition-colors"
+            >
+              + Log Note
+            </button>
+          </div>
           {acts.length === 0 ? (
             <div className="p-5 text-center text-[var(--muted)] text-[12px]">No activity</div>
           ) : acts.slice(0, 6).map((x: Activity) => (
@@ -559,13 +587,7 @@ export default function OppDetailPage() {
                   <button
                     key={s}
                     disabled={active || isMutating}
-                    onClick={() => move.mutate(
-                      { id: o.id, stage: toPrismaStage(s) },
-                      {
-                        onSuccess: () => addToast({ type: 'success', message: `Stage → ${s}` }),
-                        onError: (err: Error) => addToast({ type: 'error', message: `Move failed: ${err.message}` }),
-                      }
-                    )}
+                    onClick={() => move.mutate({ id: o.id, stage: toPrismaStage(s) })}
                     className={cn(
                       'text-left px-2 py-1.5 rounded-md text-[11.5px] transition-colors border disabled:opacity-50',
                       active ? 'border-brand/30 bg-brand/[.08] text-brand' : 'border-transparent text-[var(--sub)] hover:bg-[var(--hover)]'

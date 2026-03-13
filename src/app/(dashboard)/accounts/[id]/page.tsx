@@ -1,19 +1,173 @@
 'use client';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { useAccountDetail } from '@/lib/queries/accounts';
+import { useCreateOpportunity } from '@/lib/queries/opportunities';
+import { useLogActivity } from '@/lib/queries/activities';
+import { useStore } from '@/lib/store';
+import { KANBAN_STAGES, STAGE_PROB } from '@/lib/types';
 import type { Account, Opportunity, Activity, Task, Goal } from '@/lib/types';
+import { api } from '@/lib/api-client';
 import { fmt, fRelative, fDate, isOverdue, cn, confNum } from '@/lib/utils';
 import { Badge, ScorePill, FIUACBars, ConfBadge, AgentTag, Avatar, StageBadge, HealthBar, SectionTitle, EmptyState, Skeleton, SkeletonCard, SkeletonText, ErrorState } from '@/components/ui';
 
 const ACT_COLOR: Record<string, string> = { Email: '#5b9cf6', Meeting: '#33a882', Call: '#33a882', Note: '#e8a838' };
+
+function OpportunityCreateForm({
+  prefilledAccountId,
+  prefilledAccountName,
+  onSubmit,
+  registerSubmit,
+}: {
+  prefilledAccountId?: string;
+  prefilledAccountName?: string;
+  onSubmit: (data: { name: string; accountId: string; stage: string; amount: number; closeDate: string }) => void;
+  registerSubmit: (fn: () => void) => void;
+}) {
+  const [name, setName] = useState('');
+  const [accountId, setAccountId] = useState(prefilledAccountId || '');
+  const [accountQuery, setAccountQuery] = useState(prefilledAccountName || '');
+  const [accountResults, setAccountResults] = useState<any[]>([]);
+  const [showDropdown, setShowDropdown] = useState(false);
+  const [selectedAccountName, setSelectedAccountName] = useState(prefilledAccountName || '');
+  const [stage, setStage] = useState('Contacted');
+  const [amount, setAmount] = useState(0);
+  const defaultClose = new Date(Date.now() + 90 * 864e5).toISOString().split('T')[0];
+  const [closeDate, setCloseDate] = useState(defaultClose);
+
+  useEffect(() => {
+    if (prefilledAccountId || !accountQuery.trim() || accountQuery === selectedAccountName) {
+      setAccountResults([]);
+      setShowDropdown(false);
+      return;
+    }
+    const timer = setTimeout(async () => {
+      try {
+        const res = await api.accounts.list({ q: accountQuery });
+        const results = (res?.data ?? []).slice(0, 5);
+        setAccountResults(results);
+        setShowDropdown(results.length > 0);
+      } catch {
+        setAccountResults([]);
+        setShowDropdown(false);
+      }
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [accountQuery, prefilledAccountId, selectedAccountName]);
+
+  const handleSubmit = () => {
+    onSubmit({ name, accountId, stage, amount, closeDate });
+  };
+
+  useEffect(() => { registerSubmit(handleSubmit); });
+
+  const prob = STAGE_PROB[stage] ?? 0;
+
+  return (
+    <div
+      className="flex flex-col gap-3"
+      onKeyDown={e => { if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') handleSubmit(); }}
+    >
+      <label className="flex flex-col gap-1">
+        <span className="text-[10px] font-semibold uppercase tracking-wide text-[var(--muted)]">Opportunity Name *</span>
+        <input
+          autoFocus
+          value={name}
+          onChange={e => setName(e.target.value)}
+          placeholder="e.g. Ørsted PPA Deal 2026"
+          className="px-2.5 py-1.5 text-[12px] rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] placeholder:text-[var(--muted)] focus:outline-none focus:border-brand/40"
+        />
+      </label>
+
+      <label className="flex flex-col gap-1 relative">
+        <span className="text-[10px] font-semibold uppercase tracking-wide text-[var(--muted)]">Account *</span>
+        {prefilledAccountId ? (
+          <div className="px-2.5 py-1.5 text-[12px] rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)]">
+            {prefilledAccountName}
+          </div>
+        ) : (
+          <>
+            <input
+              value={accountQuery}
+              onChange={e => { setAccountQuery(e.target.value); setAccountId(''); setSelectedAccountName(''); }}
+              placeholder="Search for an account..."
+              className="px-2.5 py-1.5 text-[12px] rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] placeholder:text-[var(--muted)] focus:outline-none focus:border-brand/40"
+              onBlur={() => setTimeout(() => setShowDropdown(false), 200)}
+            />
+            {showDropdown && (
+              <div className="absolute top-full left-0 right-0 z-10 mt-0.5 rounded-md bg-[var(--elevated)] border border-[var(--border)] shadow-lg max-h-[160px] overflow-y-auto">
+                {accountResults.map((acc: any) => (
+                  <button
+                    key={acc.id}
+                    type="button"
+                    className="w-full text-left px-2.5 py-1.5 text-[12px] hover:bg-[var(--hover)] transition-colors flex items-center gap-1.5"
+                    onMouseDown={e => {
+                      e.preventDefault();
+                      setAccountId(acc.id);
+                      setAccountQuery(acc.name);
+                      setSelectedAccountName(acc.name);
+                      setShowDropdown(false);
+                    }}
+                  >
+                    <span className="text-[var(--text)]">{acc.name}</span>
+                    <span className="text-[9px] px-1.5 py-0.5 rounded bg-[var(--surface)] text-[var(--muted)]">{acc.type}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+            {accountQuery && !accountId && !showDropdown && accountQuery !== selectedAccountName && (
+              <span className="text-[10px] text-warn">No account selected — search and pick one</span>
+            )}
+          </>
+        )}
+      </label>
+
+      <div className="flex gap-2">
+        <label className="flex flex-col gap-1 flex-1">
+          <span className="text-[10px] font-semibold uppercase tracking-wide text-[var(--muted)]">Stage</span>
+          <select
+            value={stage}
+            onChange={e => setStage(e.target.value)}
+            className="px-2.5 py-1.5 text-[12px] rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] focus:outline-none focus:border-brand/40"
+          >
+            {KANBAN_STAGES.map(s => <option key={s} value={s}>{s}</option>)}
+          </select>
+          <span className="text-[10px] text-[var(--muted)]">Probability: {prob}%</span>
+        </label>
+        <label className="flex flex-col gap-1 flex-1">
+          <span className="text-[10px] font-semibold uppercase tracking-wide text-[var(--muted)]">Amount</span>
+          <input
+            type="number"
+            value={amount || ''}
+            onChange={e => setAmount(Number(e.target.value) || 0)}
+            placeholder="0"
+            className="px-2.5 py-1.5 text-[12px] rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] focus:outline-none focus:border-brand/40"
+          />
+        </label>
+      </div>
+
+      <label className="flex flex-col gap-1">
+        <span className="text-[10px] font-semibold uppercase tracking-wide text-[var(--muted)]">Close Date</span>
+        <input
+          type="date"
+          value={closeDate}
+          onChange={e => setCloseDate(e.target.value)}
+          className="px-2.5 py-1.5 text-[12px] rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] focus:outline-none focus:border-brand/40"
+        />
+      </label>
+    </div>
+  );
+}
 
 export default function AccountDetailPage() {
   const params = useParams();
   const id = params.id as string;
   const { data, isLoading, error, refetch } = useAccountDetail(id);
   const [tab, setTab] = useState('overview');
+  const logActivity = useLogActivity();
+  const createOpp = useCreateOpportunity();
+  const { openDrawer, closeDrawer, addToast } = useStore();
 
   /* ── Loading skeleton ── */
   if (isLoading) {
@@ -96,6 +250,114 @@ export default function AccountDetailPage() {
   const openPipe = accOpps.filter(o => !['Closed Won', 'Closed Lost'].includes(o.stage)).reduce((s, o) => s + o.amt, 0);
   const stale = (Date.now() - new Date(a.lastAct).getTime()) / 864e5 > 14;
   const conf = confNum(a.aiConf);
+
+  function openLogActivityDrawer(preselectedType?: string) {
+    const state = { type: preselectedType || 'Note', summary: '', detail: '' };
+
+    openDrawer({
+      title: 'Log Activity',
+      subtitle: `${a.name}`,
+      body: (
+        <div
+          className="flex flex-col gap-3"
+          onKeyDown={e => { if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') (document.querySelector('[data-submit-activity]') as HTMLButtonElement)?.click(); }}
+        >
+          <label className="flex flex-col gap-1">
+            <span className="text-[10px] font-semibold uppercase tracking-wide text-[var(--muted)]">Type</span>
+            <select
+              defaultValue={state.type}
+              onChange={e => { state.type = e.target.value; }}
+              className="px-2.5 py-1.5 text-[12px] rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] focus:outline-none focus:border-brand/40"
+            >
+              <option value="Note">Note</option>
+              <option value="Call">Call</option>
+              <option value="Meeting">Meeting</option>
+              <option value="Email">Email</option>
+            </select>
+          </label>
+
+          <label className="flex flex-col gap-1">
+            <span className="text-[10px] font-semibold uppercase tracking-wide text-[var(--muted)]">Summary *</span>
+            <input
+              autoFocus
+              onChange={e => { state.summary = e.target.value; }}
+              placeholder="Brief summary of the activity"
+              className="px-2.5 py-1.5 text-[12px] rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] placeholder:text-[var(--muted)] focus:outline-none focus:border-brand/40"
+            />
+          </label>
+
+          <label className="flex flex-col gap-1">
+            <span className="text-[10px] font-semibold uppercase tracking-wide text-[var(--muted)]">Detail</span>
+            <textarea
+              rows={4}
+              onChange={e => { state.detail = e.target.value; }}
+              placeholder="Additional details..."
+              className="px-2.5 py-1.5 text-[12px] rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] placeholder:text-[var(--muted)] focus:outline-none focus:border-brand/40 resize-none"
+            />
+          </label>
+        </div>
+      ),
+      footer: (
+        <>
+          <button className="px-3.5 py-1.5 text-[12px] text-[var(--sub)] bg-[var(--surface)] border border-[var(--border)] rounded-md hover:bg-[var(--hover)] transition-colors" onClick={closeDrawer}>Cancel</button>
+          <button
+            data-submit-activity
+            disabled={logActivity.isPending}
+            className="px-3.5 py-1.5 text-[12px] font-medium bg-brand text-[#09090b] rounded-md hover:brightness-110 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            onClick={() => {
+              if (!state.summary.trim()) {
+                addToast({ type: 'error', message: 'Summary is required' });
+                return;
+              }
+              logActivity.mutate(
+                { type: state.type, summary: state.summary.trim(), detail: state.detail || undefined, accountId: id, source: 'Manual' },
+                {
+                  onSuccess: () => { addToast({ type: 'success', message: 'Activity logged' }); closeDrawer(); },
+                  onError: (err) => addToast({ type: 'error', message: err.message }),
+                }
+              );
+            }}
+          >
+            Log Activity
+          </button>
+        </>
+      ),
+    });
+  }
+
+  function openNewOppDrawer() {
+    const submitRef = { current: () => {} };
+    const DISPLAY_TO_PRISMA: Record<string, string> = { 'Solution Fit': 'SolutionFit', 'Verbal Commit': 'VerbalCommit' };
+
+    openDrawer({
+      title: 'New Opportunity',
+      subtitle: `For ${a.name}`,
+      body: (
+        <OpportunityCreateForm
+          prefilledAccountId={id}
+          prefilledAccountName={a.name}
+          onSubmit={(data) => {
+            if (!data.name.trim()) { addToast({ type: 'error', message: 'Name is required' }); return; }
+            const prismaStage = DISPLAY_TO_PRISMA[data.stage] ?? data.stage;
+            createOpp.mutate(
+              { name: data.name.trim(), accountId: id, stage: prismaStage, amount: data.amount, closeDate: data.closeDate || undefined },
+              {
+                onSuccess: () => { addToast({ type: 'success', message: `Opportunity created: ${data.name}` }); closeDrawer(); },
+                onError: (err) => addToast({ type: 'error', message: err.message }),
+              }
+            );
+          }}
+          registerSubmit={(fn) => { submitRef.current = fn; }}
+        />
+      ),
+      footer: (
+        <>
+          <button className="px-3.5 py-1.5 text-[12px] text-[var(--sub)] bg-[var(--surface)] border border-[var(--border)] rounded-md hover:bg-[var(--hover)] transition-colors" onClick={closeDrawer}>Cancel</button>
+          <button disabled={createOpp.isPending} className="px-3.5 py-1.5 text-[12px] font-medium bg-brand text-[#09090b] rounded-md hover:brightness-110 transition-colors disabled:opacity-50 disabled:cursor-not-allowed" onClick={() => submitRef.current()}>Create Opportunity</button>
+        </>
+      ),
+    });
+  }
 
   const TABS = [
     { key: 'overview', label: 'Overview' },
@@ -263,9 +525,18 @@ export default function AccountDetailPage() {
 
       {/* ── Opportunities ── */}
       {tab === 'opps' && (
-        accOpps.length === 0 ? (
-          <EmptyState icon="\uD83D\uDCCA" title="No opportunities" description="Create one or convert a qualified lead." />
-        ) : (
+        <>
+          <div className="flex justify-end mb-2">
+            <button
+              onClick={openNewOppDrawer}
+              className="px-3 py-1.5 text-[12px] font-medium bg-brand text-[#09090b] rounded-md hover:brightness-110 transition-colors"
+            >
+              + New Opportunity
+            </button>
+          </div>
+          {accOpps.length === 0 ? (
+            <EmptyState icon="\uD83D\uDCCA" title="No opportunities" description="Create one or convert a qualified lead." />
+          ) : (
           <div className="flex flex-col gap-2">
             {accOpps.map(o => (
               <Link key={o.id} href={`/pipeline/${o.id}`}>
@@ -286,38 +557,64 @@ export default function AccountDetailPage() {
               </Link>
             ))}
           </div>
-        )
+          )}
+        </>
       )}
 
       {/* ── Activity ── */}
       {tab === 'activity' && (
-        accActs.length === 0 ? (
-          <EmptyState icon="\uD83D\uDCC5" title="No activity" description="Activity from emails, meetings, and notes will appear here." />
-        ) : (
-          <div className="rounded-lg bg-[var(--elevated)] border border-[var(--border)] p-4">
-            <div className="relative pl-6">
-              <div className="absolute left-[7px] top-0 bottom-0 w-px bg-[var(--border)]" />
-              {accActs.map(x => (
-                <div key={x.id} className="relative pb-4 last:pb-0">
-                  <div
-                    className="absolute -left-[13px] top-[3px] w-2 h-2 rounded-full border-2 border-[var(--elevated)]"
-                    style={{ background: ACT_COLOR[x.type] || '#4f576b' }}
-                  />
-                  <div
-                    className="text-[9px] font-semibold uppercase tracking-wide mb-0.5 flex items-center gap-1.5"
-                    style={{ color: ACT_COLOR[x.type] || '#4f576b' }}
-                  >
-                    {x.type}
-                    <Badge variant="neutral" className="!text-[8.5px]">{x.src}</Badge>
-                  </div>
-                  <div className="text-[12.5px] font-medium mb-0.5">{x.sum}</div>
-                  <div className="text-[11.5px] text-sub leading-relaxed">{x.detail}</div>
-                  <div className="text-[10px] text-muted mt-0.5">{x.who.name} · {fRelative(x.date)}</div>
-                </div>
+        <>
+          <div className="flex items-center gap-2 mb-3">
+            <button
+              onClick={() => openLogActivityDrawer()}
+              className="px-3 py-1.5 text-[12px] font-medium bg-brand text-[#09090b] rounded-md hover:brightness-110 transition-colors"
+            >
+              + Log Note
+            </button>
+            <div className="flex gap-1">
+              {[
+                { type: 'Call', icon: '\uD83D\uDCDE' },
+                { type: 'Email', icon: '\uD83D\uDCE7' },
+                { type: 'Meeting', icon: '\uD83E\uDD1D' },
+              ].map(({ type, icon }) => (
+                <button
+                  key={type}
+                  onClick={() => openLogActivityDrawer(type)}
+                  className="px-2 py-1 text-[11px] rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--sub)] hover:bg-[var(--hover)] transition-colors"
+                >
+                  {icon} {type}
+                </button>
               ))}
             </div>
           </div>
-        )
+          {accActs.length === 0 ? (
+            <EmptyState icon="\uD83D\uDCC5" title="No activity" description="Activity from emails, meetings, and notes will appear here." />
+          ) : (
+            <div className="rounded-lg bg-[var(--elevated)] border border-[var(--border)] p-4">
+              <div className="relative pl-6">
+                <div className="absolute left-[7px] top-0 bottom-0 w-px bg-[var(--border)]" />
+                {accActs.map(x => (
+                  <div key={x.id} className="relative pb-4 last:pb-0">
+                    <div
+                      className="absolute -left-[13px] top-[3px] w-2 h-2 rounded-full border-2 border-[var(--elevated)]"
+                      style={{ background: ACT_COLOR[x.type] || '#4f576b' }}
+                    />
+                    <div
+                      className="text-[9px] font-semibold uppercase tracking-wide mb-0.5 flex items-center gap-1.5"
+                      style={{ color: ACT_COLOR[x.type] || '#4f576b' }}
+                    >
+                      {x.type}
+                      <Badge variant="neutral" className="!text-[8.5px]">{x.src}</Badge>
+                    </div>
+                    <div className="text-[12.5px] font-medium mb-0.5">{x.sum}</div>
+                    <div className="text-[11.5px] text-sub leading-relaxed">{x.detail}</div>
+                    <div className="text-[10px] text-muted mt-0.5">{x.who.name} · {fRelative(x.date)}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </>
       )}
 
       {/* ── Tasks ── */}

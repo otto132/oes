@@ -48,3 +48,19 @@ export function useCloseLost() {
     onSuccess: () => qc.invalidateQueries({ queryKey: oppKeys.all }),
   });
 }
+
+export function useCreateOpportunity() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: {
+      name: string;
+      accountId: string;
+      stage?: string;
+      amount?: number;
+      closeDate?: string;
+    }) => api.opportunities.create(data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: oppKeys.all });
+    },
+  });
+}

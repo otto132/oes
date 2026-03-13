@@ -1,10 +1,12 @@
 'use client';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { useOpportunitiesQuery } from '@/lib/queries/opportunities';
+import { useOpportunitiesQuery, useCreateOpportunity } from '@/lib/queries/opportunities';
 import { Avatar, HealthBar, StageBadge, EmptyState, Skeleton, SkeletonCard, ErrorState } from '@/components/ui';
 import { fmt, fDate, isOverdue, cn } from '@/lib/utils';
-import { KANBAN_STAGES, healthAvg } from '@/lib/types';
+import { KANBAN_STAGES, STAGE_PROB, healthAvg } from '@/lib/types';
+import { useStore } from '@/lib/store';
+import { api } from '@/lib/api-client';
 import type { Opportunity } from '@/lib/types';
 
 function riskHex(h: { eng: number; stake: number; comp: number; time: number }): string {
@@ -38,9 +40,205 @@ function LoadingSkeleton() {
   );
 }
 
+function OpportunityCreateForm({
+  prefilledAccountId,
+  prefilledAccountName,
+  onSubmit,
+  registerSubmit,
+}: {
+  prefilledAccountId?: string;
+  prefilledAccountName?: string;
+  onSubmit: (data: { name: string; accountId: string; stage: string; amount: number; closeDate: string }) => void;
+  registerSubmit: (fn: () => void) => void;
+}) {
+  const [name, setName] = useState('');
+  const [accountId, setAccountId] = useState(prefilledAccountId || '');
+  const [accountQuery, setAccountQuery] = useState(prefilledAccountName || '');
+  const [accountResults, setAccountResults] = useState<any[]>([]);
+  const [showDropdown, setShowDropdown] = useState(false);
+  const [selectedAccountName, setSelectedAccountName] = useState(prefilledAccountName || '');
+  const [stage, setStage] = useState('Contacted');
+  const [amount, setAmount] = useState(0);
+  const defaultClose = new Date(Date.now() + 90 * 864e5).toISOString().split('T')[0];
+  const [closeDate, setCloseDate] = useState(defaultClose);
+
+  // Debounced account search
+  useEffect(() => {
+    if (prefilledAccountId || !accountQuery.trim() || accountQuery === selectedAccountName) {
+      setAccountResults([]);
+      setShowDropdown(false);
+      return;
+    }
+    const timer = setTimeout(async () => {
+      try {
+        const res = await api.accounts.list({ q: accountQuery });
+        const results = (res?.data ?? []).slice(0, 5);
+        setAccountResults(results);
+        setShowDropdown(results.length > 0);
+      } catch {
+        setAccountResults([]);
+        setShowDropdown(false);
+      }
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [accountQuery, prefilledAccountId, selectedAccountName]);
+
+  const handleSubmit = () => {
+    onSubmit({ name, accountId, stage, amount, closeDate });
+  };
+
+  useEffect(() => { registerSubmit(handleSubmit); });
+
+  const prob = STAGE_PROB[stage] ?? 0;
+
+  return (
+    <div
+      className="flex flex-col gap-3"
+      onKeyDown={e => { if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') handleSubmit(); }}
+    >
+      <label className="flex flex-col gap-1">
+        <span className="text-[10px] font-semibold uppercase tracking-wide text-[var(--muted)]">Opportunity Name *</span>
+        <input
+          autoFocus
+          value={name}
+          onChange={e => setName(e.target.value)}
+          placeholder="e.g. Ørsted PPA Deal 2026"
+          className="px-2.5 py-1.5 text-[12px] rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] placeholder:text-[var(--muted)] focus:outline-none focus:border-brand/40"
+        />
+      </label>
+
+      {/* Account typeahead */}
+      <label className="flex flex-col gap-1 relative">
+        <span className="text-[10px] font-semibold uppercase tracking-wide text-[var(--muted)]">Account *</span>
+        {prefilledAccountId ? (
+          <div className="px-2.5 py-1.5 text-[12px] rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)]">
+            {prefilledAccountName}
+          </div>
+        ) : (
+          <>
+            <input
+              value={accountQuery}
+              onChange={e => { setAccountQuery(e.target.value); setAccountId(''); setSelectedAccountName(''); }}
+              placeholder="Search for an account..."
+              className="px-2.5 py-1.5 text-[12px] rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] placeholder:text-[var(--muted)] focus:outline-none focus:border-brand/40"
+              onBlur={() => setTimeout(() => setShowDropdown(false), 200)}
+            />
+            {showDropdown && (
+              <div className="absolute top-full left-0 right-0 z-10 mt-0.5 rounded-md bg-[var(--elevated)] border border-[var(--border)] shadow-lg max-h-[160px] overflow-y-auto">
+                {accountResults.map((acc: any) => (
+                  <button
+                    key={acc.id}
+                    type="button"
+                    className="w-full text-left px-2.5 py-1.5 text-[12px] hover:bg-[var(--hover)] transition-colors flex items-center gap-1.5"
+                    onMouseDown={e => {
+                      e.preventDefault();
+                      setAccountId(acc.id);
+                      setAccountQuery(acc.name);
+                      setSelectedAccountName(acc.name);
+                      setShowDropdown(false);
+                    }}
+                  >
+                    <span className="text-[var(--text)]">{acc.name}</span>
+                    <span className="text-[9px] px-1.5 py-0.5 rounded bg-[var(--surface)] text-[var(--muted)]">{acc.type}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+            {accountQuery && !accountId && !showDropdown && accountQuery !== selectedAccountName && (
+              <span className="text-[10px] text-warn">No account selected — search and pick one</span>
+            )}
+          </>
+        )}
+      </label>
+
+      <div className="flex gap-2">
+        <label className="flex flex-col gap-1 flex-1">
+          <span className="text-[10px] font-semibold uppercase tracking-wide text-[var(--muted)]">Stage</span>
+          <select
+            value={stage}
+            onChange={e => setStage(e.target.value)}
+            className="px-2.5 py-1.5 text-[12px] rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] focus:outline-none focus:border-brand/40"
+          >
+            {KANBAN_STAGES.map(s => <option key={s} value={s}>{s}</option>)}
+          </select>
+          <span className="text-[10px] text-[var(--muted)]">Probability: {prob}%</span>
+        </label>
+        <label className="flex flex-col gap-1 flex-1">
+          <span className="text-[10px] font-semibold uppercase tracking-wide text-[var(--muted)]">Amount</span>
+          <input
+            type="number"
+            value={amount || ''}
+            onChange={e => setAmount(Number(e.target.value) || 0)}
+            placeholder="0"
+            className="px-2.5 py-1.5 text-[12px] rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] focus:outline-none focus:border-brand/40"
+          />
+        </label>
+      </div>
+
+      <label className="flex flex-col gap-1">
+        <span className="text-[10px] font-semibold uppercase tracking-wide text-[var(--muted)]">Close Date</span>
+        <input
+          type="date"
+          value={closeDate}
+          onChange={e => setCloseDate(e.target.value)}
+          className="px-2.5 py-1.5 text-[12px] rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] focus:outline-none focus:border-brand/40"
+        />
+      </label>
+    </div>
+  );
+}
+
 export default function PipelinePage() {
   const { data, isLoading, error, refetch } = useOpportunitiesQuery();
+  const createOpp = useCreateOpportunity();
+  const { openDrawer, closeDrawer, addToast } = useStore();
   const [view, setView] = useState<'kanban' | 'table'>('kanban');
+
+  function openNewOppDrawer(prefilledAccountId?: string, prefilledAccountName?: string) {
+    const submitRef = { current: () => {} };
+
+    // Map display stage names to Prisma enum values for the API
+    const DISPLAY_TO_PRISMA: Record<string, string> = {
+      'Solution Fit': 'SolutionFit',
+      'Verbal Commit': 'VerbalCommit',
+    };
+
+    openDrawer({
+      title: 'New Opportunity',
+      subtitle: prefilledAccountName ? `For ${prefilledAccountName}` : 'Create a new deal',
+      body: (
+        <OpportunityCreateForm
+          prefilledAccountId={prefilledAccountId}
+          prefilledAccountName={prefilledAccountName}
+          onSubmit={(data) => {
+            if (!data.name.trim()) { addToast({ type: 'error', message: 'Name is required' }); return; }
+            if (!data.accountId) { addToast({ type: 'error', message: 'Account is required' }); return; }
+            const prismaStage = DISPLAY_TO_PRISMA[data.stage] ?? data.stage;
+            createOpp.mutate(
+              { name: data.name.trim(), accountId: data.accountId, stage: prismaStage, amount: data.amount, closeDate: data.closeDate || undefined },
+              {
+                onSuccess: () => { addToast({ type: 'success', message: `Opportunity created: ${data.name}` }); closeDrawer(); },
+                onError: (err) => addToast({ type: 'error', message: err.message }),
+              }
+            );
+          }}
+          registerSubmit={(fn) => { submitRef.current = fn; }}
+        />
+      ),
+      footer: (
+        <>
+          <button className="px-3.5 py-1.5 text-[12px] text-[var(--sub)] bg-[var(--surface)] border border-[var(--border)] rounded-md hover:bg-[var(--hover)] transition-colors" onClick={closeDrawer}>Cancel</button>
+          <button
+            disabled={createOpp.isPending}
+            className="px-3.5 py-1.5 text-[12px] font-medium bg-brand text-[#09090b] rounded-md hover:brightness-110 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            onClick={() => submitRef.current()}
+          >
+            Create Opportunity
+          </button>
+        </>
+      ),
+    });
+  }
 
   if (isLoading) return <LoadingSkeleton />;
 
@@ -65,13 +263,21 @@ export default function PipelinePage() {
             {open.length} open · <span className="font-mono font-semibold">{fmt(totalPipe)}</span> total · <span className="font-mono text-[var(--sub)]">{fmt(totalWeighted)}</span> weighted
           </p>
         </div>
-        <div className="hidden md:flex border border-[var(--border)] rounded-md overflow-hidden">
-          {(['kanban', 'table'] as const).map(v => (
-            <button key={v} onClick={() => setView(v)} className={cn(
-              'px-2.5 py-1 text-[11px] capitalize transition-colors',
-              view === v ? 'bg-[var(--surface)] text-[var(--text)]' : 'bg-transparent text-[var(--sub)] hover:bg-[var(--hover)]'
-            )}>{v === 'kanban' ? 'Board' : 'Table'}</button>
-          ))}
+        <div className="flex items-center gap-2">
+          <div className="hidden md:flex border border-[var(--border)] rounded-md overflow-hidden">
+            {(['kanban', 'table'] as const).map(v => (
+              <button key={v} onClick={() => setView(v)} className={cn(
+                'px-2.5 py-1 text-[11px] capitalize transition-colors',
+                view === v ? 'bg-[var(--surface)] text-[var(--text)]' : 'bg-transparent text-[var(--sub)] hover:bg-[var(--hover)]'
+              )}>{v === 'kanban' ? 'Board' : 'Table'}</button>
+            ))}
+          </div>
+          <button
+            onClick={() => openNewOppDrawer()}
+            className="px-3 py-1.5 text-[12px] font-medium bg-brand text-[#09090b] rounded-md hover:brightness-110 transition-colors"
+          >
+            + New Opportunity
+          </button>
         </div>
       </div>
 

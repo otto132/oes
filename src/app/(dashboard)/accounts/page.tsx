@@ -1,7 +1,8 @@
 'use client';
 import { useState } from 'react';
 import Link from 'next/link';
-import { useAccountsQuery } from '@/lib/queries/accounts';
+import { useAccountsQuery, useCreateAccount } from '@/lib/queries/accounts';
+import { useStore } from '@/lib/store';
 import { compositeScore } from '@/lib/types';
 import type { Account } from '@/lib/types';
 import { fmt, fRelative, cn } from '@/lib/utils';
@@ -38,6 +39,96 @@ export default function AccountsPage() {
   const [search, setSearch] = useState('');
   const [typeFilter, setTypeFilter] = useState('all');
   const { data: resp, isLoading, isError, refetch } = useAccountsQuery(search || undefined, typeFilter !== 'all' ? typeFilter : undefined);
+  const createAccount = useCreateAccount();
+  const { openDrawer, closeDrawer, addToast } = useStore();
+
+  const ACCOUNT_TYPES = ['Unknown', 'PPA Buyer', 'Certificate Trader', 'Corporate Offtaker'];
+  const COUNTRIES = ['Finland', 'Denmark', 'Sweden', 'Norway', 'Germany', 'Netherlands', 'UK', 'US'];
+
+  function openNewAccountDrawer() {
+    const state = { name: '', type: 'Unknown', country: '', notes: '' };
+
+    openDrawer({
+      title: 'New Account',
+      subtitle: 'Add a new account to the CRM',
+      body: (
+        <div
+          className="flex flex-col gap-3"
+          onKeyDown={e => { if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') (document.querySelector('[data-submit-account]') as HTMLButtonElement)?.click(); }}
+        >
+          <label className="flex flex-col gap-1">
+            <span className="text-[10px] font-semibold uppercase tracking-wide text-[var(--muted)]">Company Name *</span>
+            <input
+              autoFocus
+              onChange={e => { state.name = e.target.value; }}
+              placeholder="e.g. Ørsted, Vattenfall"
+              className="px-2.5 py-1.5 text-[12px] rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] placeholder:text-[var(--muted)] focus:outline-none focus:border-brand/40"
+            />
+          </label>
+
+          <div className="flex gap-2">
+            <label className="flex flex-col gap-1 flex-1">
+              <span className="text-[10px] font-semibold uppercase tracking-wide text-[var(--muted)]">Type</span>
+              <select
+                defaultValue="Unknown"
+                onChange={e => { state.type = e.target.value; }}
+                className="px-2.5 py-1.5 text-[12px] rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] focus:outline-none focus:border-brand/40"
+              >
+                {ACCOUNT_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
+              </select>
+            </label>
+            <label className="flex flex-col gap-1 flex-1">
+              <span className="text-[10px] font-semibold uppercase tracking-wide text-[var(--muted)]">Country</span>
+              <select
+                defaultValue=""
+                onChange={e => { state.country = e.target.value; }}
+                className="px-2.5 py-1.5 text-[12px] rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] focus:outline-none focus:border-brand/40"
+              >
+                <option value="">Select...</option>
+                {COUNTRIES.map(c => <option key={c} value={c}>{c}</option>)}
+                <option value="Other">Other</option>
+              </select>
+            </label>
+          </div>
+
+          <label className="flex flex-col gap-1">
+            <span className="text-[10px] font-semibold uppercase tracking-wide text-[var(--muted)]">Notes / Pain Hypothesis</span>
+            <textarea
+              rows={3}
+              onChange={e => { state.notes = e.target.value; }}
+              placeholder="Initial pain hypothesis or notes..."
+              className="px-2.5 py-1.5 text-[12px] rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] placeholder:text-[var(--muted)] focus:outline-none focus:border-brand/40 resize-none"
+            />
+          </label>
+        </div>
+      ),
+      footer: (
+        <>
+          <button className="px-3.5 py-1.5 text-[12px] text-[var(--sub)] bg-[var(--surface)] border border-[var(--border)] rounded-md hover:bg-[var(--hover)] transition-colors" onClick={closeDrawer}>Cancel</button>
+          <button
+            data-submit-account
+            disabled={createAccount.isPending}
+            className="px-3.5 py-1.5 text-[12px] font-medium bg-brand text-[#09090b] rounded-md hover:brightness-110 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            onClick={() => {
+              if (!state.name.trim()) {
+                addToast({ type: 'error', message: 'Company name is required' });
+                return;
+              }
+              createAccount.mutate(
+                { name: state.name.trim(), type: state.type, country: state.country || undefined, notes: state.notes || undefined },
+                {
+                  onSuccess: () => { addToast({ type: 'success', message: `Account created: ${state.name}` }); closeDrawer(); },
+                  onError: (err) => addToast({ type: 'error', message: err.message }),
+                }
+              );
+            }}
+          >
+            Create Account
+          </button>
+        </>
+      ),
+    });
+  }
 
   if (isLoading) return <AccountsSkeleton />;
   if (isError) return <ErrorState onRetry={() => refetch()} />;
@@ -54,6 +145,12 @@ export default function AccountsPage() {
           <h1 className="text-[18px] font-semibold tracking-tight">Accounts</h1>
           <p className="text-[12px] text-[var(--sub)] mt-0.5">{sorted.length} account{sorted.length !== 1 ? 's' : ''}</p>
         </div>
+        <button
+          onClick={openNewAccountDrawer}
+          className="px-3 py-1.5 text-[12px] font-medium bg-brand text-[#09090b] rounded-md hover:brightness-110 transition-colors"
+        >
+          + New Account
+        </button>
       </div>
 
       <div className="flex items-center gap-1.5 mb-2.5 flex-wrap">
