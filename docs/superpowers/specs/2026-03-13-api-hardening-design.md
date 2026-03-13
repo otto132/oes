@@ -496,6 +496,8 @@ leads: { create: (data) => post('/api/leads', { action: 'create', ...data }) }
 
 Same pattern for `opportunities.create()` and `tasks.create()`.
 
+**Deployment note:** Since this is a monolithic Next.js app, client and server deploy atomically. No backward-compatibility shim is needed in `withHandler` — both sides update in the same deployment.
+
 ### Barrel export
 
 Add `src/lib/schemas/index.ts` re-exporting all schemas for clean imports.
