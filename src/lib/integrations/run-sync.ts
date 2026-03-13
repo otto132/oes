@@ -71,6 +71,9 @@ export async function runSync({ type, syncFn }: RunSyncOptions): Promise<SyncRes
               completedAt: new Date(),
             },
           });
+
+          // Create alert activity for the failure
+          await createSyncFailureAlert(type, errorMsg, tokenRow.userId);
           continue;
         }
       }
@@ -81,10 +84,11 @@ export async function runSync({ type, syncFn }: RunSyncOptions): Promise<SyncRes
       allErrors.push(...result.errors);
 
       // Log sync result
+      const status = result.errors.length === 0 ? 'success' : 'partial';
       await db.syncLog.create({
         data: {
           type,
-          status: result.errors.length === 0 ? 'success' : 'partial',
+          status,
           itemsSynced: result.synced,
           errors: result.errors,
           userId: tokenRow.userId,
@@ -92,6 +96,17 @@ export async function runSync({ type, syncFn }: RunSyncOptions): Promise<SyncRes
           completedAt: new Date(),
         },
       });
+
+      // Create alert activity for partial failures
+      if (status === 'partial') {
+        const detail = result.errors.slice(0, 5).join('\n');
+        await createSyncFailureAlert(
+          type,
+          detail,
+          tokenRow.userId,
+          `Sync partial: ${type} (${result.errors.length} error${result.errors.length === 1 ? '' : 's'})`,
+        );
+      }
     } catch (err) {
       const errorMsg = `Sync failed for user ${tokenRow.userEmail}: ${err}`;
       allErrors.push(errorMsg);
@@ -107,8 +122,34 @@ export async function runSync({ type, syncFn }: RunSyncOptions): Promise<SyncRes
           completedAt: new Date(),
         },
       });
+
+      // Create alert activity for the failure
+      await createSyncFailureAlert(type, errorMsg, tokenRow.userId);
     }
   }
 
   return { synced: totalSynced, errors: allErrors };
+}
+
+/** Create an in-app Activity alert for a sync failure or partial failure. */
+async function createSyncFailureAlert(
+  type: string,
+  detail: string,
+  userId: string,
+  summary?: string,
+): Promise<void> {
+  try {
+    await db.activity.create({
+      data: {
+        type: 'Note',
+        summary: summary || `Sync failed: ${type}`,
+        detail: detail.slice(0, 2000), // truncate to avoid oversized entries
+        source: 'System Alert',
+        authorId: userId,
+      },
+    });
+  } catch {
+    // Best-effort: don't let alert creation break the sync flow
+    console.error(`Failed to create sync failure alert for user ${userId}`);
+  }
 }
