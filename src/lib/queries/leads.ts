@@ -20,7 +20,27 @@ export function useAdvanceLead() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (id: string) => api.leads.advance(id),
-    onSuccess: () => qc.invalidateQueries({ queryKey: leadKeys.all }),
+    onMutate: async (id) => {
+      await qc.cancelQueries({ queryKey: leadKeys.all });
+      const queries = qc.getQueriesData({ queryKey: leadKeys.all });
+      const previous = queries.map(([key, data]) => [key, data] as const);
+      qc.setQueriesData({ queryKey: leadKeys.all }, (old: any) => {
+        if (!old) return old;
+        return {
+          ...old,
+          data: old.data.map((lead: any) =>
+            lead.id === id ? { ...lead, stage: getNextStage(lead.stage) } : lead
+          ),
+        };
+      });
+      return { previous };
+    },
+    onError: (_err, _vars, context) => {
+      context?.previous.forEach(([key, data]) => qc.setQueryData(key, data));
+    },
+    onSettled: () => {
+      qc.invalidateQueries({ queryKey: leadKeys.all });
+    },
   });
 }
 
@@ -28,7 +48,27 @@ export function useDisqualifyLead() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (id: string) => api.leads.disqualify(id),
-    onSuccess: () => qc.invalidateQueries({ queryKey: leadKeys.all }),
+    onMutate: async (id) => {
+      await qc.cancelQueries({ queryKey: leadKeys.all });
+      const queries = qc.getQueriesData({ queryKey: leadKeys.all });
+      const previous = queries.map(([key, data]) => [key, data] as const);
+      qc.setQueriesData({ queryKey: leadKeys.all }, (old: any) => {
+        if (!old) return old;
+        return {
+          ...old,
+          data: old.data.map((lead: any) =>
+            lead.id === id ? { ...lead, stage: 'Disqualified' } : lead
+          ),
+        };
+      });
+      return { previous };
+    },
+    onError: (_err, _vars, context) => {
+      context?.previous.forEach(([key, data]) => qc.setQueryData(key, data));
+    },
+    onSettled: () => {
+      qc.invalidateQueries({ queryKey: leadKeys.all });
+    },
   });
 }
 
@@ -37,10 +77,29 @@ export function useConvertLead() {
   return useMutation({
     mutationFn: ({ id, ...data }: { id: string; accountName?: string; accountType?: string; oppName?: string; oppAmount?: number; oppStage?: string }) =>
       api.leads.convert(id, data),
-    onSuccess: () => {
+    onMutate: async ({ id }) => {
+      await qc.cancelQueries({ queryKey: leadKeys.all });
+      const queries = qc.getQueriesData({ queryKey: leadKeys.all });
+      const previous = queries.map(([key, data]) => [key, data] as const);
+      qc.setQueriesData({ queryKey: leadKeys.all }, (old: any) => {
+        if (!old) return old;
+        return { ...old, data: old.data.filter((lead: any) => lead.id !== id) };
+      });
+      return { previous };
+    },
+    onError: (_err, _vars, context) => {
+      context?.previous.forEach(([key, data]) => qc.setQueryData(key, data));
+    },
+    onSettled: () => {
       qc.invalidateQueries({ queryKey: leadKeys.all });
       qc.invalidateQueries({ queryKey: accountKeys.all });
       qc.invalidateQueries({ queryKey: oppKeys.all });
     },
   });
+}
+
+const LEAD_STAGES = ['New', 'Contacted', 'Qualified', 'Converted'];
+function getNextStage(current: string): string {
+  const idx = LEAD_STAGES.indexOf(current);
+  return idx >= 0 && idx < LEAD_STAGES.length - 1 ? LEAD_STAGES[idx + 1] : current;
 }

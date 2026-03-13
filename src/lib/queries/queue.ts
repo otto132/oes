@@ -22,7 +22,22 @@ export function useApproveQueueItem() {
   return useMutation({
     mutationFn: ({ id, editedPayload }: { id: string; editedPayload?: Record<string, unknown> }) =>
       api.queue.approve(id, editedPayload),
-    onSuccess: () => qc.invalidateQueries({ queryKey: queueKeys.all }),
+    onMutate: async ({ id }) => {
+      await qc.cancelQueries({ queryKey: queueKeys.all });
+      const queries = qc.getQueriesData<QueueResponse>({ queryKey: queueKeys.all });
+      const previous = queries.map(([key, data]) => [key, data] as const);
+      qc.setQueriesData<QueueResponse>({ queryKey: queueKeys.all }, (old) => {
+        if (!old) return old;
+        return { ...old, data: old.data.filter(item => item.id !== id) };
+      });
+      return { previous };
+    },
+    onError: (_err, _vars, context) => {
+      context?.previous.forEach(([key, data]) => qc.setQueryData(key, data));
+    },
+    onSettled: () => {
+      qc.invalidateQueries({ queryKey: queueKeys.all });
+    },
   });
 }
 
@@ -31,6 +46,21 @@ export function useRejectQueueItem() {
   return useMutation({
     mutationFn: ({ id, reason }: { id: string; reason: string }) =>
       api.queue.reject(id, reason),
-    onSuccess: () => qc.invalidateQueries({ queryKey: queueKeys.all }),
+    onMutate: async ({ id }) => {
+      await qc.cancelQueries({ queryKey: queueKeys.all });
+      const queries = qc.getQueriesData<QueueResponse>({ queryKey: queueKeys.all });
+      const previous = queries.map(([key, data]) => [key, data] as const);
+      qc.setQueriesData<QueueResponse>({ queryKey: queueKeys.all }, (old) => {
+        if (!old) return old;
+        return { ...old, data: old.data.filter(item => item.id !== id) };
+      });
+      return { previous };
+    },
+    onError: (_err, _vars, context) => {
+      context?.previous.forEach(([key, data]) => qc.setQueryData(key, data));
+    },
+    onSettled: () => {
+      qc.invalidateQueries({ queryKey: queueKeys.all });
+    },
   });
 }
