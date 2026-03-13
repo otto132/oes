@@ -16,6 +16,12 @@ export async function GET(req: NextRequest) {
     return NextResponse.redirect(new URL('/settings?error=no_code', req.url));
   }
 
+  // CSRF prevention: validate state parameter
+  const state = req.nextUrl.searchParams.get('state');
+  if (state !== 'outlook_connect') {
+    return NextResponse.redirect(new URL('/settings?error=invalid_state', req.url));
+  }
+
   // Require active session
   const session = await auth();
   if (!session?.user?.id) {
