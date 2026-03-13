@@ -38,6 +38,18 @@ export function useCreateAccount() {
   });
 }
 
+export function useUpdateAccount() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, data }: { id: string; data: Record<string, unknown> }) =>
+      api.accounts.update(id, data),
+    onSuccess: (_data, vars) => {
+      qc.invalidateQueries({ queryKey: accountKeys.detail(vars.id) });
+      qc.invalidateQueries({ queryKey: accountKeys.all });
+    },
+  });
+}
+
 export function useCreateContact(accountId: string) {
   const qc = useQueryClient();
   return useMutation({

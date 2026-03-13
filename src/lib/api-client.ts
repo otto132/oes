@@ -124,6 +124,8 @@ export const api = {
     detail: (id: string) => get<any>(`/accounts?id=${id}`),
     create: (data: { name: string; type?: string; country?: string; notes?: string }) =>
       post<any>('/accounts', data),
+    update: (id: string, data: Record<string, unknown>) =>
+      patch<any>(`/accounts/${id}`, data),
   },
 
   // ── Opportunities ──────────────────────────────
