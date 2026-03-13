@@ -64,6 +64,38 @@ export default function LoginPage({
               </button>
             </form>
           )}
+
+          {process.env.NODE_ENV === "development" && (
+            <>
+              <div className="flex items-center gap-2 my-1">
+                <div className="flex-1 h-px bg-[var(--border)]" />
+                <span className="text-[10px] uppercase tracking-wider text-[var(--muted)]">dev only</span>
+                <div className="flex-1 h-px bg-[var(--border)]" />
+              </div>
+              <form
+                action={async () => {
+                  "use server"
+                  const params = await searchParams
+                  await signIn("dev-login", {
+                    redirectTo: params.callbackUrl || "/",
+                  })
+                }}
+              >
+                <button
+                  type="submit"
+                  className="w-full flex items-center justify-center gap-3 bg-[var(--surface)] text-[var(--text)] font-semibold py-2.5 px-4 rounded-lg hover:bg-[var(--surface-hover)] transition-all text-sm border border-dashed border-[var(--border)]"
+                >
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+                    <circle cx="9" cy="7" r="4" />
+                    <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
+                    <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+                  </svg>
+                  Dev Login (first seed user)
+                </button>
+              </form>
+            </>
+          )}
         </div>
       </div>
     </div>

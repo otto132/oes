@@ -2,6 +2,7 @@ import NextAuth from "next-auth"
 import type { NextAuthConfig } from "next-auth"
 import MicrosoftEntraID from "next-auth/providers/microsoft-entra-id"
 import Google from "next-auth/providers/google"
+import Credentials from "next-auth/providers/credentials"
 import { db } from "@/lib/db"
 import { env, availableProviders } from "@/lib/env"
 import { testSignInCallback } from "./auth-callbacks"
@@ -26,6 +27,25 @@ if (microsoft) {
       clientId: env.AZURE_AD_CLIENT_ID!,
       clientSecret: env.AZURE_AD_CLIENT_SECRET!,
       issuer: `https://login.microsoftonline.com/${env.AZURE_AD_TENANT_ID!}/v2.0`,
+    })
+  )
+}
+
+// Dev-only credentials provider — auto-signs in as first active user
+if (process.env.NODE_ENV === "development") {
+  providers.push(
+    Credentials({
+      id: "dev-login",
+      name: "Dev Login",
+      credentials: {},
+      async authorize() {
+        const user = await db.user.findFirst({
+          where: { isActive: true },
+          orderBy: { createdAt: "asc" },
+        })
+        if (!user) return null
+        return { id: user.id, email: user.email, name: user.name }
+      },
     })
   )
 }
