@@ -14,7 +14,7 @@ Add action buttons to lead cards in the kanban view and wire the Convert flow th
 
 ### Lead Card Actions
 
-Each lead card gets contextual action buttons rendered as a small row at the card bottom. Available actions depend on stage:
+Each lead card gets contextual action buttons that appear on hover (desktop) or always visible (mobile), rendered as a compact row at the card bottom. Available actions depend on stage:
 
 | Lead Stage   | Available Actions                         |
 |-------------|-------------------------------------------|
@@ -22,7 +22,7 @@ Each lead card gets contextual action buttons rendered as a small row at the car
 | Researching  | Advance (→ Qualified), Disqualify         |
 | Qualified    | **Convert** (→ Account), Disqualify       |
 
-- **Advance** — calls `api.leads.advance(id)`, shows success toast `"Lead advanced to {stage}"`, no drawer needed
+- **Advance** — calls `api.leads.advance(id)`, shows success toast using display stage name from API response, no drawer needed
 - **Disqualify** — calls `api.leads.disqualify(id)`, shows info toast `"Lead disqualified"`, no drawer needed
 - **Convert** — opens the Convert drawer (see below)
 
@@ -38,7 +38,7 @@ Follows the established drawer pattern from W-02 (signal → lead conversion):
 
 **Body — Account Fields (always visible):**
 - Account Name — text input, pre-filled from `lead.company`
-- Account Type — text input, pre-filled from `lead.type`
+- Account Type — select dropdown (matching W-02 pattern), pre-filled from `lead.type`. Options: PPA Buyer, Certificate Trader, Corporate Offtaker, Unknown
 - Country — text input, pre-filled from `lead.country`
 
 **Body — Opportunity Toggle:**
@@ -46,7 +46,7 @@ Follows the established drawer pattern from W-02 (signal → lead conversion):
 - When checked, reveals:
   - Opportunity Name — text input, default: `"{company} — Opportunity"`
   - Amount — number input, default empty
-  - Stage — dropdown with values: Discovery (default), Identified, Contacted, Qualified
+  - Stage — dropdown following pipeline progression: Identified, Contacted, Discovery (default), Qualified
 
 **Footer:**
 - Cancel button (calls `closeDrawer()`)
@@ -76,20 +76,22 @@ convertLead.mutate(
 - Invalidate `accountKeys.all` (new account appears)
 - Invalidate `oppKeys.all` (if opportunity created)
 
-### New Mutation Hooks (`src/lib/queries/leads.ts`)
+### New Mutation Hook (`src/lib/queries/leads.ts`)
+
+`useAdvanceLead()` and `useDisqualifyLead()` already exist in `queries/leads.ts`. Only one new hook is needed:
 
 ```typescript
-useAdvanceLead()    — mutationFn: api.leads.advance(id)    → invalidates leadKeys.all
-useDisqualifyLead() — mutationFn: api.leads.disqualify(id) → invalidates leadKeys.all
-useConvertLead()    — mutationFn: api.leads.convert(id, data) → invalidates leadKeys.all + accountKeys.all + oppKeys.all
+useConvertLead()  — mutationFn: api.leads.convert(id, data) → invalidates leadKeys.all + accountKeys.all + oppKeys.all
 ```
+
+Note: `accountKeys` imported from `queries/accounts.ts`, `oppKeys` from `queries/opportunities.ts`.
 
 ### Files Changed
 
 | File | Change |
 |------|--------|
-| `src/app/(dashboard)/leads/page.tsx` | Add action buttons to lead cards, add convert drawer opener function |
-| `src/lib/queries/leads.ts` | Add `useAdvanceLead()`, `useDisqualifyLead()`, `useConvertLead()` hooks |
+| `src/app/(dashboard)/leads/page.tsx` | Add action buttons to lead cards, add convert drawer opener function, import `useStore` for drawer/toast |
+| `src/lib/queries/leads.ts` | Add `useConvertLead()` hook (advance/disqualify already exist) |
 
 ### Existing Infrastructure (no changes needed)
 
@@ -110,7 +112,7 @@ The opportunity detail page already has stage buttons wired to `useMoveStage()`,
 
 Add `onSuccess` / `onError` callbacks to the existing `move.mutate()` call in the detail page:
 
-- **Move success:** toast `"Stage → {display stage name}"`
+- **Move success:** toast `"Stage → {display stage name}"` (use `mapOppStage()` from adapters to convert Prisma enum to display name)
 - **Move error:** toast `"Move failed: {error.message}"`
 
 ### Close Won Drawer
@@ -173,7 +175,7 @@ closeLost.mutate(
 
 | File | Change |
 |------|--------|
-| `src/app/(dashboard)/pipeline/[id]/page.tsx` | Add toast callbacks to move handler, replace close won/lost direct calls with drawer openers |
+| `src/app/(dashboard)/pipeline/[id]/page.tsx` | Import `useStore` for drawer/toast, add toast callbacks to move handler, replace close won/lost direct calls with drawer openers |
 
 ### Existing Infrastructure (no changes needed)
 
