@@ -2,7 +2,7 @@
 import { useState } from 'react';
 import { useSession } from 'next-auth/react';
 import { useStore } from '@/lib/store';
-import { useTasksQuery } from '@/lib/queries/tasks';
+import { useTasksQuery, useCreateTask } from '@/lib/queries/tasks';
 import { Badge, Avatar, AgentTag, EmptyState, Skeleton, SkeletonCard, SkeletonText, ErrorState } from '@/components/ui';
 import { fDate, isOverdue, cn, fR } from '@/lib/utils';
 import type { Task, Goal } from '@/lib/types';
@@ -41,6 +41,8 @@ export default function TasksPage() {
   const [tab, setTab] = useState<'mine' | 'review' | 'all'>('mine');
   const [showCompleted, setShowCompleted] = useState(false);
   const [search, setSearch] = useState('');
+  const createTask = useCreateTask();
+  const addToast = useStore(s => s.addToast);
 
   // Always fetch all tasks (including completed) so goal progress bars
   // can compute done/total correctly. Client-side filtering for the
@@ -82,6 +84,112 @@ export default function TasksPage() {
     const bo = b.status === 'Done' ? 2 : isOverdue(b.due) ? 0 : 1;
     return ao !== bo ? ao - bo : new Date(a.due || '2099-01-01').getTime() - new Date(b.due || '2099-01-01').getTime();
   });
+
+  function openNewTaskDrawer() {
+    const defaultDue = new Date(Date.now() + 7 * 864e5).toISOString().split('T')[0];
+    const state = { title: '', priority: 'Medium', due: defaultDue, accountName: '', goalId: '' };
+
+    openDrawer({
+      title: 'New Task',
+      subtitle: 'Create a manual task',
+      body: (
+        <div className="flex flex-col gap-3">
+          <label className="flex flex-col gap-1">
+            <span className="text-[10px] font-semibold uppercase tracking-wide text-muted">Title</span>
+            <input
+              autoFocus
+              onChange={e => { state.title = e.target.value; }}
+              placeholder="e.g. Follow up with Ørsted on PPA terms"
+              className="px-2.5 py-1.5 text-[12px] rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] placeholder:text-muted focus:outline-none focus:border-brand/40"
+            />
+          </label>
+          <div className="flex gap-2">
+            <label className="flex flex-col gap-1 flex-1">
+              <span className="text-[10px] font-semibold uppercase tracking-wide text-muted">Priority</span>
+              <select
+                defaultValue="Medium"
+                onChange={e => { state.priority = e.target.value; }}
+                className="px-2.5 py-1.5 text-[12px] rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] focus:outline-none focus:border-brand/40"
+              >
+                <option value="High">High</option>
+                <option value="Medium">Medium</option>
+                <option value="Low">Low</option>
+              </select>
+            </label>
+            <label className="flex flex-col gap-1 flex-1">
+              <span className="text-[10px] font-semibold uppercase tracking-wide text-muted">Due Date</span>
+              <input
+                type="date"
+                defaultValue={defaultDue}
+                onChange={e => { state.due = e.target.value; }}
+                className="px-2.5 py-1.5 text-[12px] rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] focus:outline-none focus:border-brand/40"
+              />
+            </label>
+          </div>
+          <label className="flex flex-col gap-1">
+            <span className="text-[10px] font-semibold uppercase tracking-wide text-muted">Account (optional)</span>
+            <input
+              onChange={e => { state.accountName = e.target.value; }}
+              placeholder="e.g. Ørsted, Vattenfall"
+              className="px-2.5 py-1.5 text-[12px] rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] placeholder:text-muted focus:outline-none focus:border-brand/40"
+            />
+          </label>
+          {goals.length > 0 && (
+            <label className="flex flex-col gap-1">
+              <span className="text-[10px] font-semibold uppercase tracking-wide text-muted">Goal (optional)</span>
+              <select
+                defaultValue=""
+                onChange={e => { state.goalId = e.target.value; }}
+                className="px-2.5 py-1.5 text-[12px] rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] focus:outline-none focus:border-brand/40"
+              >
+                <option value="">No goal</option>
+                {goals.map(g => (
+                  <option key={g.id} value={g.id}>{g.title}{g.accName ? ` (${g.accName})` : ''}</option>
+                ))}
+              </select>
+            </label>
+          )}
+        </div>
+      ),
+      footer: (
+        <>
+          <button
+            className="px-3.5 py-1.5 text-[12px] text-sub bg-[var(--surface)] border border-[var(--border)] rounded-md hover:bg-[var(--hover)] transition-colors"
+            onClick={closeDrawer}
+          >
+            Cancel
+          </button>
+          <button
+            disabled={createTask.isPending}
+            className="px-3.5 py-1.5 text-[12px] font-medium bg-brand text-[#09090b] rounded-md hover:brightness-110 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            onClick={() => {
+              if (!state.title.trim()) {
+                addToast({ type: 'error', message: 'Title is required' });
+                return;
+              }
+              createTask.mutate(
+                {
+                  title: state.title.trim(),
+                  priority: state.priority,
+                  due: state.due || undefined,
+                  goalId: state.goalId || undefined,
+                },
+                {
+                  onSuccess: () => {
+                    addToast({ type: 'success', message: `Task created: ${state.title}` });
+                    closeDrawer();
+                  },
+                  onError: (err) => addToast({ type: 'error', message: `Failed: ${err.message}` }),
+                }
+              );
+            }}
+          >
+            Create Task
+          </button>
+        </>
+      ),
+    });
+  }
 
   function openTaskDetail(t: Task) {
     const goal = t.goalId ? goals.find(g => g.id === t.goalId) : null;
@@ -175,6 +283,12 @@ export default function TasksPage() {
             {overdue.length > 0 && <span className="text-danger"> · {overdue.length} overdue</span>}
           </p>
         </div>
+        <button
+          onClick={openNewTaskDrawer}
+          className="px-3 py-1.5 text-[12px] font-medium rounded-md bg-brand text-[#09090b] hover:brightness-110 transition-colors flex items-center gap-1"
+        >
+          + New Task
+        </button>
       </div>
 
       {/* Tabs */}

@@ -1,7 +1,7 @@
 'use client';
 import { useState } from 'react';
 import { useStore } from '@/lib/store';
-import { useSignalsQuery } from '@/lib/queries/signals';
+import { useSignalsQuery, useConvertSignal, useDismissSignal } from '@/lib/queries/signals';
 import { Badge, ConfBadge, AgentTag, EmptyState, Skeleton, SkeletonCard, SkeletonText, ErrorState } from '@/components/ui';
 import { signalLabel, signalColor, fR, cn, confNum } from '@/lib/utils';
 import { Zap, Check } from 'lucide-react';
@@ -41,11 +41,87 @@ export default function SignalsPage() {
   const [filter, setFilter] = useState('all');
   const { data: resp, isLoading, isError, refetch } = useSignalsQuery(filter !== 'all' ? filter : undefined);
   const signals: Signal[] = resp?.data ?? [];
+  const convert = useConvertSignal();
+  const dismiss = useDismissSignal();
+  const addToast = useStore(s => s.addToast);
 
   if (isLoading) return <SignalsSkeleton />;
   if (isError) return <ErrorState onRetry={() => refetch()} />;
 
   const filtered = signals;
+
+  function openConvertDrawer(s: Signal) {
+    const state = { company: s.title, type: 'Unknown', country: '' };
+
+    openDrawer({
+      title: 'Convert to Lead',
+      subtitle: `From signal: ${s.title.slice(0, 50)}`,
+      body: (
+        <div className="flex flex-col gap-3">
+          <label className="flex flex-col gap-1">
+            <span className="text-[10px] font-semibold uppercase tracking-wide text-[var(--muted)]">Company Name</span>
+            <input
+              defaultValue={state.company}
+              onChange={e => { state.company = e.target.value; }}
+              className="px-2.5 py-1.5 text-[12px] rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] focus:outline-none focus:border-brand/40"
+            />
+          </label>
+          <label className="flex flex-col gap-1">
+            <span className="text-[10px] font-semibold uppercase tracking-wide text-[var(--muted)]">Type</span>
+            <select
+              defaultValue={state.type}
+              onChange={e => { state.type = e.target.value; }}
+              className="px-2.5 py-1.5 text-[12px] rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] focus:outline-none focus:border-brand/40"
+            >
+              <option value="Unknown">Unknown</option>
+              <option value="PPA Buyer">PPA Buyer</option>
+              <option value="Certificate Trader">Certificate Trader</option>
+              <option value="Corporate Offtaker">Corporate Offtaker</option>
+            </select>
+          </label>
+          <label className="flex flex-col gap-1">
+            <span className="text-[10px] font-semibold uppercase tracking-wide text-[var(--muted)]">Country (optional)</span>
+            <input
+              defaultValue={state.country}
+              onChange={e => { state.country = e.target.value; }}
+              className="px-2.5 py-1.5 text-[12px] rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] focus:outline-none focus:border-brand/40"
+            />
+          </label>
+        </div>
+      ),
+      footer: (
+        <>
+          <button
+            className="px-3.5 py-1.5 text-[12px] text-[var(--sub)] bg-[var(--surface)] border border-[var(--border)] rounded-md hover:bg-[var(--hover)] transition-colors"
+            onClick={closeDrawer}
+          >
+            Cancel
+          </button>
+          <button
+            className="px-3.5 py-1.5 text-[12px] font-medium bg-[var(--brand)] text-[#09090b] rounded-md hover:brightness-110 transition-colors"
+            onClick={() => {
+              if (!state.company.trim()) {
+                addToast({ type: 'error', message: 'Company name is required' });
+                return;
+              }
+              convert.mutate(
+                { id: s.id, company: state.company.trim(), type: state.type, country: state.country.trim() || undefined },
+                {
+                  onSuccess: () => {
+                    addToast({ type: 'success', message: `Lead created: ${state.company}` });
+                    closeDrawer();
+                  },
+                  onError: (err) => addToast({ type: 'error', message: err.message }),
+                }
+              );
+            }}
+          >
+            Create Lead
+          </button>
+        </>
+      ),
+    });
+  }
 
   function viewDetail(id: string) {
     const s = signals.find((x: any) => x.id === id);
@@ -73,8 +149,8 @@ export default function SignalsPage() {
       ),
       footer: (
         <>
-          <button className="px-3.5 py-1.5 text-[12.5px] text-[var(--sub)] bg-[var(--surface)] border border-[var(--border)] rounded-md hover:bg-[var(--hover)] transition-colors" onClick={closeDrawer}>Dismiss</button>
-          <button className="px-3.5 py-1.5 text-[12.5px] font-medium bg-[var(--brand)] text-[#09090b] rounded-md hover:brightness-110 transition-colors" onClick={closeDrawer}>Convert to Lead</button>
+          <button className="px-3.5 py-1.5 text-[12.5px] text-[var(--sub)] bg-[var(--surface)] border border-[var(--border)] rounded-md hover:bg-[var(--hover)] transition-colors" onClick={closeDrawer}>Close</button>
+          <button className="px-3.5 py-1.5 text-[12.5px] font-medium bg-[var(--brand)] text-[#09090b] rounded-md hover:brightness-110 transition-colors" onClick={() => { closeDrawer(); openConvertDrawer(s); }}>Convert to Lead</button>
         </>
       ),
     });
@@ -122,8 +198,24 @@ export default function SignalsPage() {
               </div>
               {!converted && (
                 <div className="flex gap-1 flex-shrink-0 self-start mt-0.5">
-                  <button className="px-2 py-1 text-[11px] font-medium rounded-md bg-[var(--brand)] text-[#09090b] hover:brightness-110 transition-colors" onClick={e => e.stopPropagation()}>→ Lead</button>
-                  <button className="px-1.5 py-1 text-[11px] text-[var(--sub)] hover:bg-[var(--hover)] rounded-md transition-colors" onClick={e => e.stopPropagation()}>✕</button>
+                  <button
+                    className="px-2 py-1 text-[11px] font-medium rounded-md bg-[var(--brand)] text-[#09090b] hover:brightness-110 transition-colors"
+                    onClick={e => { e.stopPropagation(); openConvertDrawer(s); }}
+                  >
+                    → Lead
+                  </button>
+                  <button
+                    className="px-1.5 py-1 text-[11px] text-[var(--sub)] hover:bg-[var(--hover)] rounded-md transition-colors"
+                    onClick={e => {
+                      e.stopPropagation();
+                      dismiss.mutate(s.id, {
+                        onSuccess: () => addToast({ type: 'info', message: 'Signal dismissed' }),
+                        onError: (err) => addToast({ type: 'error', message: err.message }),
+                      });
+                    }}
+                  >
+                    ✕
+                  </button>
                 </div>
               )}
             </div>
