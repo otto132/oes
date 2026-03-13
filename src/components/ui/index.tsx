@@ -1,6 +1,7 @@
 // Eco-Insight UI primitives — strict design system
 import { type FIUACScores, type DealHealth, compositeScore, healthAvg } from '@/lib/types';
 import { cn } from '@/lib/utils';
+import { AlertTriangle } from 'lucide-react';
 
 /* ── Badge ── */
 type BadgeVariant = 'ok' | 'err' | 'warn' | 'info' | 'neutral' | 'purple' | 'ai';
@@ -148,6 +149,41 @@ export function EmptyState({ icon, title, description }: { icon: string; title: 
       <div className="text-2xl mb-2 opacity-30">{icon}</div>
       <div className="text-[13px] font-medium text-sub mb-1">{title}</div>
       <div className="text-[12px] text-muted leading-relaxed max-w-[280px] mx-auto">{description}</div>
+    </div>
+  );
+}
+
+/* ── Skeleton Primitives ── */
+export function Skeleton({ className }: { className?: string }) {
+  return <div className={cn('animate-pulse bg-[var(--card-hover)] rounded', className)} />;
+}
+
+export function SkeletonText({ className }: { className?: string }) {
+  return <Skeleton className={cn('h-3 w-full', className)} />;
+}
+
+export function SkeletonCard({ className, children }: { className?: string; children?: React.ReactNode }) {
+  return (
+    <div className={cn('rounded-xl bg-[var(--elevated)] border border-[var(--border)] p-3.5', className)}>
+      {children}
+    </div>
+  );
+}
+
+/* ── Error State ── */
+export function ErrorState({ message = 'Something went wrong', onRetry }: { message?: string; onRetry?: () => void }) {
+  return (
+    <div className="py-16 px-6 text-center">
+      <AlertTriangle className="w-8 h-8 text-[var(--sub)] mx-auto mb-3 opacity-40" />
+      <div className="text-[13px] font-medium text-[var(--sub)] mb-3">{message}</div>
+      {onRetry && (
+        <button
+          onClick={onRetry}
+          className="text-[12px] font-medium text-[var(--brand)] hover:underline"
+        >
+          Try again
+        </button>
+      )}
     </div>
   );
 }
