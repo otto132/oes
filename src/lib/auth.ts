@@ -24,20 +24,72 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         secure: process.env.NODE_ENV === "production",
       },
     },
+    csrfToken: {
+      name: process.env.NODE_ENV === "production"
+        ? "__Host-next-auth.csrf-token"
+        : "next-auth.csrf-token",
+      options: {
+        httpOnly: true,
+        sameSite: "lax",
+        path: "/",
+        secure: process.env.NODE_ENV === "production",
+      },
+    },
+    callbackUrl: {
+      name: process.env.NODE_ENV === "production"
+        ? "__Secure-next-auth.callback-url"
+        : "next-auth.callback-url",
+      options: {
+        httpOnly: true,
+        sameSite: "lax",
+        path: "/",
+        secure: process.env.NODE_ENV === "production",
+      },
+    },
   },
   callbacks: {
     async signIn({ user }) {
       if (!user.email) return false
-      await db.user.upsert({
-        where: { email: user.email },
-        update: { name: user.name || user.email },
-        create: {
+
+      // Existing user? Allow if active, reject if deactivated.
+      const existing = await db.user.findUnique({ where: { email: user.email } })
+      if (existing) {
+        if (!existing.isActive) return false // deactivated
+        // Update name on each login
+        await db.user.update({
+          where: { id: existing.id },
+          data: { name: user.name || user.email },
+        })
+        return true
+      }
+
+      // New user: check for a valid pending invitation.
+      const invitation = await db.invitation.findFirst({
+        where: {
+          email: user.email,
+          status: 'PENDING',
+          expiresAt: { gt: new Date() },
+        },
+      })
+
+      if (!invitation) return false // no invitation — reject
+
+      // Create user from invitation
+      await db.user.create({
+        data: {
           email: user.email,
           name: user.name || user.email,
           initials: deriveInitials(user.name || user.email),
-          role: "rep",
+          role: invitation.role,
         },
       })
+
+      // Mark invitation as accepted
+      await db.invitation.update({
+        where: { id: invitation.id },
+        data: { status: 'ACCEPTED' },
+      })
+
       return true
     },
     async jwt({ token, user }) {

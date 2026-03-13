@@ -30,7 +30,7 @@ enum SignalType {
 }
 
 enum SignalStatus {
-  new_signal     // "new" is reserved in some contexts
+  new_signal // "new" is reserved in some contexts
   reviewed
   converted
   dismissed
@@ -65,7 +65,7 @@ enum OppStage {
   Contacted
   Discovery
   Qualified
-  SolutionFit    // Prisma enums can't have spaces
+  SolutionFit // Prisma enums can't have spaces
   Proposal
   Negotiation
   VerbalCommit
@@ -150,6 +150,19 @@ enum GoalStatus {
   archived
 }
 
+enum InvitationStatus {
+  PENDING
+  ACCEPTED
+  EXPIRED
+  REVOKED
+}
+
+enum Role {
+  ADMIN
+  MEMBER
+  VIEWER
+}
+
 // ═══════════════════════════════════════════════════════════════
 // USERS
 // ═══════════════════════════════════════════════════════════════
@@ -159,21 +172,24 @@ model User {
   name      String
   initials  String   @db.VarChar(4)
   email     String   @unique
-  role      String
+  role      Role     @default(MEMBER)
   color     String   @default("default") @db.VarChar(20)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  isActive  Boolean  @default(true)
+
   // Relations
-  ownedLeads        Lead[]        @relation("LeadOwner")
-  ownedAccounts     Account[]     @relation("AccountOwner")
-  ownedOpps         Opportunity[] @relation("OppOwner")
-  ownedTasks        Task[]        @relation("TaskOwner")
-  assignedTasks     Task[]        @relation("TaskAssignees")
-  reviewingTasks    Task[]        @relation("TaskReviewer")
-  ownedGoals        Goal[]        @relation("GoalOwner")
-  activities        Activity[]    @relation("ActivityAuthor")
-  taskComments      TaskComment[] @relation("CommentAuthor")
+  ownedLeads      Lead[]        @relation("LeadOwner")
+  ownedAccounts   Account[]     @relation("AccountOwner")
+  ownedOpps       Opportunity[] @relation("OppOwner")
+  ownedTasks      Task[]        @relation("TaskOwner")
+  assignedTasks   Task[]        @relation("TaskAssignees")
+  reviewingTasks  Task[]        @relation("TaskReviewer")
+  ownedGoals      Goal[]        @relation("GoalOwner")
+  activities      Activity[]    @relation("ActivityAuthor")
+  taskComments    TaskComment[] @relation("CommentAuthor")
+  sentInvitations Invitation[]  @relation("SentInvitations")
 
   @@map("users")
 }
@@ -188,17 +204,17 @@ model Signal {
   title      String
   summary    String       @db.Text
   reasoning  String       @db.Text
-  source     String       // source name e.g. "Reuters Energy"
-  sourceUrl  String?      // original URL
-  relevance  Int          // 0–100
-  confidence Float        // 0.0–1.0
+  source     String // source name e.g. "Reuters Energy"
+  sourceUrl  String? // original URL
+  relevance  Int // 0–100
+  confidence Float // 0.0–1.0
   agent      String       @default("Signal Hunter")
   status     SignalStatus @default(new_signal)
   detectedAt DateTime     @default(now())
   createdAt  DateTime     @default(now())
 
   // Extracted entities stored as JSON array of company names
-  companies  String[]
+  companies String[]
 
   // Relations
   leads Lead[] @relation("LeadSignal")
@@ -213,15 +229,15 @@ model Signal {
 // ═══════════════════════════════════════════════════════════════
 
 model Lead {
-  id        String    @id @default(cuid())
-  company   String
-  domain    String    @default("")
-  source    String    // "Signal", "Manual", "Conference", etc.
-  type      AccountType @default(Unknown)
-  country   String    @default("")
-  region    String    @default("")
-  stage     LeadStage @default(New)
-  pain      String    @db.Text @default("")
+  id      String      @id @default(cuid())
+  company String
+  domain  String      @default("")
+  source  String // "Signal", "Manual", "Conference", etc.
+  type    AccountType @default(Unknown)
+  country String      @default("")
+  region  String      @default("")
+  stage   LeadStage   @default(New)
+  pain    String      @default("") @db.Text
 
   // FIUAC scores stored as individual columns for queryability
   scoreFit        Int @default(50)
@@ -231,17 +247,17 @@ model Lead {
   scoreCommercial Int @default(50)
 
   // Module fit as string array
-  moduleFit  String[]
+  moduleFit String[]
 
-  confidence Float     @default(0.5)
-  createdAt  DateTime  @default(now())
-  updatedAt  DateTime  @updatedAt
+  confidence Float    @default(0.5)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 
   // Relations
-  signalId  String?
-  signal    Signal?   @relation("LeadSignal", fields: [signalId], references: [id])
-  ownerId   String
-  owner     User      @relation("LeadOwner", fields: [ownerId], references: [id])
+  signalId String?
+  signal   Signal? @relation("LeadSignal", fields: [signalId], references: [id])
+  ownerId  String
+  owner    User    @relation("LeadOwner", fields: [ownerId], references: [id])
 
   @@unique([company]) // dedup by company name
   @@index([stage])
@@ -263,7 +279,7 @@ model Account {
   status      AccountStatus @default(Prospect)
 
   // Certificate schemes as string array (GoO, ELcert, REGO, I-REC, EECS)
-  schemes     String[]
+  schemes String[]
 
   // FIUAC scores
   scoreFit        Int @default(50)
@@ -273,15 +289,15 @@ model Account {
   scoreCommercial Int @default(50)
 
   // Cached/computed
-  pipelineValue Int      @default(0)  // cached sum of open opp amounts
+  pipelineValue  Int      @default(0) // cached sum of open opp amounts
   lastActivityAt DateTime @default(now())
 
   // AI Account Brief
-  pain         String  @db.Text @default("")
-  whyNow       String  @db.Text @default("")
+  pain         String   @default("") @db.Text
+  whyNow       String   @default("") @db.Text
   moduleFit    String[]
-  competitors  String? @db.Text
-  aiConfidence Float   @default(0.5)
+  competitors  String?  @db.Text
+  aiConfidence Float    @default(0.5)
   aiUpdatedAt  DateTime @default(now())
 
   createdAt DateTime @default(now())
@@ -307,16 +323,16 @@ model Account {
 // ═══════════════════════════════════════════════════════════════
 
 model Contact {
-  id        String       @id @default(cuid())
-  name      String
-  title     String       @default("")
-  role      ContactRole  @default(Champion)
-  warmth    ContactWarmth @default(Cold)
-  email     String       @default("")
-  phone     String?
+  id          String        @id @default(cuid())
+  name        String
+  title       String        @default("")
+  role        ContactRole   @default(Champion)
+  warmth      ContactWarmth @default(Cold)
+  email       String        @default("")
+  phone       String?
   linkedinUrl String?
-  createdAt DateTime     @default(now())
-  updatedAt DateTime     @updatedAt
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
 
   // Relations
   accountId String
@@ -331,21 +347,21 @@ model Contact {
 // ═══════════════════════════════════════════════════════════════
 
 model Opportunity {
-  id          String   @id @default(cuid())
+  id          String    @id @default(cuid())
   name        String
-  stage       OppStage @default(Identified)
-  amount      Int      @default(0) // euro cents in production; whole euros in seed
-  probability Int      @default(5) // 0–100, auto-set from stage
+  stage       OppStage  @default(Identified)
+  amount      Int       @default(0) // euro cents in production; whole euros in seed
+  probability Int       @default(5) // 0–100, auto-set from stage
   closeDate   DateTime?
 
   // Deal health dimensions (0–100 each)
-  healthEngagement  Int @default(50)
+  healthEngagement   Int @default(50)
   healthStakeholders Int @default(30)
-  healthCompetitive Int @default(50)
-  healthTimeline    Int @default(70)
+  healthCompetitive  Int @default(50)
+  healthTimeline     Int @default(70)
 
   // AI next action (from Pipeline Hygiene)
-  nextAction     String? @db.Text
+  nextAction     String?   @db.Text
   nextActionDate DateTime?
 
   // Win metadata
@@ -353,9 +369,9 @@ model Opportunity {
   competitorBeaten String?
 
   // Loss metadata
-  lossReason    String?
+  lossReason     String?
   lossCompetitor String?
-  lossNotes     String? @db.Text
+  lossNotes      String? @db.Text
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -377,29 +393,29 @@ model Opportunity {
 // ═══════════════════════════════════════════════════════════════
 
 model QueueItem {
-  id        String          @id @default(cuid())
-  type      QueueItemType
-  title     String
-  accName   String          @default("")  // denormalized for display
-  accId     String?                       // nullable for cold outreach
-  agent     String
-  confidence Float          @default(0.5)
+  id         String        @id @default(cuid())
+  type       QueueItemType
+  title      String
+  accName    String        @default("") // denormalized for display
+  accId      String? // nullable for cold outreach
+  agent      String
+  confidence Float         @default(0.5)
 
   // Confidence breakdown + sources + payload as JSON
-  confidenceBreakdown Json  @default("{}")
-  sources             Json  @default("[]")  // [{name, url}]
-  payload             Json  @default("{}")  // type-specific data
+  confidenceBreakdown Json @default("{}")
+  sources             Json @default("[]") // [{name, url}]
+  payload             Json @default("{}") // type-specific data
 
-  reasoning String          @db.Text @default("")
+  reasoning String          @default("") @db.Text
   status    QueueItemStatus @default(pending)
   priority  QueuePriority   @default(Normal)
   createdAt DateTime        @default(now())
 
   // Audit trail
-  reviewedById String?
-  reviewedAt   DateTime?
-  rejReason    String?
-  originalPayload Json?     // snapshot before edit
+  reviewedById    String?
+  reviewedAt      DateTime?
+  rejReason       String?
+  originalPayload Json? // snapshot before edit
 
   @@index([status, createdAt(sort: Desc)])
   @@index([type])
@@ -423,14 +439,14 @@ model Task {
 
   // Relations
   accountId  String?
-  account    Account?  @relation(fields: [accountId], references: [id])
+  account    Account?      @relation(fields: [accountId], references: [id])
   ownerId    String
-  owner      User      @relation("TaskOwner", fields: [ownerId], references: [id])
-  assignees  User[]    @relation("TaskAssignees")
+  owner      User          @relation("TaskOwner", fields: [ownerId], references: [id])
+  assignees  User[]        @relation("TaskAssignees")
   reviewerId String?
-  reviewer   User?     @relation("TaskReviewer", fields: [reviewerId], references: [id])
+  reviewer   User?         @relation("TaskReviewer", fields: [reviewerId], references: [id])
   goalId     String?
-  goal       Goal?     @relation(fields: [goalId], references: [id])
+  goal       Goal?         @relation(fields: [goalId], references: [id])
   comments   TaskComment[]
 
   @@index([status])
@@ -449,9 +465,9 @@ model TaskComment {
 
   // Relations
   taskId   String
-  task     Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  task     Task   @relation(fields: [taskId], references: [id], onDelete: Cascade)
   authorId String
-  author   User @relation("CommentAuthor", fields: [authorId], references: [id])
+  author   User   @relation("CommentAuthor", fields: [authorId], references: [id])
 
   @@index([taskId])
   @@map("task_comments")
@@ -486,10 +502,10 @@ model Goal {
 model Activity {
   id        String       @id @default(cuid())
   type      ActivityType
-  summary   String       // max ~80 chars for list display
-  detail    String       @db.Text @default("")
+  summary   String // max ~80 chars for list display
+  detail    String       @default("") @db.Text
   source    String       @default("Manual") // "Outlook Sync", "Calendar Sync", "Quick Log", etc.
-  noteType  String?      // "insight", "objection", "competitor", etc. for Quick Log entries
+  noteType  String? // "insight", "objection", "competitor", etc. for Quick Log entries
   createdAt DateTime     @default(now())
 
   // Relations
@@ -508,14 +524,14 @@ model Activity {
 // ═══════════════════════════════════════════════════════════════
 
 model InboxEmail {
-  id          String              @id @default(cuid())
-  subject     String
-  fromEmail   String
-  fromName    String
-  preview     String              @db.Text // first ~200 chars
-  receivedAt  DateTime            @default(now())
-  isUnread    Boolean             @default(true)
-  isArchived  Boolean             @default(false)
+  id         String   @id @default(cuid())
+  subject    String
+  fromEmail  String
+  fromName   String
+  preview    String   @db.Text // first ~200 chars
+  receivedAt DateTime @default(now())
+  isUnread   Boolean  @default(true)
+  isArchived Boolean  @default(false)
 
   // AI classification
   classification     EmailClassification
@@ -523,10 +539,10 @@ model InboxEmail {
   classifierAgent    String              @default("Inbox Classifier")
 
   // Account linking
-  isLinked    Boolean  @default(false)
+  isLinked    Boolean @default(false)
   accountId   String?
-  accountName String?  // denormalized
-  domain      String?  // sender domain for new-domain detection
+  accountName String? // denormalized
+  domain      String? // sender domain for new-domain detection
 
   createdAt DateTime @default(now())
 
@@ -541,7 +557,7 @@ model InboxEmail {
 
 model IntegrationToken {
   id           String   @id @default(cuid())
-  provider     String   // "microsoft"
+  provider     String // "microsoft"
   accessToken  String   @db.Text
   refreshToken String   @db.Text
   expiresAt    DateTime
@@ -560,17 +576,56 @@ model IntegrationToken {
 model Meeting {
   id         String            @id @default(cuid())
   title      String
-  startTime  String            // "HH:MM" display
-  duration   String            // "30 min", "60 min"
+  startTime  String // "HH:MM" display
+  duration   String // "30 min", "60 min"
   date       DateTime
-  attendees  String[]          // names
+  attendees  String[] // names
   prepStatus MeetingPrepStatus @default(draft)
   createdAt  DateTime          @default(now())
 
   // Relations
-  accountId  String?
-  accountName String?  // denormalized
+  accountId   String?
+  accountName String? // denormalized
 
   @@index([date])
   @@map("meetings")
+}
+
+// ═══════════════════════════════════════════════════════════════
+// AGENT CONFIG
+// ═══════════════════════════════════════════════════════════════
+
+model AgentConfig {
+  id          String    @id @default(cuid())
+  name        String    @unique // e.g. "lead_qualifier"
+  displayName String // e.g. "Lead Qualifier"
+  description String    @db.Text
+  status      String    @default("active") // "active", "paused", "disabled"
+  parameters  Json      @default("{}") // agent-specific config
+  lastRunAt   DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@map("agent_configs")
+}
+
+// ═══════════════════════════════════════════════════════════════
+// INVITATIONS
+// ═══════════════════════════════════════════════════════════════
+
+model Invitation {
+  id          String           @id @default(cuid())
+  email       String
+  role        Role             @default(MEMBER)
+  token       String           @unique @default(cuid())
+  status      InvitationStatus @default(PENDING)
+  invitedBy   User             @relation("SentInvitations", fields: [invitedById], references: [id])
+  invitedById String
+  expiresAt   DateTime
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  @@index([email, status])
+  @@index([token])
+  @@map("invitations")
 }

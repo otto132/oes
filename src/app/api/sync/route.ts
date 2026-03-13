@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import { syncEmails } from '@/lib/integrations/email-sync';
 import { syncCalendar } from '@/lib/integrations/calendar-sync';
+import { requireRole } from '@/lib/rbac';
 
 // POST /api/sync — trigger sync manually or via cron
 // Body: { "type": "all" | "emails" | "calendar" }
@@ -16,6 +17,9 @@ async function verifyCronOrSession(req: NextRequest): Promise<NextResponse | nul
 
   const session = await auth();
   if (session?.user) {
+    // Only admins may trigger sync manually
+    const denied = requireRole(session, 'ADMIN');
+    if (denied) return denied;
     return null; // authorised via session
   }
 

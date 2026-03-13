@@ -22,11 +22,12 @@ async function main() {
   await prisma.signal.deleteMany();
   await prisma.account.deleteMany();
   await prisma.user.deleteMany();
+  await prisma.agentConfig.deleteMany();
 
   // ── Users ──────────────────────────────────────
-  const u1 = await prisma.user.create({ data: { id: 'u1', name: 'Juuso Kari', initials: 'JK', email: 'juuso@eco-insight.com', role: 'Commercial Director', color: 'green' } });
-  const u2 = await prisma.user.create({ data: { id: 'u2', name: 'Laura Puranen', initials: 'LP', email: 'laura@eco-insight.com', role: 'CEO', color: 'default' } });
-  const u3 = await prisma.user.create({ data: { id: 'u3', name: 'Nick Schoch', initials: 'NS', email: 'nick@eco-insight.com', role: 'COO', color: 'blue' } });
+  const u1 = await prisma.user.create({ data: { id: 'u1', name: 'Juuso Kari', initials: 'JK', email: 'juuso@eco-insight.com', role: 'ADMIN', color: 'green' } });
+  const u2 = await prisma.user.create({ data: { id: 'u2', name: 'Laura Puranen', initials: 'LP', email: 'laura@eco-insight.com', role: 'ADMIN', color: 'default' } });
+  const u3 = await prisma.user.create({ data: { id: 'u3', name: 'Nick Schoch', initials: 'NS', email: 'nick@eco-insight.com', role: 'MEMBER', color: 'blue' } });
   console.log('  ✓ 3 users');
 
   // ── Signals ────────────────────────────────────
@@ -162,7 +163,18 @@ async function main() {
   ]});
   console.log('  ✓ 3 meetings');
 
-  console.log('\n✅ Seed complete: 3 users, 6 signals, 4 leads, 6 accounts, 9 contacts, 7 opps, 3 goals, 6 tasks, 6 activities, 5 queue items, 6 emails, 3 meetings');
+  // ── Agent Configs ─────────────────────────────
+  await prisma.agentConfig.createMany({ data: [
+    { name: 'lead_qualifier', displayName: 'Lead Qualifier', description: 'Scores and qualifies inbound leads using FIUAC criteria, company research, and signal correlation.', status: 'active', parameters: {} },
+    { name: 'signal_hunter', displayName: 'Signal Hunter', description: 'Monitors news, job postings, and market events to detect buying signals for target accounts.', status: 'active', parameters: {} },
+    { name: 'pipeline_hygiene', displayName: 'Pipeline Hygiene', description: 'Analyzes deal health, detects stalled opportunities, and suggests next actions to keep pipeline moving.', status: 'active', parameters: {} },
+    { name: 'meeting_prep', displayName: 'Meeting Prep', description: 'Generates pre-meeting briefs with account context, stakeholder insights, and suggested talking points.', status: 'active', parameters: {} },
+    { name: 'relationship_monitor', displayName: 'Relationship Monitor', description: 'Tracks engagement levels across accounts and contacts, alerting when relationships cool or warm.', status: 'active', parameters: {} },
+    { name: 'data_enrichment', displayName: 'Data Enrichment', description: 'Enriches account and contact records with firmographic data, tech stack info, and public financial data.', status: 'active', parameters: {} },
+  ]});
+  console.log('  ✓ 6 agent configs');
+
+  console.log('\n✅ Seed complete: 3 users, 6 signals, 4 leads, 6 accounts, 9 contacts, 7 opps, 3 goals, 6 tasks, 6 activities, 5 queue items, 6 emails, 3 meetings, 6 agent configs');
 }
 
 main()
