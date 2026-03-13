@@ -1,5 +1,5 @@
-import prisma from '@/lib/prisma';
-import type { AgentEvent } from '@prisma/client';
+import { db as prisma } from '@/lib/db';
+import type { AgentEvent, Prisma } from '@prisma/client';
 
 const DEFAULT_EXPIRY_MS = 6 * 60 * 60 * 1000; // 6 hours
 
@@ -8,7 +8,7 @@ export async function emitEvent(
   payload: Record<string, unknown> = {}
 ): Promise<void> {
   await prisma.agentEvent.create({
-    data: { event, payload },
+    data: { event, payload: payload as Prisma.InputJsonValue },
   });
 }
 

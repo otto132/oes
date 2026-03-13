@@ -103,13 +103,14 @@ export const POST = withHandler(queueActionSchema, async (req, ctx) => {
       const payload = item.payload as any;
       await db.signal.create({
         data: {
-          type: String(payload.signalType || 'market'),
+          type: (payload.signalType || 'market_entry') as any,
           title: String(payload.headline || item.title),
           summary: String(payload.summary || ''),
+          reasoning: String(item.reasoning || ''),
           source: String(payload.sourceName || ''),
           sourceUrl: payload.sourceUrl ? String(payload.sourceUrl) : null,
           relevance: Number(payload.relevanceScore || item.confidence * 100),
-          status: 'active',
+          confidence: item.confidence ?? 0.5,
           companies: payload.matchedAccounts || [],
         },
       });

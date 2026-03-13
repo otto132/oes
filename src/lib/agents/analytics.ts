@@ -1,4 +1,4 @@
-import prisma from '@/lib/prisma';
+import { db as prisma } from '@/lib/db';
 
 export async function getAgentAnalytics(periodDays: number = 30) {
   const since = new Date(Date.now() - periodDays * 24 * 60 * 60 * 1000);

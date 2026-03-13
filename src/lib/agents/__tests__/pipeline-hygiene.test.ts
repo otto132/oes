@@ -4,8 +4,8 @@ import type { AgentContext } from '../types';
 
 const mockFindMany = vi.fn();
 
-vi.mock('@/lib/prisma', () => ({
-  default: {
+vi.mock('@/lib/db', () => ({
+  db: {
     opportunity: { findMany: (...args: unknown[]) => mockFindMany(...args) },
   },
 }));

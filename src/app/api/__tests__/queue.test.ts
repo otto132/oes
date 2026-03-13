@@ -29,6 +29,10 @@ vi.mock('@/lib/auth', () => ({
 
 vi.mock('@/lib/db', () => ({ db: mockDb }));
 
+vi.mock('@/lib/agents/chain', () => ({
+  handleApproval: vi.fn().mockResolvedValue(undefined),
+}));
+
 import { POST } from '../queue/route';
 
 // ── Helpers ──────────────────────────────────────────────────

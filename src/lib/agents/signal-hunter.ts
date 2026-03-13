@@ -1,4 +1,4 @@
-import prisma from '@/lib/prisma';
+import { db as prisma } from '@/lib/db';
 import RSSParser from 'rss-parser';
 import type { Agent, AgentContext, AgentResult, AgentError, NewQueueItem } from './types';
 
@@ -26,7 +26,7 @@ export const signalHunterAgent: Agent = {
 
     // Load accounts for matching
     const accounts = await prisma.account.findMany({
-      select: { id: true, name: true, pain: true, industry: true },
+      select: { id: true, name: true, pain: true },
     });
 
     // Load existing signal URLs for dedup

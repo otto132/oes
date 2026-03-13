@@ -5,8 +5,8 @@ import type { AgentContext } from '../types';
 const mockEmailFindMany = vi.fn();
 const mockAccountFindFirst = vi.fn();
 
-vi.mock('@/lib/prisma', () => ({
-  default: {
+vi.mock('@/lib/db', () => ({
+  db: {
     inboxEmail: { findMany: (...args: unknown[]) => mockEmailFindMany(...args) },
     account: { findFirst: (...args: unknown[]) => mockAccountFindFirst(...args) },
   },
@@ -37,7 +37,8 @@ describe('Inbox Classifier Agent', () => {
     mockEmailFindMany.mockResolvedValue([
       {
         id: 'em1', subject: 'URGENT: Need response today',
-        from: 'john@acme.com', body: 'Please respond ASAP',
+        fromEmail: 'john@acme.com', fromName: 'John',
+        preview: 'Please respond ASAP', domain: 'acme.com',
         classification: 'question', accountId: 'acc1',
         createdAt: new Date(),
       },
@@ -52,7 +53,8 @@ describe('Inbox Classifier Agent', () => {
     mockEmailFindMany.mockResolvedValue([
       {
         id: 'em2', subject: 'Partnership inquiry',
-        from: 'jane@newcorp.com', body: 'Interested in your product',
+        fromEmail: 'jane@newcorp.com', fromName: 'Jane',
+        preview: 'Interested in your product', domain: 'newcorp.com',
         classification: 'positive_reply', accountId: null,
         createdAt: new Date(),
       },
@@ -67,7 +69,8 @@ describe('Inbox Classifier Agent', () => {
     mockEmailFindMany.mockResolvedValue([
       {
         id: 'em3', subject: 'Newsletter',
-        from: 'noreply@news.com', body: 'Weekly update',
+        fromEmail: 'noreply@news.com', fromName: 'News',
+        preview: 'Weekly update', domain: 'news.com',
         classification: 'auto_reply', accountId: null,
         createdAt: new Date(),
       },

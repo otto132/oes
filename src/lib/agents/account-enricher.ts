@@ -1,4 +1,4 @@
-import prisma from '@/lib/prisma';
+import { db as prisma } from '@/lib/db';
 import type { Agent, AgentContext, AgentResult, NewQueueItem } from './types';
 
 const DEFAULT_PARAMS = {
@@ -31,9 +31,6 @@ export const accountEnricherAgent: Agent = {
         ...accountFilter,
         updatedAt: { lt: staleCutoff },
       },
-      include: {
-        signals: { take: 5, orderBy: { createdAt: 'desc' } },
-      },
     });
 
     const items: NewQueueItem[] = [];
@@ -42,8 +39,14 @@ export const accountEnricherAgent: Agent = {
     for (const account of accounts) {
       // Check for missing/stale fields
       if (!account.pain || !account.whyNow) {
-        // Look for hints in recent signals
-        const signalHints = account.signals
+        // Look for signals that mention this account
+        const signals = await prisma.signal.findMany({
+          where: { companies: { has: account.name } },
+          take: 5,
+          orderBy: { createdAt: 'desc' },
+        });
+
+        const signalHints = signals
           .map((s) => s.summary)
           .filter(Boolean)
           .join(' ');
@@ -58,7 +61,7 @@ export const accountEnricherAgent: Agent = {
             agent: 'account_enricher',
             confidence: 0.6,
             confidenceBreakdown: { signalBased: 0.6 },
-            sources: account.signals.map((s) => ({ name: s.source || 'Signal', url: s.sourceUrl })),
+            sources: signals.map((s) => ({ name: s.source || 'Signal', url: s.sourceUrl })),
             payload: {
               accountId: account.id,
               field: 'pain',
@@ -67,7 +70,7 @@ export const accountEnricherAgent: Agent = {
               source: 'cross-reference',
               confidence: 0.6,
             },
-            reasoning: `Account "${account.name}" has no pain field set. ${account.signals.length} recent signals available for context.`,
+            reasoning: `Account "${account.name}" has no pain field set. ${signals.length} recent signals available for context.`,
             priority: 'Normal',
           });
         }

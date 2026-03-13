@@ -3,10 +3,12 @@ import { accountEnricherAgent } from '../account-enricher';
 import type { AgentContext } from '../types';
 
 const mockAccountFindMany = vi.fn();
+const mockSignalFindMany = vi.fn();
 
-vi.mock('@/lib/prisma', () => ({
-  default: {
+vi.mock('@/lib/db', () => ({
+  db: {
     account: { findMany: (...args: unknown[]) => mockAccountFindMany(...args) },
+    signal: { findMany: (...args: unknown[]) => mockSignalFindMany(...args) },
   },
 }));
 
@@ -35,8 +37,10 @@ describe('Account Enricher Agent', () => {
       {
         id: 'acc1', name: 'Stale Corp', pain: null, whyNow: null,
         updatedAt: new Date(Date.now() - 60 * 24 * 60 * 60 * 1000),
-        signals: [{ summary: 'Recent funding round announced', source: 'News', sourceUrl: 'https://example.com' }],
       },
+    ]);
+    mockSignalFindMany.mockResolvedValue([
+      { summary: 'Recent funding round announced', source: 'News', sourceUrl: 'https://example.com' },
     ]);
 
     const result = await accountEnricherAgent.analyze(ctx);

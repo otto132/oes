@@ -1,4 +1,4 @@
-import prisma from '@/lib/prisma';
+import { db as prisma } from '@/lib/db';
 import type { Agent, AgentContext, AgentResult, NewQueueItem } from './types';
 
 const DEFAULT_PARAMS = {
@@ -25,9 +25,9 @@ export const inboxClassifierAgent: Agent = {
     let matched = 0;
 
     for (const email of emails) {
-      const text = `${email.subject} ${email.body || ''}`.toLowerCase();
+      const text = `${email.subject} ${email.preview || ''}`.toLowerCase();
       const isUrgent = urgencyKeywords.some((kw) => text.includes(kw.toLowerCase()));
-      const domain = email.from.split('@')[1] || '';
+      const domain = email.domain || email.fromEmail.split('@')[1] || '';
       const classification = email.classification as string;
 
       // Skip auto-replies and bounces
@@ -55,7 +55,7 @@ export const inboxClassifierAgent: Agent = {
             suggestedDueDate: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
             accountId: email.accountId,
           },
-          reasoning: `Urgent keywords detected in email from ${email.from}. Classification: ${classification}.`,
+          reasoning: `Urgent keywords detected in email from ${email.fromEmail}. Classification: ${classification}.`,
           priority: 'High',
         });
         continue;
@@ -63,12 +63,7 @@ export const inboxClassifierAgent: Agent = {
 
       // Unlinked email from unknown domain → suggest account linking
       if (!email.accountId && classification !== 'auto_reply') {
-        const existingAccount = await prisma.account.findFirst({
-          where: { website: { contains: domain } },
-          select: { id: true, name: true },
-        });
-
-        if (!existingAccount && ['positive_reply', 'question', 'meeting_request'].includes(classification)) {
+        if (['positive_reply', 'question', 'meeting_request'].includes(classification)) {
           matched++;
           items.push({
             type: 'enrichment',

@@ -1,14 +1,16 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { outreachDrafterAgent } from '../outreach-drafter';
 import type { AgentContext } from '../types';
 
 const mockLeadFindMany = vi.fn();
 const mockAccountFindFirst = vi.fn();
+const mockSignalFindMany = vi.fn();
 
-vi.mock('@/lib/prisma', () => ({
-  default: {
+vi.mock('@/lib/db', () => ({
+  db: {
     lead: { findMany: (...args: unknown[]) => mockLeadFindMany(...args) },
     account: { findFirst: (...args: unknown[]) => mockAccountFindFirst(...args) },
+    signal: { findMany: (...args: unknown[]) => mockSignalFindMany(...args) },
   },
 }));
 
@@ -58,13 +60,15 @@ describe('Outreach Drafter Agent', () => {
 
   it('creates outreach_draft items for qualified leads', async () => {
     mockLeadFindMany.mockResolvedValue([
-      { id: 'l1', company: 'Acme Corp', pain: 'High costs', status: 'Qualified' },
+      { id: 'l1', company: 'Acme Corp', pain: 'High costs', stage: 'Qualified' },
     ]);
     mockAccountFindFirst.mockResolvedValue({
       id: 'acc1', name: 'Acme Corp', pain: 'High costs', whyNow: 'Budget season',
       contacts: [{ id: 'c1', name: 'Jane Doe', title: 'VP Sales', warmth: 3 }],
-      signals: [{ title: 'Funding round', source: 'News', sourceUrl: 'https://example.com' }],
     });
+    mockSignalFindMany.mockResolvedValue([
+      { title: 'Funding round', source: 'News', sourceUrl: 'https://example.com' },
+    ]);
     mockCreate.mockResolvedValue({
       content: [{ type: 'text', text: '{"subjectA": "Save on costs", "subjectB": "Quick question", "body": "Hi Jane...", "reasoning": "Using pain point"}' }],
     });

@@ -4,8 +4,8 @@ import type { AgentContext } from '../types';
 
 const mockLeadFindMany = vi.fn();
 
-vi.mock('@/lib/prisma', () => ({
-  default: {
+vi.mock('@/lib/db', () => ({
+  db: {
     lead: { findMany: (...args: unknown[]) => mockLeadFindMany(...args) },
   },
 }));
@@ -34,8 +34,8 @@ describe('Lead Qualifier Agent', () => {
       {
         id: 'l1', company: 'Hot Corp', type: 'Enterprise', country: 'Finland',
         pain: 'High energy costs', scoreFit: 80, scoreIntent: 75,
-        scoreUrgency: 70, scoreAccess: 85, scoreCapacity: 90,
-        status: 'New', createdAt: new Date(),
+        scoreUrgency: 70, scoreAccess: 85, scoreCommercial: 90,
+        stage: 'New', createdAt: new Date(),
       },
     ]);
 
@@ -51,8 +51,8 @@ describe('Lead Qualifier Agent', () => {
       {
         id: 'l2', company: 'Cold Corp', type: 'SMB', country: 'Unknown',
         pain: '', scoreFit: 10, scoreIntent: 15,
-        scoreUrgency: 20, scoreAccess: 10, scoreCapacity: 5,
-        status: 'New', createdAt: new Date(),
+        scoreUrgency: 20, scoreAccess: 10, scoreCommercial: 5,
+        stage: 'New', createdAt: new Date(),
       },
     ]);
 

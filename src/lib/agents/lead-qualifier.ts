@@ -1,4 +1,4 @@
-import prisma from '@/lib/prisma';
+import { db as prisma } from '@/lib/db';
 import type { Agent, AgentContext, AgentResult, NewQueueItem } from './types';
 
 const DEFAULT_PARAMS = {
@@ -20,7 +20,7 @@ export const leadQualifierAgent: Agent = {
 
     // Fetch leads that need scoring (New or Contacted status)
     const leads = await prisma.lead.findMany({
-      where: { status: { in: ['New', 'Contacted'] } },
+      where: { stage: { in: ['New', 'Researching'] } },
     });
 
     const items: NewQueueItem[] = [];
@@ -31,7 +31,7 @@ export const leadQualifierAgent: Agent = {
       const i = lead.scoreIntent || 0;
       const u = lead.scoreUrgency || 0;
       const a = lead.scoreAccess || 0;
-      const c = lead.scoreCapacity || 0;
+      const c = lead.scoreCommercial || 0;
       const avgScore = (f + i + u + a + c) / 5;
 
       let recommendation: 'qualify' | 'disqualify' | 'review';
@@ -51,7 +51,7 @@ export const leadQualifierAgent: Agent = {
         accId: null,
         agent: 'lead_qualifier',
         confidence: recommendation === 'review' ? 0.5 : 0.8,
-        confidenceBreakdown: { fit: f / 100, intent: i / 100, urgency: u / 100, access: a / 100, capacity: c / 100 },
+        confidenceBreakdown: { fit: f / 100, intent: i / 100, urgency: u / 100, access: a / 100, commercial: c / 100 },
         sources: [],
         payload: {
           leadId: lead.id,

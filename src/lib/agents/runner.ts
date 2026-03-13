@@ -1,8 +1,8 @@
-import prisma from '@/lib/prisma';
-import type { AgentRun } from '@prisma/client';
+import { db as prisma } from '@/lib/db';
+import type { AgentRun, Prisma } from '@prisma/client';
 import type { Agent, AgentEventData } from './types';
 import { consumePendingEvents, markProcessed, expireOldEvents } from './events';
-import { getAllAgents, getAgentsByTrigger } from './registry';
+import { getAgentsByTrigger } from './registry';
 
 const STALE_RUN_TIMEOUT_MS = 10 * 60 * 1000; // 10 minutes
 
@@ -37,7 +37,7 @@ export async function runAgent(
         status: 'failed',
         completedAt: new Date(),
         durationMs: elapsed,
-        errors: [{ message: 'Run timed out (stale)', recoverable: true }],
+        errors: [{ message: 'Run timed out (stale)', recoverable: true }] as unknown as Prisma.InputJsonValue,
       },
     });
   }
@@ -71,9 +71,9 @@ export async function runAgent(
           accId: item.accId,
           agent: item.agent,
           confidence: item.confidence,
-          confidenceBreakdown: item.confidenceBreakdown,
-          sources: item.sources,
-          payload: item.payload,
+          confidenceBreakdown: item.confidenceBreakdown as Prisma.InputJsonValue,
+          sources: item.sources as unknown as Prisma.InputJsonValue,
+          payload: item.payload as Prisma.InputJsonValue,
           reasoning: item.reasoning,
           priority: item.priority,
         })),
@@ -91,7 +91,7 @@ export async function runAgent(
         itemsCreated: result.items.length,
         itemsScanned: result.metrics.scanned,
         itemsMatched: result.metrics.matched,
-        errors: result.errors,
+        errors: result.errors as unknown as Prisma.InputJsonValue,
       },
     });
 
@@ -115,7 +115,7 @@ export async function runAgent(
             message: error instanceof Error ? error.message : String(error),
             recoverable: false,
           },
-        ],
+        ] as unknown as Prisma.InputJsonValue,
       },
     });
     return run;

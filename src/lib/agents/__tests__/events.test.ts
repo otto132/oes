@@ -7,8 +7,8 @@ const mockFindMany = vi.fn();
 const mockUpdate = vi.fn();
 const mockUpdateMany = vi.fn();
 
-vi.mock('@/lib/prisma', () => ({
-  default: {
+vi.mock('@/lib/db', () => ({
+  db: {
     agentEvent: {
       create: (...args: unknown[]) => mockCreate(...args),
       findMany: (...args: unknown[]) => mockFindMany(...args),

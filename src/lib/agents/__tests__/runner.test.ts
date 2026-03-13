@@ -9,8 +9,8 @@ const mockAgentConfigUpdate = vi.fn();
 const mockAgentConfigFindUnique = vi.fn();
 const mockQueueItemCreateMany = vi.fn();
 
-vi.mock('@/lib/prisma', () => ({
-  default: {
+vi.mock('@/lib/db', () => ({
+  db: {
     agentRun: {
       create: (...args: unknown[]) => mockAgentRunCreate(...args),
       update: (...args: unknown[]) => mockAgentRunUpdate(...args),

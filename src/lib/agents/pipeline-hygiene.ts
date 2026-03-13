@@ -1,4 +1,4 @@
-import prisma from '@/lib/prisma';
+import { db as prisma } from '@/lib/db';
 import type { Agent, AgentContext, AgentResult, NewQueueItem } from './types';
 
 const DEFAULT_PARAMS = {
@@ -17,17 +17,13 @@ export const pipelineHygieneAgent: Agent = {
     const staleThreshold = Number(params.staleThresholdDays) || 7;
     const healthThreshold = Number(params.healthAlertThreshold) || 40;
 
-    // Fetch open opportunities with account and recent activities
+    // Fetch open opportunities with account
     const opportunities = await prisma.opportunity.findMany({
       where: {
-        stage: { notIn: ['Closed Won', 'Closed Lost'] },
+        stage: { notIn: ['ClosedWon', 'ClosedLost'] },
       },
       include: {
-        account: { select: { id: true, name: true } },
-        activities: {
-          orderBy: { createdAt: 'desc' },
-          take: 1,
-        },
+        account: { select: { id: true, name: true, lastActivityAt: true } },
       },
     });
 
@@ -35,13 +31,13 @@ export const pipelineHygieneAgent: Agent = {
     let matched = 0;
 
     for (const opp of opportunities) {
-      const lastActivity = opp.activities[0];
-      const daysSinceActivity = lastActivity
-        ? Math.floor((Date.now() - lastActivity.createdAt.getTime()) / (24 * 60 * 60 * 1000))
+      const lastActivityDate = opp.account?.lastActivityAt;
+      const daysSinceActivity = lastActivityDate
+        ? Math.floor((Date.now() - lastActivityDate.getTime()) / (24 * 60 * 60 * 1000))
         : 999;
 
       const avgHealth = Math.round(
-        (opp.healthEngagement + opp.healthStakeholders + opp.healthCompetition + opp.healthTimeline) / 4
+        (opp.healthEngagement + opp.healthStakeholders + opp.healthCompetitive + opp.healthTimeline) / 4
       );
 
       // Check: stale (no activity)

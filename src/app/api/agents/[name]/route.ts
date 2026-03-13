@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import prisma from '@/lib/prisma';
+import { db as prisma } from '@/lib/db';
+import type { Prisma } from '@prisma/client';
 import { auth } from '@/lib/auth';
 import { updateAgentConfigSchema } from '@/lib/schemas/agents';
 import { getAgent } from '@/lib/agents/registry';
@@ -41,9 +42,15 @@ export async function PATCH(req: NextRequest, ctx: RouteContext) {
       { status: 400 }
     );
   }
+  const updateData: Prisma.AgentConfigUpdateInput = {
+    ...(parsed.data.status && { status: parsed.data.status }),
+    ...(parsed.data.parameters && {
+      parameters: parsed.data.parameters as Prisma.InputJsonValue,
+    }),
+  };
   const updated = await prisma.agentConfig.update({
     where: { name },
-    data: parsed.data,
+    data: updateData,
   });
   return NextResponse.json({ data: updated });
 }

@@ -5,8 +5,8 @@ import type { AgentContext } from '../types';
 const mockAccountFindMany = vi.fn();
 const mockSignalFindMany = vi.fn();
 
-vi.mock('@/lib/prisma', () => ({
-  default: {
+vi.mock('@/lib/db', () => ({
+  db: {
     account: { findMany: (...args: unknown[]) => mockAccountFindMany(...args) },
     signal: { findMany: (...args: unknown[]) => mockSignalFindMany(...args) },
   },

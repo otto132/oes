@@ -1,4 +1,4 @@
-import prisma from '@/lib/prisma';
+import { db as prisma } from '@/lib/db';
 import Anthropic from '@anthropic-ai/sdk';
 import type { Agent, AgentContext, AgentResult, AgentError, NewQueueItem } from './types';
 
@@ -32,7 +32,7 @@ export const outreachDrafterAgent: Agent = {
 
     // Find leads/accounts needing outreach
     const leads = await prisma.lead.findMany({
-      where: { status: 'Qualified' },
+      where: { stage: 'Qualified' },
       take: 10,
     });
 
@@ -47,13 +47,18 @@ export const outreachDrafterAgent: Agent = {
               where: { name: { contains: lead.company, mode: 'insensitive' } },
               include: {
                 contacts: { take: 1, orderBy: { warmth: 'desc' } },
-                signals: { take: 3, orderBy: { createdAt: 'desc' } },
               },
             })
           : null;
 
         const contact = account?.contacts?.[0];
-        const signals = account?.signals || [];
+        const signals = account
+          ? await prisma.signal.findMany({
+              where: { companies: { has: account.name } },
+              take: 3,
+              orderBy: { createdAt: 'desc' },
+            })
+          : [];
 
         const prompt = `You are a B2B sales outreach specialist. Write a ${params.templateStyle} email.
 

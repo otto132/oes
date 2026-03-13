@@ -3,10 +3,8 @@ import type {
   Agent,
   AgentContext,
   AgentResult,
-  AgentError,
   AgentTrigger,
   AgentEventData,
-  NewQueueItem,
 } from '../types';
 
 describe('Agent types', () => {
