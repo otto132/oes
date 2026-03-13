@@ -24,7 +24,7 @@ const SHORTCUTS = [
 
 export default function SettingsPage() {
   const { openDrawer, closeDrawer } = useStore();
-  // Team list will come from API in E2-09; hardcode for now
+  // TODO(E2-09): Replace with data from /api/settings/team
   const users = [
     { id: 'u1', name: 'Juuso Kari', ini: 'JK', role: 'Commercial Director', ac: 'green' },
     { id: 'u2', name: 'Laura Puranen', ini: 'LP', role: 'CEO', ac: 'default' },
@@ -59,7 +59,7 @@ export default function SettingsPage() {
           </div>
           <div className="flex items-center gap-1.5">
             <Badge variant="ok">● Active</Badge>
-            <span className="text-[10px] text-muted">Last run: 2 hours ago</span>
+            <span className="text-[10px] text-muted">Last run: —</span>
           </div>
         </div>
       ),
