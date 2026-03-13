@@ -5,12 +5,43 @@ import { useAccountsQuery } from '@/lib/queries/accounts';
 import { compositeScore } from '@/lib/types';
 import type { Account } from '@/lib/types';
 import { fmt, fRelative, cn } from '@/lib/utils';
-import { ScorePill, FIUACBars, Badge, Avatar } from '@/components/ui';
+import { ScorePill, FIUACBars, Badge, Avatar, Skeleton, SkeletonCard, SkeletonText, ErrorState } from '@/components/ui';
+
+function AccountsSkeleton() {
+  return (
+    <div className="page-enter space-y-4">
+      <div className="flex gap-3 items-center">
+        <Skeleton className="h-9 flex-1 rounded-lg" />
+        <div className="flex gap-2">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <Skeleton key={i} className="h-7 w-16 rounded-full" />
+          ))}
+        </div>
+      </div>
+      <div className="space-y-2">
+        {Array.from({ length: 6 }).map((_, i) => (
+          <SkeletonCard key={i} className="flex items-center gap-4">
+            <Skeleton className="h-8 w-8 rounded-md shrink-0" />
+            <div className="flex-1 space-y-1.5">
+              <SkeletonText className="w-1/3" />
+              <SkeletonText className="w-1/5 h-2" />
+            </div>
+            <Skeleton className="h-4 w-12" />
+          </SkeletonCard>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 export default function AccountsPage() {
   const [search, setSearch] = useState('');
   const [typeFilter, setTypeFilter] = useState('all');
-  const { data: resp } = useAccountsQuery(search || undefined, typeFilter !== 'all' ? typeFilter : undefined);
+  const { data: resp, isLoading, isError, refetch } = useAccountsQuery(search || undefined, typeFilter !== 'all' ? typeFilter : undefined);
+
+  if (isLoading) return <AccountsSkeleton />;
+  if (isError) return <ErrorState onRetry={() => refetch()} />;
+
   const accounts: Account[] = resp?.data ?? [];
 
   const sorted = [...accounts].sort((a, b) => compositeScore(b.scores) - compositeScore(a.scores));
