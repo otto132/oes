@@ -54,7 +54,24 @@ export function usePatchAgent() {
   return useMutation({
     mutationFn: ({ name, data }: { name: string; data: { status?: string; parameters?: Record<string, string> } }) =>
       api.settings.patchAgent(name, data),
-    onSuccess: () => {
+    onMutate: async ({ name, data }) => {
+      await qc.cancelQueries({ queryKey: settingsKeys.agents() });
+      const previousAgents = qc.getQueryData(settingsKeys.agents());
+      qc.setQueryData(settingsKeys.agents(), (old: any) => {
+        if (!old?.data) return old;
+        return {
+          ...old,
+          data: old.data.map((a: any) =>
+            a.name === name ? { ...a, ...data } : a,
+          ),
+        };
+      });
+      return { previousAgents };
+    },
+    onError: (_err, _vars, context) => {
+      if (context?.previousAgents) qc.setQueryData(settingsKeys.agents(), context.previousAgents);
+    },
+    onSettled: () => {
       qc.invalidateQueries({ queryKey: settingsKeys.agents() });
     },
   });

@@ -32,7 +32,57 @@ export function useCreateAccount() {
       country?: string;
       notes?: string;
     }) => api.accounts.create(data),
-    onSuccess: () => {
+    onMutate: async (vars) => {
+      await qc.cancelQueries({ queryKey: accountKeys.all });
+      const queries = qc.getQueriesData({ queryKey: accountKeys.all });
+      const previous = queries.map(([key, data]) => [key, data] as const);
+      qc.setQueriesData({ queryKey: accountKeys.all }, (old: any) => {
+        if (!old) return old;
+        const tempItem = {
+          id: `temp-${Date.now()}`,
+          name: vars.name,
+          type: vars.type,
+          country: vars.country,
+          status: 'Prospect',
+        };
+        return { ...old, data: [tempItem, ...old.data] };
+      });
+      return { previous };
+    },
+    onError: (_err, _vars, context) => {
+      context?.previous.forEach(([key, data]) => qc.setQueryData(key, data));
+    },
+    onSettled: () => {
+      qc.invalidateQueries({ queryKey: accountKeys.all });
+    },
+  });
+}
+
+export function useUpdateAccount() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, data }: { id: string; data: Record<string, unknown> }) =>
+      api.accounts.update(id, data),
+    onMutate: async ({ id, data }) => {
+      await qc.cancelQueries({ queryKey: accountKeys.detail(id) });
+      await qc.cancelQueries({ queryKey: accountKeys.all });
+      const previousDetail = qc.getQueryData(accountKeys.detail(id));
+      const queries = qc.getQueriesData({ queryKey: accountKeys.all });
+      const previousList = queries.map(([key, d]) => [key, d] as const);
+      qc.setQueryData(accountKeys.detail(id), (old: any) => {
+        if (!old) return old;
+        return { ...old, ...data };
+      });
+      return { previousDetail, previousList, id };
+    },
+    onError: (_err, _vars, context) => {
+      if (context?.previousDetail !== undefined) {
+        qc.setQueryData(accountKeys.detail(context.id), context.previousDetail);
+      }
+      context?.previousList.forEach(([key, data]) => qc.setQueryData(key, data));
+    },
+    onSettled: (_data, _err, vars) => {
+      qc.invalidateQueries({ queryKey: accountKeys.detail(vars.id) });
       qc.invalidateQueries({ queryKey: accountKeys.all });
     },
   });
@@ -71,7 +121,33 @@ export function useCreateContact(accountId: string) {
       }
       return res.json();
     },
-    onSuccess: () => {
+    onMutate: async (vars) => {
+      await qc.cancelQueries({ queryKey: accountKeys.detail(accountId) });
+      const previousDetail = qc.getQueryData(accountKeys.detail(accountId));
+      qc.setQueryData(accountKeys.detail(accountId), (old: any) => {
+        if (!old) return old;
+        const tempContact = {
+          id: `temp-${Date.now()}`,
+          name: vars.name,
+          title: vars.title,
+          role: vars.role,
+          warmth: vars.warmth,
+          email: vars.email,
+          phone: vars.phone,
+        };
+        return {
+          ...old,
+          contacts: [...(old.contacts ?? []), tempContact],
+        };
+      });
+      return { previousDetail };
+    },
+    onError: (_err, _vars, context) => {
+      if (context?.previousDetail !== undefined) {
+        qc.setQueryData(accountKeys.detail(accountId), context.previousDetail);
+      }
+    },
+    onSettled: () => {
       qc.invalidateQueries({ queryKey: accountKeys.detail(accountId) });
     },
   });

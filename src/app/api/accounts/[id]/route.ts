@@ -1,18 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { z } from 'zod';
-import { auth } from '@/lib/auth';
 import { db } from '@/lib/db';
-import { unauthorized, notFound, zodError } from '@/lib/api-errors';
+import { auth } from '@/lib/auth';
+import { adaptAccount } from '@/lib/adapters';
+import { patchAccountSchema } from '@/lib/schemas/accounts';
+import { unauthorized, notFound, conflict, zodError } from '@/lib/api-errors';
 
-const updateAccountSchema = z.object({
-  name: z.string().min(1).max(200).optional(),
-  type: z.string().optional(),
-  country: z.string().optional(),
-  notes: z.string().optional(),
-  pain: z.string().optional(),
-  whyNow: z.string().optional(),
-  ownerId: z.string().optional(),
-});
+const AI_FIELDS = new Set([
+  'pain', 'whyNow', 'moduleFit', 'competitors', 'aiConfidence',
+  'scoreFit', 'scoreIntent', 'scoreUrgency', 'scoreAccess', 'scoreCommercial',
+]);
 
 export async function PATCH(
   req: NextRequest,
@@ -23,22 +19,47 @@ export async function PATCH(
 
   const { id } = await params;
 
-  const account = await db.account.findUnique({ where: { id } });
-  if (!account) return notFound('Account not found');
-
   const raw = await req.json();
-  const parsed = updateAccountSchema.safeParse(raw);
+  const parsed = patchAccountSchema.safeParse(raw);
   if (!parsed.success) return zodError(parsed.error);
 
-  const { ownerId, type, ...rest } = parsed.data;
+  const body = parsed.data;
+
+  const existing = await db.account.findUnique({ where: { id } });
+  if (!existing) return notFound('Account not found');
+
+  if (body.name && body.name.toLowerCase() !== existing.name.toLowerCase()) {
+    const dup = await db.account.findFirst({
+      where: {
+        name: { equals: body.name, mode: 'insensitive' },
+        id: { not: id },
+      },
+    });
+    if (dup) return conflict(`Account "${dup.name}" already exists`);
+  }
+
+  const hasAiChange = Object.keys(body).some(k => AI_FIELDS.has(k));
+  const changedFields = Object.keys(body);
+
   const updated = await db.account.update({
     where: { id },
     data: {
-      ...rest,
-      ...(type ? { type: type as any } : {}),
-      ...(ownerId ? { owner: { connect: { id: ownerId } } } : {}),
+      ...(body as any),
+      ...(hasAiChange ? { aiUpdatedAt: new Date() } : {}),
+    },
+    include: { owner: true, contacts: { orderBy: { role: 'asc' } } },
+  });
+
+  await db.activity.create({
+    data: {
+      type: 'Note',
+      summary: 'Account updated',
+      detail: `Changed: ${changedFields.join(', ')}`,
+      source: 'user',
+      accountId: id,
+      authorId: session.user.id,
     },
   });
 
-  return NextResponse.json({ data: updated });
+  return NextResponse.json({ data: adaptAccount(updated as any) });
 }

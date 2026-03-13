@@ -124,7 +124,8 @@ export const api = {
     detail: (id: string) => get<any>(`/accounts?id=${id}`),
     create: (data: { name: string; type?: string; country?: string; notes?: string }) =>
       post<any>('/accounts', data),
-    update: (id: string, data: Record<string, unknown>) => patch<any>(`/accounts/${id}`, data),
+    update: (id: string, data: Record<string, unknown>) =>
+      patch<any>(`/accounts/${id}`, data),
   },
 
   // ── Opportunities ──────────────────────────────
@@ -186,6 +187,24 @@ export const api = {
     },
     log: (data: { type?: string; summary: string; detail?: string; source?: string; noteType?: string; accountId?: string }) =>
       post<any>('/activities', data),
+  },
+
+  // ── Meetings ────────────────────────────────────
+  meetings: {
+    list: (opts?: { date?: string; range?: number; cursor?: string; limit?: number }) => {
+      const params = new URLSearchParams();
+      if (opts?.date) params.set('date', opts.date);
+      if (opts?.range) params.set('range', String(opts.range));
+      if (opts?.cursor) params.set('cursor', opts.cursor);
+      if (opts?.limit) params.set('limit', String(opts.limit));
+      const qs = params.toString();
+      return get<any>(`/meetings${qs ? `?${qs}` : ''}`);
+    },
+    detail: (id: string) => get<any>(`/meetings/${id}`),
+    create: (data: { title: string; date: string; startTime: string; duration?: string; attendees?: string[]; accountId?: string }) =>
+      post<any>('/meetings', data),
+    update: (id: string, data: Record<string, unknown>) =>
+      patch<any>(`/meetings/${id}`, data),
   },
 
   // ── Search ─────────────────────────────────────

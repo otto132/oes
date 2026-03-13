@@ -19,7 +19,22 @@ export function useDismissSignal() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (id: string) => api.signals.dismiss(id),
-    onSuccess: () => qc.invalidateQueries({ queryKey: signalKeys.all }),
+    onMutate: async (id) => {
+      await qc.cancelQueries({ queryKey: signalKeys.all });
+      const queries = qc.getQueriesData({ queryKey: signalKeys.all });
+      const previous = queries.map(([key, data]) => [key, data] as const);
+      qc.setQueriesData({ queryKey: signalKeys.all }, (old: any) => {
+        if (!old) return old;
+        return { ...old, data: old.data.filter((s: any) => s.id !== id) };
+      });
+      return { previous };
+    },
+    onError: (_err, _vars, context) => {
+      context?.previous.forEach(([key, data]) => qc.setQueryData(key, data));
+    },
+    onSettled: () => {
+      qc.invalidateQueries({ queryKey: signalKeys.all });
+    },
   });
 }
 
@@ -28,7 +43,20 @@ export function useConvertSignal() {
   return useMutation({
     mutationFn: ({ id, company, type, country }: { id: string; company: string; type?: string; country?: string }) =>
       api.signals.convert(id, company, type, country),
-    onSuccess: () => {
+    onMutate: async ({ id }) => {
+      await qc.cancelQueries({ queryKey: signalKeys.all });
+      const queries = qc.getQueriesData({ queryKey: signalKeys.all });
+      const previous = queries.map(([key, data]) => [key, data] as const);
+      qc.setQueriesData({ queryKey: signalKeys.all }, (old: any) => {
+        if (!old) return old;
+        return { ...old, data: old.data.filter((s: any) => s.id !== id) };
+      });
+      return { previous };
+    },
+    onError: (_err, _vars, context) => {
+      context?.previous.forEach(([key, data]) => qc.setQueryData(key, data));
+    },
+    onSettled: () => {
       qc.invalidateQueries({ queryKey: signalKeys.all });
       qc.invalidateQueries({ queryKey: leadKeys.all });
     },
