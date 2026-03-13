@@ -62,11 +62,14 @@ export default function Sidebar() {
 
       {/* Search */}
       <div className="px-3 py-2.5">
-        <div className="flex items-center gap-2 px-2.5 py-[6px] rounded-md bg-surface border border-border text-muted hover:border-border-strong transition-colors cursor-pointer">
+        <button
+          onClick={() => useStore.getState().openPalette()}
+          className="flex items-center gap-2 w-full px-2.5 py-[6px] rounded-md bg-surface border border-border text-muted hover:border-border-strong transition-colors cursor-pointer"
+        >
           <Search className="w-3.5 h-3.5" />
-          <span className="flex-1 text-[12px]">Search…</span>
-          <kbd>⌘K</kbd>
-        </div>
+          <span className="flex-1 text-[12px] text-left">Search…</span>
+          <kbd className="text-[10px]">⌘K</kbd>
+        </button>
       </div>
 
       {/* Navigation */}

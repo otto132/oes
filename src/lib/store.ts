@@ -14,10 +14,13 @@ interface Store {
   theme: 'dark' | 'light';
   drawerOpen: boolean;
   drawerContent: { title: string; subtitle: string; body: React.ReactNode; footer: React.ReactNode } | null;
+  paletteOpen: boolean;
   toasts: Toast[];
   toggleTheme: () => void;
   openDrawer: (c: { title: string; subtitle: string; body: React.ReactNode; footer: React.ReactNode }) => void;
   closeDrawer: () => void;
+  openPalette: () => void;
+  closePalette: () => void;
   addToast: (toast: { type: Toast['type']; message: string; action?: Toast['action'] }) => void;
   removeToast: (id: string) => void;
 }
@@ -28,14 +31,21 @@ export const useStore = create<Store>((set, get) => ({
   theme: 'dark',
   drawerOpen: false,
   drawerContent: null,
+  paletteOpen: false,
   toasts: [],
   toggleTheme: () => set(s => {
     const next = s.theme === 'dark' ? 'light' : 'dark';
-    if (typeof document !== 'undefined') document.documentElement.classList.toggle('dark', next === 'dark');
+    if (typeof document !== 'undefined') {
+      document.documentElement.classList.remove('dark', 'light');
+      document.documentElement.classList.add(next);
+      try { localStorage.setItem('eco-theme', next); } catch {}
+    }
     return { theme: next };
   }),
   openDrawer: (content) => set({ drawerOpen: true, drawerContent: content }),
   closeDrawer: () => set({ drawerOpen: false }),
+  openPalette: () => set({ paletteOpen: true }),
+  closePalette: () => set({ paletteOpen: false }),
   addToast: (toast) => {
     const id = `toast-${++_toastCounter}-${Date.now()}`;
     const newToast: Toast = { id, ...toast };

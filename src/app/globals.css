@@ -4,8 +4,8 @@
 @tailwind components;
 @tailwind utilities;
 
-/* ── Design tokens ── */
-:root {
+/* ── Design tokens (dark – default) ── */
+:root, .dark {
   --bg: #09090b;
   --elevated: #111113;
   --surface: #18181b;
@@ -23,10 +23,30 @@
   --row-hover: rgba(255,255,255,0.02);
 }
 
+/* ── Light theme ── */
+.light {
+  --bg: #ffffff;
+  --elevated: #f8f9fa;
+  --surface: #f1f3f5;
+  --overlay: #e9ecef;
+  --hover: #f1f3f5;
+  --brand: #33a882;
+  --brand-dim: rgba(51,168,130,0.06);
+  --brand-border: rgba(51,168,130,0.18);
+  --border: #e2e4e7;
+  --border-strong: #ced4da;
+  --text: #111113;
+  --sub: #555b63;
+  --muted: #868e96;
+  --card-hover: #f1f3f5;
+  --row-hover: rgba(0,0,0,0.02);
+}
+
 /* ── Base ── */
 * { box-sizing: border-box; margin: 0; padding: 0; }
 html { -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
 ::selection { background: rgba(62,207,142,.15); color: #fff; }
+.light ::selection { background: rgba(51,168,130,.2); color: #111; }
 body {
   background: var(--bg);
   color: var(--text);
@@ -40,6 +60,8 @@ body {
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: #27272a; border-radius: 3px; }
 ::-webkit-scrollbar-thumb:hover { background: #3f3f46; }
+.light ::-webkit-scrollbar-thumb { background: #ced4da; }
+.light ::-webkit-scrollbar-thumb:hover { background: #adb5bd; }
 
 /* ── Score pills ── */
 .score-strong { background: rgba(62,207,142,.08); color: var(--brand); border: 1px solid rgba(62,207,142,.15); }
