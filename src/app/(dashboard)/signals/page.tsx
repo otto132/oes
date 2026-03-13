@@ -1,6 +1,7 @@
 'use client';
 import { useState } from 'react';
 import { useStore } from '@/lib/store';
+import { ApiError } from '@/lib/api-client';
 import { useSignalsQuery, useConvertSignal, useDismissSignal } from '@/lib/queries/signals';
 import { Badge, ConfBadge, AgentTag, EmptyState, Skeleton, SkeletonCard, SkeletonText, ErrorState } from '@/components/ui';
 import { signalLabel, signalColor, fR, cn, confNum } from '@/lib/utils';
@@ -108,10 +109,20 @@ export default function SignalsPage() {
                 { id: s.id, company: state.company.trim(), type: state.type, country: state.country.trim() || undefined },
                 {
                   onSuccess: () => {
-                    addToast({ type: 'success', message: `Lead created: ${state.company}` });
+                    addToast({
+                      type: 'success',
+                      message: `Lead created for ${state.company}`,
+                      action: { label: 'View Leads →', href: '/leads' },
+                    });
                     closeDrawer();
                   },
-                  onError: (err) => addToast({ type: 'error', message: err.message }),
+                  onError: (err) => {
+                    if (err instanceof ApiError && err.status === 409) {
+                      addToast({ type: 'error', message: `Lead or account already exists for ${state.company}` });
+                    } else {
+                      addToast({ type: 'error', message: `Failed to convert signal: ${err.message}` });
+                    }
+                  },
                 }
               );
             }}
