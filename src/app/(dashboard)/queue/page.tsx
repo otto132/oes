@@ -95,7 +95,8 @@ export default function QueuePage() {
             Cancel
           </button>
           <button
-            className="px-3 py-1.5 text-[12px] font-medium bg-brand text-[#09090b] rounded-md hover:brightness-110 transition-colors"
+            disabled={approve.isPending}
+            className="px-3 py-1.5 text-[12px] font-medium bg-brand text-[#09090b] rounded-md hover:brightness-110 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             onClick={() => {
               const editedPayload = { ...q.payload, ...state };
               approve.mutate(

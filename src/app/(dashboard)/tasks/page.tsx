@@ -129,7 +129,8 @@ export default function TasksPage() {
             Cancel
           </button>
           <button
-            className="px-3.5 py-1.5 text-[12px] font-medium bg-brand text-[#09090b] rounded-md hover:brightness-110 transition-colors"
+            disabled={createTask.isPending}
+            className="px-3.5 py-1.5 text-[12px] font-medium bg-brand text-[#09090b] rounded-md hover:brightness-110 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             onClick={() => {
               if (!state.title.trim()) {
                 addToast({ type: 'error', message: 'Title is required' });
