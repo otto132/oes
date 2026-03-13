@@ -3,9 +3,37 @@ import { useState } from 'react';
 import { useSession } from 'next-auth/react';
 import { useStore } from '@/lib/store';
 import { useTasksQuery } from '@/lib/queries/tasks';
-import { Badge, Avatar, AgentTag, EmptyState } from '@/components/ui';
+import { Badge, Avatar, AgentTag, EmptyState, Skeleton, SkeletonCard, SkeletonText, ErrorState } from '@/components/ui';
 import { fDate, isOverdue, cn, fR } from '@/lib/utils';
 import type { Task, Goal } from '@/lib/types';
+
+function TasksSkeleton() {
+  return (
+    <div className="page-enter space-y-4">
+      <div className="flex gap-2">
+        {Array.from({ length: 3 }).map((_, i) => (
+          <Skeleton key={i} className="h-7 w-20 rounded-full" />
+        ))}
+      </div>
+      <Skeleton className="h-9 w-full rounded-lg" />
+      {Array.from({ length: 2 }).map((_, g) => (
+        <div key={g} className="space-y-2">
+          <div className="flex items-center gap-2">
+            <SkeletonText className="w-1/4" />
+            <Skeleton className="h-1.5 flex-1 rounded-full" />
+          </div>
+          {Array.from({ length: 3 }).map((_, i) => (
+            <SkeletonCard key={i} className="flex items-center gap-3">
+              <Skeleton className="h-4 w-4 rounded shrink-0" />
+              <SkeletonText className="w-2/3" />
+              <Skeleton className="h-4 w-12 rounded-full ml-auto" />
+            </SkeletonCard>
+          ))}
+        </div>
+      ))}
+    </div>
+  );
+}
 
 export default function TasksPage() {
   const { openDrawer, closeDrawer } = useStore();
@@ -17,7 +45,10 @@ export default function TasksPage() {
   // Always fetch all tasks (including completed) so goal progress bars
   // can compute done/total correctly. Client-side filtering for the
   // showCompleted toggle happens below.
-  const { data: resp } = useTasksQuery(true);
+  const { data: resp, isLoading, isError, refetch } = useTasksQuery(true);
+
+  if (isLoading) return <TasksSkeleton />;
+  if (isError) return <ErrorState onRetry={() => refetch()} />;
   const allTasks: Task[] = resp?.data?.tasks ?? [];
   const goals: Goal[] = resp?.data?.goals ?? [];
   const me = {
