@@ -157,9 +157,9 @@ async function main() {
 
   // ── Meetings ───────────────────────────────────
   await prisma.meeting.createMany({ data: [
-    { title: 'E.ON API Integration Review', startTime: '10:00', duration: '60 min', date: new Date('2026-03-11'), attendees: ['Kai Mueller', 'Thomas Weber'], prepStatus: 'ready', accountId: 'a3', accountName: 'E.ON Energy Markets' },
-    { title: 'RWE Discovery Call', startTime: '14:00', duration: '30 min', date: new Date('2026-03-20'), attendees: ['Maria Hoffmann'], prepStatus: 'draft', accountId: 'a6', accountName: 'RWE Renewables Europe' },
-    { title: 'Axpo QBR — Q1 Review', startTime: '09:00', duration: '90 min', date: new Date('2026-03-28'), attendees: ['Erik Sandvik', 'Nick Schoch'], prepStatus: 'ready', accountId: 'a5', accountName: 'Axpo Nordic AS' },
+    { title: 'E.ON API Integration Review', startTime: new Date('2026-03-11T10:00:00Z'), duration: 60, date: new Date('2026-03-11'), attendees: ['Kai Mueller', 'Thomas Weber'], attendeeEmails: ['kai.mueller@eon.com', 'thomas.weber@eon.com'], prepStatus: 'ready', accountId: 'a3', accountName: 'E.ON Energy Markets' },
+    { title: 'RWE Discovery Call', startTime: new Date('2026-03-20T14:00:00Z'), duration: 30, date: new Date('2026-03-20'), attendees: ['Maria Hoffmann'], attendeeEmails: ['maria.hoffmann@rwe.com'], prepStatus: 'draft', accountId: 'a6', accountName: 'RWE Renewables Europe' },
+    { title: 'Axpo QBR — Q1 Review', startTime: new Date('2026-03-28T09:00:00Z'), duration: 90, date: new Date('2026-03-28'), attendees: ['Erik Sandvik', 'Nick Schoch'], attendeeEmails: ['erik.sandvik@axpo.com', 'nick.schoch@axpo.com'], prepStatus: 'ready', accountId: 'a5', accountName: 'Axpo Nordic AS' },
   ]});
   console.log('  ✓ 3 meetings');
 
