@@ -45,6 +45,148 @@ export default function LeadsPage() {
   const disqualify = useDisqualifyLead();
   const convertLead = useConvertLead();
 
+  function openConvertDrawer(l: Lead) {
+    const state = {
+      accountName: l.company,
+      accountType: l.type || 'Unknown',
+      country: l.country || '',
+      createOpp: false,
+      oppName: `${l.company} — Opportunity`,
+      oppAmount: '',
+      oppStage: 'Discovery',
+    };
+
+    openDrawer({
+      title: 'Convert to Account',
+      subtitle: l.company,
+      body: (
+        <div className="flex flex-col gap-3">
+          <label className="flex flex-col gap-1">
+            <span className="text-[10px] font-semibold uppercase tracking-wide text-[var(--muted)]">Account Name</span>
+            <input
+              defaultValue={state.accountName}
+              onChange={e => { state.accountName = e.target.value; }}
+              className="px-2.5 py-1.5 text-[12px] rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] focus:outline-none focus:border-brand/40"
+            />
+          </label>
+          <label className="flex flex-col gap-1">
+            <span className="text-[10px] font-semibold uppercase tracking-wide text-[var(--muted)]">Account Type</span>
+            <select
+              defaultValue={state.accountType}
+              onChange={e => { state.accountType = e.target.value; }}
+              className="px-2.5 py-1.5 text-[12px] rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] focus:outline-none focus:border-brand/40"
+            >
+              <option value="Unknown">Unknown</option>
+              <option value="PPA Buyer">PPA Buyer</option>
+              <option value="Certificate Trader">Certificate Trader</option>
+              <option value="Corporate Offtaker">Corporate Offtaker</option>
+            </select>
+          </label>
+          <label className="flex flex-col gap-1">
+            <span className="text-[10px] font-semibold uppercase tracking-wide text-[var(--muted)]">Country</span>
+            <input
+              defaultValue={state.country}
+              onChange={e => { state.country = e.target.value; }}
+              className="px-2.5 py-1.5 text-[12px] rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] focus:outline-none focus:border-brand/40"
+            />
+          </label>
+
+          {/* Opportunity toggle */}
+          <label className="flex items-center gap-2 pt-2 border-t border-[var(--border)]">
+            <input
+              type="checkbox"
+              defaultChecked={state.createOpp}
+              onChange={e => {
+                state.createOpp = e.target.checked;
+                const oppSection = document.getElementById('opp-fields');
+                if (oppSection) oppSection.style.display = e.target.checked ? 'flex' : 'none';
+              }}
+              className="rounded border-[var(--border)]"
+            />
+            <span className="text-[11px] font-medium text-[var(--text)]">Also create opportunity</span>
+          </label>
+          <div id="opp-fields" className="flex-col gap-3" style={{ display: 'none' }}>
+            <label className="flex flex-col gap-1">
+              <span className="text-[10px] font-semibold uppercase tracking-wide text-[var(--muted)]">Opportunity Name</span>
+              <input
+                defaultValue={state.oppName}
+                onChange={e => { state.oppName = e.target.value; }}
+                className="px-2.5 py-1.5 text-[12px] rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] focus:outline-none focus:border-brand/40"
+              />
+            </label>
+            <label className="flex flex-col gap-1">
+              <span className="text-[10px] font-semibold uppercase tracking-wide text-[var(--muted)]">Amount</span>
+              <input
+                type="number"
+                placeholder="0"
+                onChange={e => { state.oppAmount = e.target.value; }}
+                className="px-2.5 py-1.5 text-[12px] rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] focus:outline-none focus:border-brand/40"
+              />
+            </label>
+            <label className="flex flex-col gap-1">
+              <span className="text-[10px] font-semibold uppercase tracking-wide text-[var(--muted)]">Stage</span>
+              <select
+                defaultValue={state.oppStage}
+                onChange={e => { state.oppStage = e.target.value; }}
+                className="px-2.5 py-1.5 text-[12px] rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] focus:outline-none focus:border-brand/40"
+              >
+                <option value="Identified">Identified</option>
+                <option value="Contacted">Contacted</option>
+                <option value="Discovery">Discovery</option>
+                <option value="Qualified">Qualified</option>
+              </select>
+            </label>
+          </div>
+        </div>
+      ),
+      footer: (
+        <>
+          <button
+            className="px-3.5 py-1.5 text-[12px] text-[var(--sub)] bg-[var(--surface)] border border-[var(--border)] rounded-md hover:bg-[var(--hover)] transition-colors"
+            onClick={closeDrawer}
+          >
+            Cancel
+          </button>
+          <button
+            disabled={convertLead.isPending}
+            className="px-3.5 py-1.5 text-[12px] font-medium bg-[var(--brand)] text-[#09090b] rounded-md hover:brightness-110 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            onClick={() => {
+              if (!state.accountName.trim()) {
+                addToast({ type: 'error', message: 'Account name is required' });
+                return;
+              }
+              if (state.createOpp && !state.oppName.trim()) {
+                addToast({ type: 'error', message: 'Opportunity name is required' });
+                return;
+              }
+              convertLead.mutate(
+                {
+                  id: l.id,
+                  accountName: state.accountName.trim(),
+                  accountType: state.accountType,
+                  ...(state.createOpp ? {
+                    oppName: state.oppName.trim(),
+                    oppAmount: state.oppAmount ? Number(state.oppAmount) : undefined,
+                    oppStage: state.oppStage,
+                  } : {}),
+                },
+                {
+                  onSuccess: () => {
+                    addToast({ type: 'success', message: `Account created: ${state.accountName}` });
+                    closeDrawer();
+                  },
+                  onError: (err) => addToast({ type: 'error', message: err.message }),
+                }
+              );
+            }}
+          >
+            Convert
+          </button>
+        </>
+      ),
+    });
+  }
+
   if (isLoading) return <LeadsSkeleton />;
   if (isError) return <ErrorState onRetry={() => refetch()} />;
   const leads: Lead[] = resp?.data ?? [];
