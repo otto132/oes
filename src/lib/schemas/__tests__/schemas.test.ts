@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { queueActionSchema } from '@/lib/schemas/queue';
 import { signalActionSchema } from '@/lib/schemas/signals';
 import { leadActionSchema } from '@/lib/schemas/leads';
-import { createAccountSchema, updateAccountSchema } from '@/lib/schemas/accounts';
+import { createAccountSchema, patchAccountSchema } from '@/lib/schemas/accounts';
 import { opportunityActionSchema } from '@/lib/schemas/opportunities';
 import { taskActionSchema } from '@/lib/schemas/tasks';
 import { createActivitySchema } from '@/lib/schemas/activities';
@@ -77,12 +77,12 @@ describe('createAccountSchema', () => {
   });
 });
 
-describe('updateAccountSchema', () => {
+describe('patchAccountSchema', () => {
   it('accepts partial update', () => {
-    expect(updateAccountSchema.safeParse({ pain: 'new pain' }).success).toBe(true);
+    expect(patchAccountSchema.safeParse({ pain: 'new pain' }).success).toBe(true);
   });
   it('rejects empty object', () => {
-    expect(updateAccountSchema.safeParse({}).success).toBe(false);
+    expect(patchAccountSchema.safeParse({}).success).toBe(false);
   });
 });
 

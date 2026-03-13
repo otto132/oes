@@ -1,7 +1,7 @@
 export { queueActionSchema } from './queue';
 export { signalActionSchema } from './signals';
 export { leadActionSchema } from './leads';
-export { createAccountSchema, updateAccountSchema } from './accounts';
+export { createAccountSchema, patchAccountSchema } from './accounts';
 export { opportunityActionSchema } from './opportunities';
 export { taskActionSchema } from './tasks';
 export { createActivitySchema } from './activities';
