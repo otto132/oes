@@ -78,12 +78,18 @@ model Meeting {
 }
 ```
 
-### IntegrationToken — add status
+### IntegrationToken — add status enum
 
 ```prisma
+enum IntegrationTokenStatus {
+  active
+  error
+  revoked
+}
+
 model IntegrationToken {
   // ... existing fields ...
-  status String @default("active")  // active | error | revoked
+  status IntegrationTokenStatus @default(active)
 }
 ```
 
@@ -106,7 +112,15 @@ model SyncLog {
 }
 ```
 
-Migration note: The Meeting `startTime` (String → DateTime) and `duration` (String → Int) changes require a data migration. Since this is pre-production, a destructive migration (drop and recreate Meeting data, re-seed) is acceptable. If existing meeting data must be preserved, a migration script will parse "HH:MM" strings into DateTimes and "Xh Ym" into minutes.
+Note: The `User` model must add `syncLogs SyncLog[]` relation field.
+
+### externalId uniqueness note
+
+Graph message IDs and event IDs are globally unique across Microsoft tenants, so `@unique` without a compound key is safe. Two users seeing the same shared calendar event will have distinct Graph event IDs per-user mailbox view.
+
+### Migration note
+
+The Meeting `startTime` (String → DateTime) and `duration` (String → Int) changes require a data migration. Since this is pre-production, a destructive migration (drop and recreate Meeting data, re-seed) is acceptable. Seed data must change: `startTime: new Date('2026-03-11T10:00:00Z')` and `duration: 60`.
 
 ---
 
@@ -143,8 +157,8 @@ This structure makes future extraction to an adapter pattern trivial when more i
 
 File: `src/lib/integrations/email-sync.ts`
 
-1. **Dedup by externalId**: Check `InboxEmail.externalId` against Graph message `id` before insert. Fall back to subject+from+receivedAt for emails without an externalId (backward compat with existing data).
-2. **Store externalId**: Save `email.id` from Graph response as `externalId` on insert.
+1. **Dedup by externalId**: Use Prisma `upsert` with `externalId` as the `where` clause to eliminate race conditions between concurrent syncs. Fall back to subject+from+receivedAt check for emails without an externalId (backward compat with existing data).
+2. **Store externalId**: Save `email.id` from Graph response as `externalId` on insert/upsert.
 3. **Use runSync**: Replace manual token iteration with `runSync({ type: 'email', syncFn })`.
 4. **syncFn signature**: Accepts a single `IntegrationToken`, returns `{ synced, errors }`.
 
@@ -156,7 +170,7 @@ No changes to: domain matching, intent classification, account linking.
 
 File: `src/lib/integrations/calendar-sync.ts`
 
-1. **Dedup by externalId**: Check `Meeting.externalId` against Graph event `id`.
+1. **Dedup by externalId**: Use Prisma `upsert` with `externalId` as the `where` clause (same race-condition protection as email sync).
 2. **Store ISO datetime**: Parse Graph event `start.dateTime` + `start.timeZone` into a proper `DateTime` for `startTime`. Store timezone info from Graph.
 3. **Store duration as minutes**: Calculate `(end - start)` in minutes, store as `Int`.
 4. **Store attendee emails**: Save `attendee.emailAddress.address` into `attendeeEmails[]` alongside display names in `attendees[]`.
@@ -170,14 +184,14 @@ File: `src/lib/integrations/calendar-sync.ts`
 
 File: `src/app/api/auth/callback/route.ts`
 
-1. **Validate state parameter**: Check `state === 'outlook_connect'` before processing.
+1. **Validate state parameter** (CSRF prevention): Strictly check `state === 'outlook_connect'` before processing. Reject with error redirect if missing or mismatched.
 2. **Error redirect**: On failure, redirect to `/settings?error=oauth_failed&message=...` instead of throwing.
 3. **Missing code handling**: If `code` param missing, redirect with error.
 4. **Session check**: If no session, redirect to `/auth/signin?callbackUrl=/settings`.
 
 File: `src/app/api/auth/connect/route.ts`
 
-1. **Session check**: Require active session before redirecting to Microsoft.
+1. **Session check**: Require active session before redirecting to Microsoft. If no session, redirect to `/auth/signin?callbackUrl=/api/auth/connect` so the user returns to the connect flow after signing in.
 
 ---
 
@@ -185,10 +199,10 @@ File: `src/app/api/auth/connect/route.ts`
 
 File: `src/app/api/settings/integrations/route.ts`
 
-Replace hardcoded response with real data:
+Replace hardcoded response with real data. **All queries must be scoped to `session.user.id`** to prevent cross-user data leakage.
 
 ```typescript
-// Per-user integration status
+// Per-user integration status (all queries filtered by session.user.id)
 {
   provider: "microsoft",
   name: "Microsoft 365 / Outlook",
@@ -200,6 +214,17 @@ Replace hardcoded response with real data:
   lastError: lastFailedLog?.errors?.[0],       // from SyncLog
   syncHistory: recentLogs                      // last 5 SyncLog entries
 }
+
+// syncHistory item shape:
+{
+  id: string
+  type: 'email' | 'calendar'
+  status: 'success' | 'partial' | 'failed'
+  itemsSynced: number
+  errorCount: number         // errors.length, not full error messages
+  startedAt: string          // ISO timestamp
+  completedAt: string | null // ISO timestamp
+}
 ```
 
 ---
@@ -208,7 +233,7 @@ Replace hardcoded response with real data:
 
 ### API
 
-The `POST /api/sync` route already supports manual triggers with ADMIN auth. No API changes needed.
+The `POST /api/sync` route already supports manual triggers with ADMIN auth. Minor change: pass through per-user sync results in the response.
 
 ### Frontend
 
@@ -219,7 +244,7 @@ File: `src/app/(dashboard)/settings/page.tsx` (IntegrationsTab)
 3. Show loading spinner during sync.
 4. On completion: show toast with results ("Synced 12 emails, 3 meetings") or error.
 5. Invalidate `['settings', 'integrations']` query to refresh status.
-6. Button disabled during sync and for non-admin users.
+6. Button disabled during sync. Visible only to ADMIN users (sync route enforces ADMIN). Non-admin users see sync status but cannot trigger manually — this is intentional since sync affects all users' data.
 
 ### Query Hook
 
@@ -243,8 +268,11 @@ Add `useSyncMutation()` hook wrapping `api.sync.trigger()` with React Query muta
 | `src/app/(dashboard)/settings/page.tsx` | Sync Now button, enriched status display |
 | `src/lib/queries/settings.ts` | Add useSyncMutation hook |
 | `src/lib/api-client.ts` | No changes needed (sync.trigger already exists) |
-| `prisma/seed.ts` | Update Meeting seed data for new field types |
-| `src/app/api/sync/route.ts` | Minor — pass through individual user results |
+| `prisma/seed.ts` | Update Meeting seed data: `startTime` as Date, `duration` as Int, add `attendeeEmails` |
+| `src/app/api/sync/route.ts` | Pass through per-user sync results |
+| `src/lib/adapters.ts` | Update `adaptMeeting()` for new `startTime: DateTime` and `duration: Int` types |
+| `src/lib/__tests__/adapters.test.ts` | Update meeting test fixtures for new field types |
+| `src/app/api/home/route.ts` | Update response shaping for new Meeting field types |
 | `src/app/api/__tests__/settings-integrations.test.ts` | Update for new response shape |
 
 ---
