@@ -110,7 +110,7 @@ export function useUpdateProfile() {
 export function useSyncMutation() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (type: string) => api.sync.trigger(type),
+    mutationFn: (type: 'all' | 'emails' | 'calendar') => api.sync.trigger(type),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: settingsKeys.integrations() });
     },
