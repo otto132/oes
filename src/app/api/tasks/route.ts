@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { Prisma, OppStage } from '@prisma/client';
+import type { Task } from '@prisma/client';
 import { db } from '@/lib/db';
 import { adaptTask, adaptGoal, adaptTaskComment } from '@/lib/adapters';
 import { withHandler } from '@/lib/api-handler';
@@ -7,7 +9,7 @@ import { parsePagination, paginate } from '@/lib/schemas/pagination';
 
 export async function GET(req: NextRequest) {
   const includeCompleted = req.nextUrl.searchParams.get('completed') === 'true';
-  const where: any = {};
+  const where: Prisma.TaskWhereInput = {};
   if (!includeCompleted) where.status = { not: 'Done' };
 
   const pagination = parsePagination(req);
@@ -46,7 +48,7 @@ export const POST = withHandler(taskActionSchema, async (req, ctx) => {
   if (body.action === 'create') {
     // Create task
     const { title, accountId, priority, due, assigneeIds, reviewerId, goalId } = body;
-    const ownerId = (body as any).ownerId || session.user.id;
+    const ownerId = ('ownerId' in body && typeof body.ownerId === 'string') ? body.ownerId : session.user.id;
     const task = await db.task.create({
       data: {
         title, priority: priority || 'Medium', due: due ? new Date(due) : new Date(Date.now() + 7 * 864e5),
@@ -79,7 +81,7 @@ export const POST = withHandler(taskActionSchema, async (req, ctx) => {
     if (task.accountId) {
       await db.account.update({ where: { id: task.accountId }, data: { lastActivityAt: new Date() } });
       const opp = await db.opportunity.findFirst({
-        where: { accountId: task.accountId, stage: { notIn: ['ClosedWon', 'ClosedLost'] } as any },
+        where: { accountId: task.accountId, stage: { notIn: [OppStage.ClosedWon, OppStage.ClosedLost] } },
       });
       if (opp) {
         await db.opportunity.update({
@@ -89,7 +91,7 @@ export const POST = withHandler(taskActionSchema, async (req, ctx) => {
       }
     }
     // Create follow-ups
-    const created: any[] = [];
+    const created: Task[] = [];
     if (followUpTasks) {
       for (const ft of followUpTasks) {
         const t = await db.task.create({

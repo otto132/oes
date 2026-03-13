@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { Prisma } from '@prisma/client';
 import { db } from '@/lib/db';
 import { auth } from '@/lib/auth';
 import { adaptAccount } from '@/lib/adapters';
@@ -44,7 +45,7 @@ export async function PATCH(
   const updated = await db.account.update({
     where: { id },
     data: {
-      ...(body as any),
+      ...(body as Prisma.AccountUpdateInput),
       ...(hasAiChange ? { aiUpdatedAt: new Date() } : {}),
     },
     include: { owner: true, contacts: { orderBy: { role: 'asc' } } },
@@ -61,5 +62,5 @@ export async function PATCH(
     },
   });
 
-  return NextResponse.json({ data: adaptAccount(updated as any) });
+  return NextResponse.json({ data: adaptAccount(updated) });
 }

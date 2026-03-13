@@ -1,10 +1,48 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { Prisma, SignalType, AccountType, LeadStage, TaskPriority } from '@prisma/client';
+import type { QueueItemType } from '@prisma/client';
 import { db } from '@/lib/db';
 import { adaptQueueItem } from '@/lib/adapters';
 import { withHandler } from '@/lib/api-handler';
 import { queueActionSchema } from '@/lib/schemas/queue';
 import { notFound, badRequest } from '@/lib/api-errors';
 import { handleApproval } from '@/lib/agents/chain';
+
+/** Typed payload interfaces for queue item side-effects */
+interface LeadQualificationPayload {
+  company: string;
+  type?: string;
+  country?: string;
+  stage?: string;
+  pain?: string;
+  scores?: { f?: number; i?: number; u?: number; a?: number; c?: number };
+}
+
+interface EnrichmentPayload {
+  field?: string;
+  after?: unknown;
+}
+
+interface TaskCreationPayload {
+  task: string;
+  due?: string;
+  pri?: string;
+}
+
+interface SignalReviewPayload {
+  signalType?: string;
+  headline?: string;
+  summary?: string;
+  sourceName?: string;
+  sourceUrl?: string;
+  relevanceScore?: number;
+  matchedAccounts?: string[];
+}
+
+interface OutreachDraftPayload {
+  subject?: string;
+  body?: string;
+}
 
 /**
  * Approval authority policy (U-04):
@@ -17,8 +55,8 @@ export async function GET(req: NextRequest) {
   const status = req.nextUrl.searchParams.get('status') || 'pending';
   const type = req.nextUrl.searchParams.get('type');
 
-  const where: any = status === 'pending' ? { status: 'pending' } : { status: { not: 'pending' } };
-  if (type && type !== 'all') where.type = type;
+  const where: Prisma.QueueItemWhereInput = status === 'pending' ? { status: 'pending' } : { status: { not: 'pending' } };
+  if (type && type !== 'all') where.type = type as QueueItemType;
 
   const items = await db.queueItem.findMany({
     where,
@@ -61,20 +99,20 @@ export const POST = withHandler(queueActionSchema, async (req, ctx) => {
         status: 'approved',
         reviewedById: userId,
         reviewedAt: new Date(),
-        ...(editedPayload ? { originalPayload: item.payload ?? undefined, payload: editedPayload as any } : {}),
+        ...(editedPayload ? { originalPayload: item.payload ?? undefined, payload: editedPayload as Prisma.InputJsonValue } : {}),
       },
     });
 
     // Apply side-effects based on type
     if (item.type === 'lead_qualification') {
-      const payload = item.payload as any;
+      const payload = item.payload as unknown as LeadQualificationPayload;
       await db.lead.create({
         data: {
           company: payload.company,
           source: 'AI Qualified',
-          type: payload.type || 'Unknown',
+          type: (payload.type || 'Unknown') as AccountType,
           country: payload.country || '',
-          stage: payload.stage || 'Researching',
+          stage: (payload.stage || 'Researching') as LeadStage,
           pain: payload.pain || '',
           scoreFit: payload.scores?.f || 50,
           scoreIntent: payload.scores?.i || 50,
@@ -86,7 +124,7 @@ export const POST = withHandler(queueActionSchema, async (req, ctx) => {
         },
       });
     } else if (item.type === 'enrichment' && item.accId) {
-      const payload = item.payload as any;
+      const payload = item.payload as unknown as EnrichmentPayload;
       if (payload.field) {
         await db.account.update({
           where: { id: item.accId },
@@ -94,12 +132,12 @@ export const POST = withHandler(queueActionSchema, async (req, ctx) => {
         });
       }
     } else if (item.type === 'task_creation') {
-      const payload = item.payload as any;
+      const payload = item.payload as unknown as TaskCreationPayload;
       await db.task.create({
         data: {
           title: payload.task,
           due: payload.due ? new Date(payload.due) : new Date(Date.now() + 7 * 864e5),
-          priority: payload.pri || 'Medium',
+          priority: (payload.pri || 'Medium') as TaskPriority,
           source: item.agent,
           accountId: item.accId || undefined,
           ownerId: userId,
@@ -107,10 +145,10 @@ export const POST = withHandler(queueActionSchema, async (req, ctx) => {
         },
       });
     } else if (item.type === 'signal_review') {
-      const payload = item.payload as any;
+      const payload = item.payload as unknown as SignalReviewPayload;
       await db.signal.create({
         data: {
-          type: (payload.signalType || 'market_entry') as any,
+          type: (payload.signalType || 'market_entry') as SignalType,
           title: String(payload.headline || item.title),
           summary: String(payload.summary || ''),
           reasoning: String(item.reasoning || ''),
@@ -122,7 +160,7 @@ export const POST = withHandler(queueActionSchema, async (req, ctx) => {
         },
       });
     } else if (item.type === 'outreach_draft') {
-      const payload = item.payload as any;
+      const payload = item.payload as unknown as OutreachDraftPayload;
       await db.activity.create({
         data: {
           type: 'Email',

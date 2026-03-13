@@ -5,6 +5,7 @@ import { syncCalendar } from '@/lib/integrations/calendar-sync';
 import { requireRole } from '@/lib/rbac';
 import { emitEvent } from '@/lib/agents/events';
 import { runDueAgents } from '@/lib/agents/runner';
+import { db } from '@/lib/db';
 import '@/lib/agents'; // registers all agents
 
 // POST /api/sync — trigger sync manually or via cron
@@ -62,6 +63,33 @@ export async function POST(req: NextRequest) {
 
   console.log(`Sync complete: ${totalSynced} items synced, ${allErrors.length} errors, ${results.agents?.runs || 0} agent runs`);
 
+  // Create a summary alert activity if there were sync errors (visible to admins)
+  if (allErrors.length > 0) {
+    try {
+      const admin = await db.user.findFirst({ where: { role: 'ADMIN', isActive: true } });
+      if (admin) {
+        const errorSources: string[] = [];
+        if (results.emails?.errors?.length) errorSources.push('email');
+        if (results.calendar?.errors?.length) errorSources.push('calendar');
+        const summary = `Sync alert: ${allErrors.length} error${allErrors.length === 1 ? '' : 's'} in ${errorSources.join(' & ')} sync`;
+        const detail = allErrors.slice(0, 10).join('\n');
+
+        await db.activity.create({
+          data: {
+            type: 'Note',
+            summary,
+            detail: detail.slice(0, 2000),
+            source: 'System Alert',
+            authorId: admin.id,
+          },
+        });
+      }
+    } catch {
+      // Best-effort: don't let alert creation break the sync response
+      console.error('Failed to create sync summary alert activity');
+    }
+  }
+
   return NextResponse.json({
     success: allErrors.length === 0,
     synced: totalSynced,
@@ -70,15 +98,36 @@ export async function POST(req: NextRequest) {
   });
 }
 
-// GET /api/sync — check sync status
+// GET /api/sync — check sync status (returns latest SyncLog entries)
 export async function GET(req: NextRequest) {
   const denied = await verifyCronOrSession(req);
   if (denied) return denied;
 
-  // In production, return last sync timestamp, status, error count
+  const recentLogs = await db.syncLog.findMany({
+    orderBy: { startedAt: 'desc' },
+    take: 20,
+    select: {
+      id: true,
+      type: true,
+      status: true,
+      itemsSynced: true,
+      errors: true,
+      startedAt: true,
+      completedAt: true,
+      user: { select: { id: true, name: true, email: true } },
+    },
+  });
+
+  const lastEmail = recentLogs.find((l) => l.type === 'email');
+  const lastCalendar = recentLogs.find((l) => l.type === 'calendar');
+
   return NextResponse.json({
-    outlook: { status: 'Check /settings for connection status' },
-    lastSync: null,
-    message: 'POST to this endpoint to trigger sync',
+    lastEmailSync: lastEmail
+      ? { status: lastEmail.status, at: lastEmail.completedAt, errors: lastEmail.errors.length }
+      : null,
+    lastCalendarSync: lastCalendar
+      ? { status: lastCalendar.status, at: lastCalendar.completedAt, errors: lastCalendar.errors.length }
+      : null,
+    recentLogs,
   });
 }

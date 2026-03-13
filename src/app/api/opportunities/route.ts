@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { Prisma, OppStage } from '@prisma/client';
 import { db } from '@/lib/db';
 import { adaptOpportunity, adaptActivity, adaptContact } from '@/lib/adapters';
 import { withHandler } from '@/lib/api-handler';
@@ -33,7 +34,7 @@ export async function GET(req: NextRequest) {
   }
 
   const pagination = parsePagination(req);
-  const where: any = { stage: { notIn: ['ClosedWon', 'ClosedLost'] } };
+  const where: Prisma.OpportunityWhereInput = { stage: { notIn: [OppStage.ClosedWon, OppStage.ClosedLost] } };
 
   // Aggregates across ALL records
   const allOpps = await db.opportunity.findMany({ where, select: { amount: true, stage: true } });
@@ -61,7 +62,7 @@ export const POST = withHandler(opportunityActionSchema, async (req, ctx) => {
     const ownerId = body.ownerId || session.user.id;
     const opp = await db.opportunity.create({
       data: {
-        name, accountId, stage: (stage || 'Contacted') as any,
+        name, accountId, stage: (stage || 'Contacted') as OppStage,
         amount: amount || 0, probability: PROB[stage || 'Contacted'] || 10,
         closeDate: closeDate ? new Date(closeDate) : undefined,
         ownerId,
@@ -76,7 +77,7 @@ export const POST = withHandler(opportunityActionSchema, async (req, ctx) => {
     const { id, stage } = body;
     const opp = await db.opportunity.update({
       where: { id },
-      data: { stage: stage as any, probability: PROB[stage] || 0 },
+      data: { stage: stage as OppStage, probability: PROB[stage] || 0 },
       include: { owner: true, account: { select: { id: true, name: true } } },
     });
     await db.activity.create({

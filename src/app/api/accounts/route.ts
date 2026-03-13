@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { Prisma, AccountType } from '@prisma/client';
 import { db } from '@/lib/db';
 import { adaptAccount, adaptOpportunity, adaptActivity, adaptTask, adaptGoal } from '@/lib/adapters';
 import { withHandler } from '@/lib/api-handler';
@@ -66,7 +67,7 @@ export async function GET(req: NextRequest) {
   // List with pagination
   const pagination = parsePagination(req);
 
-  const where: any = {};
+  const where: Prisma.AccountWhereInput = {};
   if (search) {
     where.OR = [
       { name: { contains: search, mode: 'insensitive' } },
@@ -74,7 +75,7 @@ export async function GET(req: NextRequest) {
       { pain: { contains: search, mode: 'insensitive' } },
     ];
   }
-  if (type && type !== 'all') where.type = type;
+  if (type && type !== 'all') where.type = type as AccountType;
 
   const ownerParam = req.nextUrl.searchParams.get('owner');
   if (ownerParam === 'me') {
@@ -109,7 +110,7 @@ export const POST = withHandler(createAccountSchema, async (req, ctx) => {
   const account = await db.account.create({
     data: {
       name,
-      type: (type || 'Unknown') as any,
+      type: (type || 'Unknown') as AccountType,
       country: country || '',
       status: 'Prospect',
       ownerId,

@@ -31,7 +31,13 @@ export function withHandler<T = unknown>(
 
       return await handler(req, {
         body,
-        session: session as any,
+        session: {
+          user: {
+            id: session.user.id,
+            name: session.user.name ?? undefined,
+            role: (session.user as { role?: string }).role ?? undefined,
+          },
+        },
         pagination: { cursor, limit },
       });
     } catch (err) {

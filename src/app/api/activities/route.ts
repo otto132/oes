@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { Prisma, ActivityType } from '@prisma/client';
 import { db } from '@/lib/db';
 import { withHandler } from '@/lib/api-handler';
 import { createActivitySchema } from '@/lib/schemas/activities';
@@ -6,7 +7,7 @@ import { parsePagination, paginate } from '@/lib/schemas/pagination';
 
 export async function GET(req: NextRequest) {
   const accountId = req.nextUrl.searchParams.get('accountId');
-  const where: any = {};
+  const where: Prisma.ActivityWhereInput = {};
   if (accountId) where.accountId = accountId;
 
   const pagination = parsePagination(req);
@@ -29,7 +30,7 @@ export const POST = withHandler(createActivitySchema, async (req, ctx) => {
   const authorId = body.authorId || ctx.session.user.id;
 
   const activity = await db.activity.create({
-    data: { type: (type || 'Note') as any, summary, detail: detail || '', source: source || 'Manual', noteType, accountId: accountId || undefined, authorId },
+    data: { type: (type || 'Note') as ActivityType, summary, detail: detail || '', source: source || 'Manual', noteType, accountId: accountId || undefined, authorId },
   });
   if (accountId) {
     await db.account.update({ where: { id: accountId }, data: { lastActivityAt: new Date() } });

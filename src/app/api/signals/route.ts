@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { Prisma, AccountType, type SignalType } from '@prisma/client';
 import { db } from '@/lib/db';
 import { adaptSignal } from '@/lib/adapters';
 import { withHandler } from '@/lib/api-handler';
@@ -9,8 +10,8 @@ import { parsePagination, paginate } from '@/lib/schemas/pagination';
 // ── GET /api/signals ─────────────────────────────
 export async function GET(req: NextRequest) {
   const filter = req.nextUrl.searchParams.get('type');
-  const where: any = { status: { not: 'dismissed' } };
-  if (filter && filter !== 'all') where.type = filter;
+  const where: Prisma.SignalWhereInput = { status: { not: 'dismissed' } };
+  if (filter && filter !== 'all') where.type = filter as SignalType;
 
   const pagination = parsePagination(req);
 
@@ -48,7 +49,7 @@ export const POST = withHandler(signalActionSchema, async (req, ctx) => {
         company,
         source: 'Signal',
         signalId: id,
-        type: (type || 'Unknown') as any,
+        type: (type || 'Unknown') as AccountType,
         country: country || '',
         stage: 'New',
         pain: signal.summary,
