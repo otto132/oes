@@ -38,7 +38,8 @@ function AccountsSkeleton() {
 export default function AccountsPage() {
   const [search, setSearch] = useState('');
   const [typeFilter, setTypeFilter] = useState('all');
-  const { data: resp, isLoading, isError, refetch } = useAccountsQuery(search || undefined, typeFilter !== 'all' ? typeFilter : undefined);
+  const [ownerFilter, setOwnerFilter] = useState<'all' | 'me'>('all');
+  const { data: resp, isLoading, isError, refetch } = useAccountsQuery(search || undefined, typeFilter !== 'all' ? typeFilter : undefined, ownerFilter === 'me' ? 'me' : undefined);
   const createAccount = useCreateAccount();
   const { openDrawer, closeDrawer, addToast } = useStore();
 
@@ -160,6 +161,16 @@ export default function AccountsPage() {
             <button key={t} onClick={() => setTypeFilter(t)} className={cn('px-2 py-1 text-[11.5px] rounded-md transition-colors', typeFilter === t ? 'bg-[var(--surface)] text-[var(--text)] border border-[var(--border)]' : 'text-[var(--muted)] hover:bg-[var(--hover)]')}>{t === 'all' ? 'All' : t}</button>
           ))}
         </div>
+        <button
+          onClick={() => setOwnerFilter(ownerFilter === 'all' ? 'me' : 'all')}
+          className={`px-2.5 py-1 text-[11px] font-medium rounded-md border transition-colors ${
+            ownerFilter === 'me'
+              ? 'bg-brand/10 border-brand/30 text-brand'
+              : 'bg-[var(--surface)] border-[var(--border)] text-[var(--muted)] hover:text-[var(--sub)]'
+          }`}
+        >
+          {ownerFilter === 'me' ? 'My Accounts' : 'All Accounts'}
+        </button>
       </div>
 
       {/* Desktop table */}
