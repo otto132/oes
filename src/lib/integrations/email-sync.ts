@@ -82,87 +82,98 @@ function classifyEmail(subject: string, body: string, fromEmail: string): { cls:
 // ── Sync Function ────────────────────────────────
 
 export async function syncEmails(): Promise<{ synced: number; errors: string[] }> {
-  const errors: string[] = [];
+  const tokens = await db.integrationToken.findMany({
+    where: { provider: 'microsoft', user: { isActive: true } },
+    include: { user: true },
+  });
 
-  // Get stored tokens
-  const tokenRow = await db.integrationToken.findFirst({ where: { provider: 'microsoft' } });
-  if (!tokenRow) return { synced: 0, errors: ['No Microsoft token — connect Outlook first'] };
-
-  // Refresh token if expired
-  let accessToken = tokenRow.accessToken;
-  if (tokenRow.expiresAt < new Date()) {
-    try {
-      const refreshed = await refreshAccessToken(tokenRow.refreshToken);
-      accessToken = refreshed.access_token;
-      await db.integrationToken.update({
-        where: { id: tokenRow.id },
-        data: {
-          accessToken: refreshed.access_token,
-          refreshToken: refreshed.refresh_token,
-          expiresAt: new Date(Date.now() + refreshed.expires_in * 1000),
-        },
-      });
-    } catch (err) {
-      return { synced: 0, errors: ['Token refresh failed — reconnect Outlook'] };
-    }
+  if (tokens.length === 0) {
+    return { synced: 0, errors: ['No Microsoft tokens found — users need to connect Outlook'] };
   }
 
-  // Fetch emails from last 24h
-  const since = new Date(Date.now() - 24 * 60 * 60 * 1000);
-  let graphEmails: GraphEmail[];
-  try {
-    graphEmails = await fetchRecentEmails(accessToken, since);
-  } catch (err) {
-    return { synced: 0, errors: [`Graph API error: ${err}`] };
-  }
+  let totalSynced = 0;
+  const allErrors: string[] = [];
 
-  let synced = 0;
-
-  for (const ge of graphEmails) {
+  for (const tokenRow of tokens) {
     try {
-      // Skip if already synced (by subject + from + receivedDateTime)
-      const existing = await db.inboxEmail.findFirst({
-        where: {
-          subject: ge.subject,
-          fromEmail: ge.from.emailAddress.address,
-          receivedAt: new Date(ge.receivedDateTime),
-        },
-      });
-      if (existing) continue;
-
-      // Match to account
-      const match = await matchDomainToAccount(ge.from.emailAddress.address);
-      const domain = ge.from.emailAddress.address.split('@')[1];
-
-      // Classify
-      let { cls, conf } = classifyEmail(ge.subject, ge.bodyPreview, ge.from.emailAddress.address);
-      // Override: if no account match and not auto-reply/bounce, mark as new_domain
-      if (!match && cls !== 'auto_reply' && cls !== 'bounce') {
-        cls = 'new_domain';
+      // Refresh token if expired
+      let accessToken = tokenRow.accessToken;
+      if (tokenRow.expiresAt < new Date()) {
+        try {
+          const refreshed = await refreshAccessToken(tokenRow.refreshToken);
+          accessToken = refreshed.access_token;
+          await db.integrationToken.update({
+            where: { id: tokenRow.id },
+            data: {
+              accessToken: refreshed.access_token,
+              refreshToken: refreshed.refresh_token,
+              expiresAt: new Date(Date.now() + refreshed.expires_in * 1000),
+            },
+          });
+        } catch (err) {
+          allErrors.push(`Token refresh failed for ${tokenRow.userEmail} — reconnect Outlook`);
+          continue;
+        }
       }
 
-      // Store
-      await db.inboxEmail.create({
-        data: {
-          subject: ge.subject,
-          fromEmail: ge.from.emailAddress.address,
-          fromName: ge.from.emailAddress.name,
-          preview: ge.bodyPreview.slice(0, 500),
-          receivedAt: new Date(ge.receivedDateTime),
-          isUnread: !ge.isRead,
-          classification: cls,
-          classificationConf: conf,
-          isLinked: !!match,
-          accountId: match?.accountId || null,
-          accountName: match?.accountName || null,
-          domain: !match ? domain : null,
-        },
-      });
-      synced++;
+      // Fetch emails from last 24h
+      const since = new Date(Date.now() - 24 * 60 * 60 * 1000);
+      let graphEmails: GraphEmail[];
+      try {
+        graphEmails = await fetchRecentEmails(accessToken, since);
+      } catch (err) {
+        allErrors.push(`Graph API error for ${tokenRow.userEmail}: ${err}`);
+        continue;
+      }
+
+      for (const ge of graphEmails) {
+        try {
+          // Skip if already synced (by subject + from + receivedDateTime)
+          const existing = await db.inboxEmail.findFirst({
+            where: {
+              subject: ge.subject,
+              fromEmail: ge.from.emailAddress.address,
+              receivedAt: new Date(ge.receivedDateTime),
+            },
+          });
+          if (existing) continue;
+
+          // Match to account
+          const match = await matchDomainToAccount(ge.from.emailAddress.address);
+          const domain = ge.from.emailAddress.address.split('@')[1];
+
+          // Classify
+          let { cls, conf } = classifyEmail(ge.subject, ge.bodyPreview, ge.from.emailAddress.address);
+          if (!match && cls !== 'auto_reply' && cls !== 'bounce') {
+            cls = 'new_domain';
+          }
+
+          // Store
+          await db.inboxEmail.create({
+            data: {
+              subject: ge.subject,
+              fromEmail: ge.from.emailAddress.address,
+              fromName: ge.from.emailAddress.name,
+              preview: ge.bodyPreview.slice(0, 500),
+              receivedAt: new Date(ge.receivedDateTime),
+              isUnread: !ge.isRead,
+              classification: cls,
+              classificationConf: conf,
+              isLinked: !!match,
+              accountId: match?.accountId || null,
+              accountName: match?.accountName || null,
+              domain: !match ? domain : null,
+            },
+          });
+          totalSynced++;
+        } catch (err) {
+          allErrors.push(`Failed to sync email "${ge.subject}": ${err}`);
+        }
+      }
     } catch (err) {
-      errors.push(`Failed to sync email "${ge.subject}": ${err}`);
+      allErrors.push(`Sync failed for user ${tokenRow.userEmail}: ${err}`);
     }
   }
 
-  return { synced, errors };
+  return { synced: totalSynced, errors: allErrors };
 }
