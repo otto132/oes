@@ -8,3 +8,4 @@ export { createActivitySchema } from './activities';
 export { inboxActionSchema } from './inbox';
 export { paginate, parsePagination } from './pagination';
 export type { PaginationParams } from './pagination';
+export { createMeetingSchema, patchMeetingSchema } from './meetings';
