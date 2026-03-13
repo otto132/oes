@@ -30,3 +30,17 @@ export function useCommentOnTask() {
     onSuccess: () => qc.invalidateQueries({ queryKey: taskKeys.all }),
   });
 }
+
+export function useCreateTask() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: {
+      title: string;
+      accountId?: string;
+      priority?: string;
+      due?: string;
+      goalId?: string;
+    }) => api.tasks.create(data),
+    onSuccess: () => qc.invalidateQueries({ queryKey: taskKeys.all }),
+  });
+}
