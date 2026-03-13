@@ -105,3 +105,14 @@ export function useUpdateProfile() {
     },
   });
 }
+
+// Trigger manual sync
+export function useSyncMutation() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (type: string) => api.sync.trigger(type),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: settingsKeys.integrations() });
+    },
+  });
+}
