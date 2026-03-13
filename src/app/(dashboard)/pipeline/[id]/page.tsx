@@ -132,6 +132,68 @@ export default function OppDetailPage() {
 
   if (!o) return <div className="rounded-lg bg-[var(--elevated)] border border-[var(--border)] p-5 text-[var(--sub)]">Opportunity not found.</div>;
 
+  function openCloseWonDrawer() {
+    const state = { winNotes: '', competitorBeaten: '' };
+
+    openDrawer({
+      title: 'Close Won',
+      subtitle: o!.name,
+      body: (
+        <div className="flex flex-col gap-3">
+          <label className="flex flex-col gap-1">
+            <span className="text-[10px] font-semibold uppercase tracking-wide text-[var(--muted)]">Win Notes</span>
+            <textarea
+              placeholder="What helped us win?"
+              onChange={e => { state.winNotes = e.target.value; }}
+              rows={3}
+              className="px-2.5 py-1.5 text-[12px] rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] focus:outline-none focus:border-brand/40 resize-none"
+            />
+          </label>
+          <label className="flex flex-col gap-1">
+            <span className="text-[10px] font-semibold uppercase tracking-wide text-[var(--muted)]">Competitor Beaten (optional)</span>
+            <input
+              placeholder="Which competitor?"
+              onChange={e => { state.competitorBeaten = e.target.value; }}
+              className="px-2.5 py-1.5 text-[12px] rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] focus:outline-none focus:border-brand/40"
+            />
+          </label>
+        </div>
+      ),
+      footer: (
+        <>
+          <button
+            className="px-3.5 py-1.5 text-[12px] text-[var(--sub)] bg-[var(--surface)] border border-[var(--border)] rounded-md hover:bg-[var(--hover)] transition-colors"
+            onClick={closeDrawer}
+          >
+            Cancel
+          </button>
+          <button
+            disabled={closeWon.isPending}
+            className="px-3.5 py-1.5 text-[12px] font-medium bg-[var(--brand)] text-[#09090b] rounded-md hover:brightness-110 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            onClick={() => {
+              closeWon.mutate(
+                {
+                  id: o!.id,
+                  winNotes: state.winNotes.trim() || undefined,
+                  competitorBeaten: state.competitorBeaten.trim() || undefined,
+                },
+                {
+                  onSuccess: () => {
+                    addToast({ type: 'success', message: `Deal won! ${o!.name}` });
+                    closeDrawer();
+                  },
+                  onError: (err) => addToast({ type: 'error', message: `Close failed: ${err.message}` }),
+                }
+              );
+            }}
+          >
+            Confirm Win
+          </button>
+        </>
+      ),
+    });
+  }
+
   const sIdx = STAGES.indexOf(o.stage);
   const hAvg = healthAvg(o.health);
   const isMutating = move.isPending || closeWon.isPending || closeLost.isPending;
@@ -284,7 +346,7 @@ export default function OppDetailPage() {
               <div className="h-px bg-[var(--border)] my-0.5" />
               <button
                 disabled={isMutating}
-                onClick={() => closeWon.mutate({ id: o.id })}
+                onClick={openCloseWonDrawer}
                 className="text-left px-2 py-1.5 rounded-md text-[11.5px] text-brand font-medium hover:bg-[var(--hover)] transition-colors disabled:opacity-50"
               >
                 Closed Won
