@@ -44,7 +44,14 @@ interface Agent {
 interface AgentContext {
   config: AgentConfig;             // from DB (parameters, thresholds)
   userId: string;                  // system user or triggering user
-  triggerEvent?: AgentEvent;       // if event-triggered, the event data
+  triggerEvent?: AgentEventData;   // if event-triggered, the event data
+}
+
+// Distinct from Prisma's AgentEvent model — this is the parsed event data passed to agents
+interface AgentEventData {
+  id: string;
+  event: string;
+  payload: Record<string, unknown>;
 }
 
 interface AgentResult {
@@ -75,7 +82,7 @@ interface NewQueueItem {
   sources: { name: string; url: string | null }[];
   payload: Record<string, unknown>;
   reasoning: string;
-  priority: 'High' | 'Normal' | 'Low';
+  priority: QueuePriority;          // reuses Prisma enum: High | Normal | Low
 }
 ```
 
@@ -90,7 +97,11 @@ const registry = new Map<string, Agent>();
 export function registerAgent(agent: Agent): void;
 export function getAgent(name: string): Agent | undefined;
 export function getAllAgents(): Agent[];
-export function getAgentsByTrigger(trigger: AgentTrigger['type'], match: string): Agent[];
+// Returns agents matching the given trigger type and value.
+// For 'cron': match is unused (returns all cron-triggered agents).
+// For 'event': match is the event name (e.g., "emails_synced").
+// For 'chain': match is the QueueItemType (e.g., "lead_qualification").
+export function getAgentsByTrigger(triggerType: AgentTrigger['type'], match?: string): Agent[];
 ```
 
 No dynamic loading. All agents are statically imported.
@@ -104,10 +115,14 @@ No dynamic loading. All agents are statically imported.
 ```
 Trigger (cron/event/manual)
   → Check AgentConfig status (skip if paused/disabled)
+  → Concurrency guard: check for existing AgentRun with status "running" for this agent
+    → If found and started < 10 min ago: skip (agent still running)
+    → If found and started >= 10 min ago: mark as "failed" (stale run), proceed
   → Create AgentRun record (status: running)
   → Call agent.analyze(context)
-  → Bulk-create returned QueueItems
+  → Bulk-create returned QueueItems (agent field = Agent.name for analytics correlation)
   → Update AgentRun (status: completed/failed, metrics, duration)
+  → Update AgentConfig.lastRunAt to now()
   → Emit events if applicable
 ```
 
@@ -140,7 +155,7 @@ model AgentRun {
 export async function runAgent(
   agent: Agent,
   trigger: string,
-  event?: AgentEvent
+  event?: AgentEventData
 ): Promise<AgentRun>;
 
 export async function runDueAgents(): Promise<AgentRun[]>;
@@ -151,6 +166,8 @@ Error handling:
 - Non-fatal errors (from `AgentResult.errors`) are stored in AgentRun but don't fail the run
 - Uncaught exceptions mark the run as `failed` with the error captured
 - A failed run does not prevent future runs of the same agent
+
+**Agent name correlation:** The `agent` field on `QueueItem` must match `Agent.name` (e.g., `"pipeline_hygiene"`, not the display name). The existing `AgentConfig.name` already uses this convention. Analytics queries join on this field.
 
 ---
 
@@ -177,21 +194,33 @@ model AgentEvent {
 // src/lib/agents/events.ts
 
 export async function emitEvent(event: string, payload?: Record<string, unknown>): Promise<void>;
-export async function consumePendingEvents(): Promise<AgentEvent[]>;
+export async function consumePendingEvents(): Promise<PrismaAgentEvent[]>;  // Prisma-generated AgentEvent type from @prisma/client
 export async function markProcessed(eventId: string): Promise<void>;
 export async function expireOldEvents(maxAgeMs?: number): Promise<number>;
-// Default: expire unprocessed events older than 1 hour
+// Default: expire unprocessed events older than 6 hours (tolerates temporary cron outages)
 ```
 
 ### Event Catalog
 
+All chain events flow through `queue_item_approved`. No separate `signal_created` or `lead_created` events needed — the chain coordinator reads the `type` field from the approved queue item to determine which downstream agents to trigger.
+
 | Event                  | Emitted By                        | Consumers                    |
 |------------------------|-----------------------------------|------------------------------|
-| `emails_synced`        | `/api/sync` after email sync      | Inbox Classifier             |
+| `emails_synced`        | `/api/sync` after email sync      | Inbox Classifier (event trigger) |
 | `calendar_synced`      | `/api/sync` after calendar sync   | (future use)                 |
-| `queue_item_approved`  | `/api/queue` POST approve         | Chain Coordinator            |
-| `signal_created`       | Signal Hunter                     | Lead Qualifier (chain)       |
-| `lead_created`         | Queue approval of lead_qual       | Outreach Drafter (chain)     |
+| `queue_item_approved`  | `/api/queue` POST approve handler | Chain Coordinator → downstream agents |
+
+**Chain trigger mapping** (derived from `queue_item_approved` event payload `type`):
+
+| Approved QueueItem type | Downstream agents triggered |
+|------------------------|----------------------------|
+| `lead_qualification`   | Outreach Drafter, Account Enricher |
+| `enrichment`           | (none currently) |
+| `task_creation`        | (none currently) |
+| `outreach_draft`       | (none currently) |
+| `signal_review`        | Lead Qualifier, Account Enricher |
+
+Signal Hunter creates queue items of type `signal_review` — a new `QueueItemType` enum value. When a signal queue item is approved, Lead Qualifier and Account Enricher are triggered via chain.
 
 Events are consumed by the agent runner polling on each cron tick. Not a real pub/sub — sufficient for current scale (single team, 6 agents).
 
@@ -231,10 +260,14 @@ export async function handleApproval(
   approvedItem: QueueItem,
   approvalPayload: Record<string, unknown>
 ): Promise<void>;
-// 1. Emit queue_item_approved event with item type + payload
-// 2. Next cron tick picks up event, finds agents with matching chain trigger
-// 3. Runner executes all matching agents with event context
+// 1. Emit queue_item_approved event (for audit trail and as fallback trigger)
+// 2. Immediately find agents with matching chain trigger for this item type
+// 3. Execute all matching agents with the approval context
+// 4. If immediate execution fails, the event remains unprocessed and
+//    will be picked up on the next cron tick as a retry mechanism
 ```
+
+**Integration point:** `handleApproval()` is called from `POST /api/queue` after the existing approval side-effects (lead creation, account update, etc.) complete successfully. It is called after the `emitEvent` call, at the end of the approval handler.
 
 **Constraints:**
 - Chains are fan-out only (one approval triggers multiple agents)
@@ -475,15 +508,18 @@ Generate:
 {
   contactId: string,
   accountId: string,
-  subjectVariants: string[],       // 2 options for human to pick
+  subject: string,                  // primary subject (used by existing approval handler)
+  subjectVariantB: string,          // A/B alternative for human to swap in
   body: string,
-  templateStyle: string,           // "consultative" | "direct" | "educational"
-  contextUsed: string[],           // what data informed the draft
-  sequenceStep: number,            // 1-4
+  templateStyle: string,            // "consultative" | "direct" | "educational"
+  contextUsed: string[],            // what data informed the draft
+  sequenceStep: number,             // 1-4
   sequenceTotal: number,
   previousOutreachId: string | null
 }
 ```
+
+**Note:** The existing queue approval handler for `outreach_draft` reads `payload.subject` and `payload.body`. This payload shape preserves that contract. The `subjectVariantB` field is shown in the edit drawer so humans can pick between the two options before approving.
 
 **Configurable parameters:**
 - `templateStyle`: "consultative"
@@ -546,19 +582,33 @@ Add new sync type `agents`:
 // Calls runDueAgents() — checks cron schedules + pending events
 ```
 
+Modify `type: "all"` to also run agents after email/calendar sync:
+```typescript
+// POST /api/sync { type: "all" } (existing behavior)
+// 1. Run email sync → emit emails_synced event
+// 2. Run calendar sync → emit calendar_synced event
+// 3. Call runDueAgents() → processes events + checks cron schedules
+```
+
+This ensures event-triggered agents (Inbox Classifier) run immediately after the sync that emitted their event, without needing a separate cron tick.
+
 ### Cron Configuration
 
-Single Vercel Cron entry for agents:
+Two Vercel Cron entries:
 ```json
 // vercel.json
 {
   "crons": [
-    { "path": "/api/sync", "schedule": "* * * * *" }  // every minute — runner decides what's due
+    { "path": "/api/sync", "schedule": "*/15 * * * *" },
+    { "path": "/api/sync?type=agents", "schedule": "*/5 * * * *" }
   ]
 }
 ```
 
-The runner is idempotent — if nothing is due, it returns immediately.
+- The `*/15` entry runs `type: "all"` (email sync + calendar sync + agents) — keeps existing schedule
+- The `*/5` entry runs `type: "agents"` only — picks up pending events and checks cron schedules between full syncs
+- Both are idempotent — if nothing is due, they return immediately
+- The concurrency guard on the runner prevents duplicate agent runs
 
 ---
 
@@ -631,7 +681,9 @@ src/lib/agents/
 └── outreach-drafter.ts   # Agent implementation
 
 src/app/api/agents/
-├── route.ts              # GET /api/agents, GET /api/agents/analytics
+├── route.ts              # GET /api/agents
+├── analytics/
+│   └── route.ts          # GET /api/agents/analytics (cross-agent)
 ├── [name]/
 │   ├── route.ts          # GET/PATCH single agent, POST run
 │   ├── analytics/
@@ -667,6 +719,7 @@ model AgentRun {
   startedAt    DateTime  @default(now())
   completedAt  DateTime?
   durationMs   Int?
+  updatedAt    DateTime  @updatedAt
 
   @@index([agentName, startedAt(sort: Desc)])
   @@map("agent_runs")
@@ -678,6 +731,7 @@ model AgentEvent {
   payload     Json     @default("{}")
   processed   Boolean  @default(false)
   createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
   @@index([processed, event])
   @@map("agent_events")
@@ -686,7 +740,18 @@ model AgentEvent {
 
 ### Existing Model Changes
 
-None — `AgentConfig` and `QueueItem` already have the fields needed.
+**QueueItemType enum** — add `signal_review`:
+```prisma
+enum QueueItemType {
+  outreach_draft
+  lead_qualification
+  enrichment
+  task_creation
+  signal_review        // NEW: Signal Hunter creates these for human review
+}
+```
+
+The existing queue approval handler needs a new branch for `signal_review` that creates a Signal record on approval (similar to how `lead_qualification` creates a Lead).
 
 ---
 
@@ -716,5 +781,5 @@ None — `AgentConfig` and `QueueItem` already have the fields needed.
 | Outreach generation | Claude API (LLM-powered) | Higher quality personalization; configurable model for cost control |
 | External data | Hybrid (RSS real, others simulated) | Proves framework without API costs; gradually upgrade |
 | Event bus | DB-backed polling | No external infra; sufficient for single-team scale |
-| Cron strategy | Single endpoint, runner decides | Avoids multiple Vercel Cron entries; idempotent |
+| Cron strategy | Two entries: */15 full sync + */5 agents-only | Balances responsiveness (5-min event pickup) with sync frequency (15-min); both idempotent |
 | Analytics storage | No new tables | Derived from AgentRun + QueueItem queries |
