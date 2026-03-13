@@ -36,7 +36,7 @@ Models and PII fields to document:
 | AgentConfig | parameters (JSON, content varies by agent — may contain business-sensitive config) |
 | Opportunity | winNotes, lossNotes, lossReason (business-sensitive competitive intelligence) |
 
-**Source** values: `user-input`, `microsoft-sync`, `ai-generated`, `admin-action`.
+**Source** values: `user-input`, `microsoft-sync`, `ai-generated`, `admin-action`, `derived` (computed from other fields), `system-generated` (created by application logic).
 
 ### 3. Third-Party Data Flows
 
@@ -81,7 +81,7 @@ Sections with `<!-- TODO before launch with EU customers -->` markers:
 
 **Neon-specific:**
 - Neon provides automatic daily backups and point-in-time recovery (PITR) on paid plans
-- How to verify: Neon dashboard → Project → Settings → Backups
+- How to verify: Neon dashboard → Project → Settings (check backup/PITR configuration)
 - Restore procedure: create a new branch from a point-in-time, update `DATABASE_URL` to the branch connection string, verify data, then promote or keep as the new primary
 
 **Provider-agnostic notes:**
