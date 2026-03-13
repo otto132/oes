@@ -92,6 +92,7 @@ enum QueueItemType {
   lead_qualification
   enrichment
   task_creation
+  signal_review
 }
 
 enum QueueItemStatus {
@@ -607,6 +608,36 @@ model AgentConfig {
   updatedAt   DateTime  @updatedAt
 
   @@map("agent_configs")
+}
+
+model AgentRun {
+  id           String    @id @default(cuid())
+  agentName    String
+  status       String    @default("running")
+  trigger      String
+  itemsCreated Int       @default(0)
+  itemsScanned Int       @default(0)
+  itemsMatched Int       @default(0)
+  errors       Json      @default("[]")
+  startedAt    DateTime  @default(now())
+  completedAt  DateTime?
+  durationMs   Int?
+  updatedAt    DateTime  @updatedAt
+
+  @@index([agentName, startedAt(sort: Desc)])
+  @@map("agent_runs")
+}
+
+model AgentEvent {
+  id          String   @id @default(cuid())
+  event       String
+  payload     Json     @default("{}")
+  processed   Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([processed, event])
+  @@map("agent_events")
 }
 
 // ═══════════════════════════════════════════════════════════════
