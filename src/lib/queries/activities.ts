@@ -1,0 +1,26 @@
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { api } from '@/lib/api-client';
+import { accountKeys } from './accounts';
+import { oppKeys } from './opportunities';
+
+export const activityKeys = {
+  all: ['activities'] as const,
+};
+
+export function useLogActivity() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: {
+      type?: string;
+      summary: string;
+      detail?: string;
+      accountId: string;
+      source?: string;
+    }) => api.activities.log(data),
+    onSuccess: (_data, vars) => {
+      qc.invalidateQueries({ queryKey: activityKeys.all });
+      qc.invalidateQueries({ queryKey: accountKeys.detail(vars.accountId) });
+      qc.invalidateQueries({ queryKey: oppKeys.all });
+    },
+  });
+}
