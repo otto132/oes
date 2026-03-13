@@ -49,7 +49,7 @@ export const POST = withHandler(createMeetingSchema, async (_req, ctx) => {
       title,
       date: new Date(date),
       startTime,
-      duration,
+      duration: parseInt(duration, 10),
       attendees,
       accountId: accountId ?? null,
       accountName,

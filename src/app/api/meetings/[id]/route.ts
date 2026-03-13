@@ -72,11 +72,13 @@ export async function PATCH(
     }
   }
 
+  const { date, duration, ...rest } = body;
   const updated = await db.meeting.update({
     where: { id },
     data: {
-      ...body,
-      ...(body.date ? { date: new Date(body.date) } : {}),
+      ...rest,
+      ...(date ? { date: new Date(date) } : {}),
+      ...(duration !== undefined ? { duration: parseInt(duration, 10) } : {}),
       ...(accountName !== undefined ? { accountName } : {}),
     },
   });

@@ -88,16 +88,6 @@ export function useUpdateAccount() {
   });
 }
 
-export function useUpdateAccount(id: string) {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: (data: Record<string, unknown>) => api.accounts.update(id, data),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: accountKeys.detail(id) });
-      qc.invalidateQueries({ queryKey: accountKeys.all });
-    },
-  });
-}
 
 export function useCreateContact(accountId: string) {
   const qc = useQueryClient();

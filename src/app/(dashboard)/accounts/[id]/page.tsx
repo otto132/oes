@@ -171,7 +171,7 @@ export default function AccountDetailPage() {
   const createOpp = useCreateOpportunity();
   const createContact = useCreateContact(id);
   const { openDrawer, closeDrawer, addToast } = useStore();
-  const updateAccount = useUpdateAccount(id);
+  const updateAccount = useUpdateAccount();
   const { data: teamData } = useTeamQuery();
   const teamMembers = (teamData?.data ?? []).filter((u: any) => u.isActive);
   const { data: session } = useSession();
@@ -540,7 +540,7 @@ export default function AccountDetailPage() {
               value={a.ownerId}
               onChange={(e) => {
                 updateAccount.mutate(
-                  { ownerId: e.target.value },
+                  { id, data: { ownerId: e.target.value } },
                   {
                     onSuccess: () => addToast({ type: 'success', message: 'Owner reassigned' }),
                     onError: (err: Error) => addToast({ type: 'error', message: err.message }),
