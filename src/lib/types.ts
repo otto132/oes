@@ -109,6 +109,10 @@ export interface QueueItem {
 export type TaskStatus = 'Open' | 'InProgress' | 'InReview' | 'Done';
 export type TaskPriority = 'High' | 'Medium' | 'Low';
 
+export interface Subtask {
+  id: ID; title: string; done: boolean; position: number;
+}
+
 export interface TaskComment { author: User; text: string; createdAt: string; mentions?: string[]; }
 
 export interface Task {
@@ -117,6 +121,8 @@ export interface Task {
   priority: TaskPriority; status: TaskStatus; source: string;
   goalId?: ID; reviewer?: User; comments: TaskComment[];
   completedAt?: string; notes?: string;
+  subtasksDone?: number; subtasksTotal?: number;
+  subtasks?: Subtask[];
 }
 
 // ── Goals ────────────────────────────────────────
