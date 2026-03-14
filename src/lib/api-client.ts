@@ -248,4 +248,9 @@ export const api = {
     updateProfile: (data: { name?: string; initials?: string; notificationPrefs?: { emailAlerts: boolean; queueAlerts: boolean } }) =>
       patch<any>('/settings/profile', data),
   },
+
+  // ── Admin ───────────────────────────────────────
+  admin: {
+    stats: () => get<any>('/admin/stats'),
+  },
 };
