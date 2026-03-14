@@ -1,6 +1,5 @@
 'use client';
 import { usePathname } from 'next/navigation';
-import Link from 'next/link';
 import { Plus } from 'lucide-react';
 import { useSession } from 'next-auth/react';
 import NotificationDropdown from '@/components/layout/NotificationDropdown';

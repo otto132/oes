@@ -7,7 +7,15 @@ import { useStore } from '@/lib/store';
 import { cn } from '@/lib/utils';
 import { useBadgeCounts } from '@/lib/queries/badge-counts';
 
-const sections = [
+interface NavItem {
+  href: string;
+  label: string;
+  icon: typeof Home;
+  badgeKey?: string;
+  adminOnly?: boolean;
+}
+
+const sections: { label: string; items: NavItem[] }[] = [
   { label: 'Core', items: [
     { href: '/', label: 'Home', icon: Home },
     { href: '/queue', label: 'Approval Queue', icon: Shield, badgeKey: 'queue' },
@@ -79,7 +87,7 @@ export default function Sidebar() {
           <div key={sec.label} className="py-1.5">
             <div className="px-2.5 pb-1 text-3xs font-semibold tracking-[0.08em] uppercase text-muted">{sec.label}</div>
             {sec.items
-              .filter(item => !('adminOnly' in item && item.adminOnly) || session?.user?.role === 'ADMIN')
+              .filter(item => !item.adminOnly || session?.user?.role === 'ADMIN')
               .map(item => {
               const active = isActive(item.href);
               const badge = item.badgeKey ? badgeCounts[item.badgeKey] : 0;
