@@ -31,7 +31,7 @@ export async function GET(req: NextRequest) {
   // Then paginated query for tasks
   const tasks = await scoped.task.findMany({
     where,
-    include: { owner: true, assignees: true, reviewer: true, goal: true, account: { select: { id: true, name: true } }, comments: { include: { author: true }, orderBy: { createdAt: 'asc' } } },
+    include: { owner: true, assignees: true, reviewer: true, goal: true, account: { select: { id: true, name: true } }, comments: { include: { author: true }, orderBy: { createdAt: 'asc' } }, subtasks: { orderBy: { position: 'asc' as const } }, _count: { select: { subtasks: true } } },
     orderBy: [{ due: 'asc' }],
     take: pagination.limit + 1,
     ...(pagination.cursor ? { cursor: { id: pagination.cursor }, skip: 1 } : {}),
