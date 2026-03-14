@@ -88,7 +88,7 @@ export default function TasksPage() {
 }
 
 function TasksPageInner() {
-  const { openDrawer, closeDrawer } = useStore();
+  const { openDrawer, closeDrawer, taskViewMode, setTaskViewMode } = useStore();
   const { data: session } = useSession();
   const [tab, setTab] = useState<'mine' | 'review' | 'all'>('mine');
   const [showCompleted, setShowCompleted] = useState(false);
@@ -149,10 +149,16 @@ function TasksPageInner() {
     else ungrouped.push(t);
   });
 
+  const PRIORITY_ORDER: Record<string, number> = { High: 0, Medium: 1, Low: 2 };
+
   const sorted = (arr: Task[]) => [...arr].sort((a, b) => {
     const ao = a.status === 'Done' ? 2 : isOverdue(a.dueDate) ? 0 : 1;
     const bo = b.status === 'Done' ? 2 : isOverdue(b.dueDate) ? 0 : 1;
-    return ao !== bo ? ao - bo : new Date(a.dueDate || '2099-01-01').getTime() - new Date(b.dueDate || '2099-01-01').getTime();
+    if (ao !== bo) return ao - bo;
+    const pa = PRIORITY_ORDER[a.priority] ?? 1;
+    const pb = PRIORITY_ORDER[b.priority] ?? 1;
+    if (pa !== pb) return pa - pb;
+    return new Date(a.dueDate || '2099-01-01').getTime() - new Date(b.dueDate || '2099-01-01').getTime();
   });
 
   function openNewTaskDrawer() {
@@ -672,13 +678,20 @@ function TasksPageInner() {
         <label className="flex items-center gap-1.5 text-[11px] text-sub cursor-pointer min-h-[44px] sm:min-h-0">
           <input type="checkbox" className="w-4 h-4 sm:w-3.5 sm:h-3.5" checked={showCompleted} onChange={e => setShowCompleted(e.target.checked)} /> Show completed
         </label>
+        <button
+          onClick={() => setTaskViewMode(taskViewMode === 'grouped' ? 'flat' : 'grouped')}
+          className="px-2 py-1 text-[10px] font-medium rounded-md bg-[var(--surface)] border border-[var(--border)] hover:bg-[var(--hover)] transition-colors whitespace-nowrap"
+        >
+          {taskViewMode === 'grouped' ? '☰ Flat' : '📁 Grouped'}
+        </button>
       </div>
 
       {visible.length === 0 ? (
         <EmptyState icon="☑" title={tab === 'review' ? 'No reviews pending' : 'All tasks complete'} description={tab === 'review' ? 'Tasks assigned to you for review will appear here.' : 'Nice work. New tasks will appear from AI agents and pipeline hygiene.'} />
+      ) : taskViewMode === 'flat' ? (
+        <div className="flex flex-col gap-1">{sorted(visible).map(t => <TaskRow key={t.id} t={t} />)}</div>
       ) : (
         <div className="flex flex-col gap-2">
-          {/* Goal groups */}
           {Object.entries(goalTasks).map(([gId, gTasks]) => {
             const g = goals.find(x => x.id === gId);
             if (!g) return null;
@@ -690,6 +703,7 @@ function TasksPageInner() {
                 <div className="flex items-center gap-2 px-3.5 py-2.5 bg-[var(--surface)] border-b border-[var(--border)]">
                   <span className="text-[10px]">🎯</span>
                   <span className="text-[12px] font-semibold flex-1">{g.title}</span>
+                  <Badge variant={g.status === 'completed' ? 'ok' : g.status === 'archived' ? 'neutral' : 'info'} className="!text-[8px]">{g.status}</Badge>
                   <div className="w-14 sm:w-20 h-[3px] rounded-full bg-[var(--surface)] overflow-hidden"><div className="h-full rounded-full bg-brand transition-all" style={{ width: `${pct}%` }} /></div>
                   <span className="text-[10px] text-muted">{done}/{total}</span>
                   {g.accountName && <Badge variant="neutral" className="!text-[8px]">{g.accountName}</Badge>}
@@ -698,8 +712,6 @@ function TasksPageInner() {
               </div>
             );
           })}
-
-          {/* Ungrouped */}
           {ungrouped.length > 0 && (
             <div className="flex flex-col gap-1">{sorted(ungrouped).map(t => <TaskRow key={t.id} t={t} />)}</div>
           )}
