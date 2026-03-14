@@ -108,13 +108,15 @@ const staleSignals = await db.signal.updateMany({
 
 Uses `updateMany` (not delete). Signals remain accessible via the dismissed filter. The existing 180-day deletion pass will eventually clean them up.
 
+The `DataRetentionRun` model tracks `dismissedSignals` which currently counts deleted dismissed signals. The auto-dismiss count will be logged separately via `logger.info()` in the retention function but NOT added to the `dismissedSignals` counter (which tracks deletions, not status transitions). This avoids conflating two different metrics.
+
 ### Files
-- `src/lib/retention.ts` (~5 lines)
+- `src/lib/retention.ts` (~8 lines)
 
 ### Acceptance
 - Signals with status `new_signal` older than 90 days are auto-dismissed on weekly cron
 - Dismissed signals remain queryable
-- Retention log includes count of auto-dismissed signals
+- Count of auto-dismissed signals logged via `logger.info()`
 
 ---
 
@@ -348,8 +350,17 @@ All 20+ drawers share common mobile issues: tiny form inputs (`text-[12px]`), sm
 These are pattern changes applied to all drawer form implementations.
 
 ### Files
-- `src/components/shell/Drawer.tsx`
-- All files containing drawer form implementations (~10 files)
+- `src/components/shell/Drawer.tsx` — scroll and footer layout
+- `src/app/(dashboard)/tasks/page.tsx` — new task, edit task, complete task, task detail drawers
+- `src/app/(dashboard)/leads/page.tsx` — new lead, convert lead drawers
+- `src/app/(dashboard)/pipeline/page.tsx` — new opportunity drawer
+- `src/app/(dashboard)/pipeline/[id]/page.tsx` — close won, close lost drawers
+- `src/app/(dashboard)/accounts/page.tsx` — new account drawer
+- `src/app/(dashboard)/accounts/[id]/page.tsx` — log activity, add/edit contact, edit account, new opportunity drawers
+- `src/app/(dashboard)/inbox/page.tsx` — email detail drawer
+- `src/app/(dashboard)/signals/page.tsx` — signal detail, convert signal drawers
+- `src/app/(dashboard)/settings/page.tsx` — invite team member drawer
+- `src/app/(dashboard)/queue/page.tsx` — edit & approve drawer
 
 ### Acceptance
 - Drawer forms comfortable to use on mobile
@@ -362,54 +373,102 @@ These are pattern changes applied to all drawer form implementations.
 ## 10. Edit Task Drawer Improvements (C-10)
 
 ### Problem
-Edit Task drawer (tasks/page.tsx lines 349-451) only allows editing title, priority, and due date. Can't reassign assignees or reviewer.
+Edit Task drawer (tasks/page.tsx lines 349-451) only allows editing title, priority, and due date. Can't reassign assignees or reviewer. No notes field.
 
-### Changes
+### Schema Change Required
+The Task model has no `notes` field. Add:
+```prisma
+model Task {
+  // ... existing fields ...
+  notes       String?   @db.Text
+}
+```
+Run `npx prisma migrate dev --name add-task-notes`.
 
+### API Changes Required
+- `src/lib/schemas/tasks.ts` — add `notes: z.string().optional()` to `patchTaskSchema`
+- `src/app/api/tasks/[id]/route.ts` — include `notes` in PATCH handler's Prisma update
+- `src/lib/adapters.ts` — include `notes` in `adaptTask()` output
+
+### UI Changes
 Add to Edit Task drawer form:
-- **Assignee selector:** Dropdown of team members (use existing team members query from settings). Multi-select or single-select depending on current data model.
-- **Reviewer selector:** Same dropdown, single-select.
-- **Notes/description textarea:** 3-row textarea for task context.
+- **Assignee selector:** Dropdown of team members (use existing `useTeamQuery()` from `src/lib/queries/settings.ts`). The Task model has `assignees User[]` (many-to-many), so use multi-select.
+- **Reviewer selector:** Same dropdown, single-select. Task model has `reviewerId String?`.
+- **Notes textarea:** 3-row textarea for task context. Maps to new `notes` field.
 
-The task PATCH API already accepts `assigneeIds` and `reviewerId` fields.
+The task PATCH API already accepts `assigneeIds` and `reviewerId` fields. Only `notes` is new.
 
 ### Files
-- `src/app/(dashboard)/tasks/page.tsx` — edit drawer section
+- `prisma/schema.prisma` — add `notes` field to Task model
+- `src/lib/schemas/tasks.ts` — add `notes` to `patchTaskSchema`
+- `src/app/api/tasks/[id]/route.ts` — include `notes` in PATCH update
+- `src/lib/adapters.ts` — include `notes` in `adaptTask()`
+- `src/app/(dashboard)/tasks/page.tsx` — edit drawer UI
 
 ### Acceptance
 - Edit Task drawer shows assignee, reviewer, and notes fields
-- Changes persist via existing PATCH API
+- Changes persist via PATCH API
 - Dropdowns populated from team members query
+- Migration runs cleanly (no data loss — field is optional)
 
 ---
 
 ## 11. Close Won/Lost Drawer Improvements (C-11)
 
 ### Problem
-Close Won drawer has only "What made us win" (textarea) and "Competitor beaten" (text). Close Lost has similar minimal fields. Not enough deal intelligence captured.
+Close Won drawer has only `winNotes` (textarea) and `competitorBeaten` (text). Close Lost has `lossReason` (select with 7 options), conditional `lossCompetitor`, and `lossNotes` (textarea). Both could capture more deal intelligence.
 
-### Changes
+### Existing Opportunity Fields (no migration needed for these)
+- `winNotes: String? @db.Text` — "What made us win"
+- `competitorBeaten: String?` — competitor name
+- `lossReason: String?` — loss reason select value
+- `lossCompetitor: String?` — competitor that won
+- `lossNotes: String? @db.Text` — "What can we learn"
 
-**Close Won drawer** — add fields:
-- Revenue captured (number input, prefilled from opportunity amount)
-- Key stakeholders (text input — who were the decision makers)
-- Lessons learned (textarea — what to replicate)
-- Keep existing: "What made us win", "Competitor beaten"
+### Schema Change Required
+Add two new optional fields to the Opportunity model:
+```prisma
+model Opportunity {
+  // ... existing fields ...
+  lessonsLearned  String? @db.Text
+  keyStakeholders String?
+}
+```
+Run `npx prisma migrate dev --name add-opp-deal-intelligence`.
 
-**Close Lost drawer** — add fields:
-- Primary loss reason (select: Price / Feature Gap / Competitor / Timing / No Decision / Other)
-- Lost to competitor (text input)
-- Could we have won? (textarea — what would have changed the outcome)
-- Lessons learned (textarea)
+### API Changes Required
+- `src/lib/schemas/opportunities.ts` — add `lessonsLearned` and `keyStakeholders` to `closeWonSchema` and `closeLostSchema`
+- `src/app/api/opportunities/route.ts` — include new fields in close_won and close_lost handlers
+- `src/lib/adapters.ts` — include new fields in `adaptOpportunity()`
+
+### UI Changes
+
+**Close Won drawer** — enhance existing form:
+- Keep: "What made us win" (`winNotes`), "Competitor Beaten" (`competitorBeaten`)
+- Add: "Key Stakeholders" (text input, maps to `keyStakeholders`) — who were the decision makers
+- Add: "Lessons Learned" (textarea, maps to `lessonsLearned`) — what to replicate
+- Note: "Revenue captured" is NOT added — the existing `amount` field already captures deal value; no need for a separate revenue field at close time.
+
+**Close Lost drawer** — enhance existing form:
+- Keep: Loss Reason select (`lossReason`, already has 7 options including Price/Timing/Competitor/No Budget/No Decision/Champion Left/Other)
+- Keep: Conditional "Who did we lose to?" (`lossCompetitor`, shown when reason=Competitor)
+- Keep: "What can we learn?" (`lossNotes`)
+- Add: "Lessons Learned" (textarea, maps to `lessonsLearned`) — broader reflection beyond immediate learnings
+- Note: The existing `lossNotes` ("What can we learn?") already covers the "Could we have won?" concept, so we don't add a duplicate field. Instead, rename the label to "What could we have done differently?" for clarity, keeping the same `lossNotes` field.
 
 ### Files
-- `src/app/(dashboard)/pipeline/[id]/page.tsx` — close won/lost drawer sections
+- `prisma/schema.prisma` — add `lessonsLearned`, `keyStakeholders` to Opportunity
+- `src/lib/schemas/opportunities.ts` — update Zod schemas
+- `src/app/api/opportunities/route.ts` — update close handlers
+- `src/lib/adapters.ts` — update `adaptOpportunity()`
+- `src/app/(dashboard)/pipeline/[id]/page.tsx` — close won/lost drawer UI
 
 ### Acceptance
-- Close Won captures revenue, stakeholders, lessons
-- Close Lost captures structured loss reason, competitor, and reflection
-- All fields optional except existing required ones
-- Data persists (may need API/model updates for new fields)
+- Close Won captures stakeholders and lessons alongside existing fields
+- Close Lost captures lessons alongside existing reason/competitor/notes
+- New fields optional (no breaking change)
+- Migration runs cleanly
+- All data persists via updated API handlers
 
 ---
 
@@ -442,29 +501,25 @@ Add `aria-label` to:
 
 ---
 
-## Data Model Considerations
+## Schema Migrations Required
 
-### Close Won/Lost fields (#11)
-The Opportunity model may need new optional fields:
-- `lossReason: String?`
-- `lostToCompetitor: String?`
-- `lessonsLearned: String?`
-- `keyStakeholders: String?`
+Two migrations are needed. Run in this order:
 
-Check if these already exist or if `closedReason` / metadata fields cover this. If not, add a Prisma migration.
+1. **`add-task-notes`** — adds `notes String? @db.Text` to Task model
+2. **`add-opp-deal-intelligence`** — adds `lessonsLearned String? @db.Text` and `keyStakeholders String?` to Opportunity model
 
-### Task notes (#10)
-Check if Task model has a `description` or `notes` field. If not, add `notes: String?` to the Task model.
+Both are additive (new optional fields). No data loss. No breaking changes.
 
 ---
 
 ## Dependencies
 
-- #27, #12 (CSS/aria) — no dependencies, can go first
+- #27, C-12 (CSS/aria) — no dependencies, can go first
 - #34, #40, #48, #50 — backend items, independent of each other
 - #53 — depends on knowing drawer open functions per page
-- #8, #9 — mobile work, #9 should go after #8 (task-specific first, then global pattern)
-- #10, #11 — drawer improvements, may need schema migration (#11)
+- C-8, C-9 — mobile work, C-9 should go after C-8 (task-specific first, then global pattern)
+- C-10 — requires migration 1 (add-task-notes) before UI work
+- C-11 — requires migration 2 (add-opp-deal-intelligence) before UI work
 - #30 — task comments, independent
 
 ---
