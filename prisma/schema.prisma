@@ -170,6 +170,12 @@ enum Role {
   VIEWER
 }
 
+enum NotificationType {
+  QUEUE_ITEM
+  TASK_ASSIGNED
+  MENTION
+}
+
 // ═══════════════════════════════════════════════════════════════
 // TENANTS
 // ═══════════════════════════════════════════════════════════════
@@ -221,11 +227,13 @@ model User {
   ownedGoals        Goal[]             @relation("GoalOwner")
   activities        Activity[]         @relation("ActivityAuthor")
   taskComments      TaskComment[]      @relation("CommentAuthor")
-  sentInvitations   Invitation[]       @relation("SentInvitations")
-  integrationTokens IntegrationToken[]
-  syncLogs          SyncLog[]
-  auditLogs         AuditLog[]         @relation("AuditLogUser")
-  accessLogs        AccessLog[]        @relation("AccessLogUser")
+  sentInvitations    Invitation[]       @relation("SentInvitations")
+  integrationTokens  IntegrationToken[]
+  syncLogs           SyncLog[]
+  auditLogs          AuditLog[]         @relation("AuditLogUser")
+  accessLogs         AccessLog[]        @relation("AccessLogUser")
+  notifications      Notification[]     @relation("notifications")
+  actedNotifications Notification[]     @relation("notificationActor")
 
   @@index([tenantId])
   @@map("users")
@@ -791,4 +799,27 @@ model DataRetentionRun {
   completedAt      DateTime?
 
   @@map("data_retention_runs")
+}
+
+// ═══════════════════════════════════════════════════════════════
+// NOTIFICATIONS
+// ═══════════════════════════════════════════════════════════════
+
+model Notification {
+  id         String           @id @default(cuid())
+  userId     String
+  user       User             @relation("notifications", fields: [userId], references: [id], onDelete: Cascade)
+  actorId    String?
+  actor      User?            @relation("notificationActor", fields: [actorId], references: [id], onDelete: SetNull)
+  type       NotificationType
+  title      String
+  message    String
+  entityType String?
+  entityId   String?
+  readAt     DateTime?
+  createdAt  DateTime         @default(now())
+
+  @@index([userId, readAt])
+  @@index([userId, createdAt])
+  @@map("notifications")
 }

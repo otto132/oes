@@ -9,12 +9,13 @@ export async function GET() {
   if (!session?.user?.id) return unauthorized();
   const db = resolveTenantDb(session as any);
 
-  const [pendingQueue, newSignals, newLeads, unreadEmails, overdueTasks] = await Promise.all([
+  const [pendingQueue, newSignals, newLeads, unreadEmails, overdueTasks, notificationCount] = await Promise.all([
     db.queueItem.count({ where: { status: 'pending' } }),
     db.signal.count({ where: { status: 'new_signal' } }),
     db.lead.count({ where: { stage: 'New' } }),
     db.inboxEmail.count({ where: { isUnread: true, isArchived: false } }),
     db.task.count({ where: { status: { not: 'Done' }, due: { lt: new Date() } } }),
+    db.notification.count({ where: { userId: session.user.id, readAt: null } }),
   ]);
 
   return NextResponse.json({
@@ -23,5 +24,6 @@ export async function GET() {
     leads: newLeads,
     inbox: unreadEmails,
     tasks: overdueTasks,
+    notifications: notificationCount,
   });
 }

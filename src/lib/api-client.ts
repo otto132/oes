@@ -238,7 +238,7 @@ export const api = {
 
   // ── Badge Counts ──────────────────────────────
   badgeCounts: {
-    get: () => get<{ queue: number; signals: number; leads: number; inbox: number; tasks: number }>('/badge-counts'),
+    get: () => get<{ queue: number; signals: number; leads: number; inbox: number; tasks: number; notifications: number }>('/badge-counts'),
   },
 
   // ── Settings ───────────────────────────────────
@@ -255,5 +255,22 @@ export const api = {
     profile: () => get<any>('/settings/profile'),
     updateProfile: (data: { name?: string; initials?: string; notificationPrefs?: { emailAlerts: boolean; queueAlerts: boolean } }) =>
       patch<any>('/settings/profile', data),
+  },
+
+  // ── Admin ───────────────────────────────────────
+  admin: {
+    stats: () => get<any>('/admin/stats'),
+  },
+
+  // ── Notifications ───────────────────────────────────
+  notifications: {
+    list: (cursor?: string) => {
+      const params = new URLSearchParams();
+      if (cursor) params.set('cursor', cursor);
+      const qs = params.toString();
+      return get<any>(`/notifications${qs ? `?${qs}` : ''}`);
+    },
+    markRead: (ids: string[]) => patch<any>('/notifications/mark-read', { ids }),
+    markAllRead: () => patch<any>('/notifications/mark-read', { all: true }),
   },
 };

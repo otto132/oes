@@ -9,6 +9,7 @@ import { taskActionSchema } from '@/lib/schemas/tasks';
 import { parsePagination, paginate } from '@/lib/schemas/pagination';
 import { auth } from '@/lib/auth';
 import { unauthorized } from '@/lib/api-errors';
+import { notifyUsers } from '@/lib/notifications';
 
 export async function GET(req: NextRequest) {
   const session = await auth();
@@ -67,6 +68,15 @@ export const POST = withHandler(taskActionSchema, async (req, ctx) => {
       },
       include: { owner: true, assignees: true, reviewer: true, account: { select: { id: true, name: true } }, comments: { include: { author: true }, orderBy: { createdAt: 'asc' } } },
     });
+    // Notify assignees
+    const notifyIds = assigneeIds || [ownerId];
+    await notifyUsers(db, notifyIds, session.user.id, {
+      type: 'TASK_ASSIGNED',
+      title: 'Task assigned to you',
+      message: title.slice(0, 100),
+      entityType: 'Task',
+      entityId: task.id,
+    });
     return NextResponse.json({ data: adaptTask(task) }, { status: 201 });
   }
 
@@ -124,6 +134,21 @@ export const POST = withHandler(taskActionSchema, async (req, ctx) => {
       data: { text, taskId: id, authorId: userId, mentions },
       include: { author: true },
     });
+    // Notify mentioned users
+    if (mentions.length > 0) {
+      const mentionedUsers = await db.user.findMany({
+        where: { name: { in: mentions, mode: 'insensitive' } },
+        select: { id: true },
+      });
+      const mentionedIds = mentionedUsers.map((u) => u.id);
+      await notifyUsers(db, mentionedIds, userId, {
+        type: 'MENTION',
+        title: 'You were mentioned',
+        message: text.slice(0, 100),
+        entityType: 'TaskComment',
+        entityId: comment.id,
+      });
+    }
     return NextResponse.json({ data: adaptTaskComment(comment) }, { status: 201 });
   }
 
