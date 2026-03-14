@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect, useRef } from 'react';
+import { Suspense, useState, useEffect, useRef } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { useStore } from '@/lib/store';
 import { ApiError } from '@/lib/api-client';
@@ -41,6 +41,10 @@ function SignalsSkeleton() {
 }
 
 export default function SignalsPage() {
+  return <Suspense><SignalsPageInner /></Suspense>;
+}
+
+function SignalsPageInner() {
   const { openDrawer, closeDrawer } = useStore();
   const searchParams = useSearchParams();
   const [filter, setFilter] = useState('all');
