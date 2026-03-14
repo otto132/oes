@@ -4,7 +4,7 @@ import { Shield, AlertTriangle, TrendingUp, ArrowRight, Zap, Signal, Calendar, A
 import { useSession } from 'next-auth/react';
 import { useHomeSummary } from '@/lib/queries/home';
 import { healthAvg } from '@/lib/types';
-import { fmt, fRelative, displayLabel } from '@/lib/utils';
+import { fmt, fRelative } from '@/lib/utils';
 import { Badge, HealthBar, AgentTag, Skeleton, SkeletonCard, SkeletonText, ErrorState } from '@/components/ui';
 
 import type { Signal as UISignal, Opportunity as UIOpportunity, Meeting as UIMeeting, Activity as UIActivity } from '@/lib/types';

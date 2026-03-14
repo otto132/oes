@@ -100,6 +100,7 @@ Qualify threshold: ${params.autoQualifyThreshold}, Disqualify threshold: ${param
         });
 
         const qual = response.parsed_output;
+        if (!qual) throw new Error('No parsed output from AI');
         const avgScore = (qual.scores.fit + qual.scores.intent + qual.scores.urgency + qual.scores.access + qual.scores.commercial) / 5;
         void avgScore; // used for potential future threshold checks
 

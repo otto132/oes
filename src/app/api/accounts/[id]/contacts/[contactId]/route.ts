@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
+import { Prisma } from '@prisma/client';
 import { db } from '@/lib/db';
 import { auth } from '@/lib/auth';
 import { requireRole } from '@/lib/rbac';
@@ -87,8 +88,8 @@ export async function DELETE(_req: NextRequest, { params }: RouteCtx) {
       phone: null,
       title: '',
       linkedinUrl: null,
-      linkedinData: null,
-      personalProfile: null,
+      linkedinData: Prisma.DbNull,
+      personalProfile: Prisma.DbNull,
     },
   });
 

@@ -4,7 +4,7 @@ import { use, useState } from 'react';
 import Link from 'next/link';
 import {
   Calendar, Clock, Users, CheckCircle2, ArrowLeft,
-  FileText, TrendingUp, AlertTriangle,
+  FileText, TrendingUp,
 } from 'lucide-react';
 import { useMeetingDetail, useUpdateMeeting, useLogOutcome } from '@/lib/queries/meetings';
 import { Badge, FIUACBars, StageBadge, EmptyState, Skeleton, SkeletonText } from '@/components/ui';

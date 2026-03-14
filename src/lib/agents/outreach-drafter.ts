@@ -91,6 +91,7 @@ Generate the outreach email with two subject line variants.`;
         });
 
         const draft = response.parsed_output;
+        if (!draft) throw new Error('No parsed output from AI');
 
         items.push({
           type: 'outreach_draft',

@@ -99,7 +99,7 @@ export const signalHunterAgent: Agent = {
           messages: [{ role: 'user', content: userPrompt }],
         });
 
-        for (const score of response.parsed_output.scores) {
+        for (const score of response.parsed_output!.scores) {
           if (score.signalIndex >= candidates.length) continue;
           if (score.relevance < dismissBelow) continue;
 

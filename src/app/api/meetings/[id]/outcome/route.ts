@@ -30,6 +30,7 @@ export async function POST(
       source: 'Meeting Outcome',
       detail: { startsWith: `[meeting:${id}]` },
     },
+    include: { author: true },
   });
   if (existing) {
     return NextResponse.json({

@@ -1,3 +1,4 @@
+import { Prisma } from '@prisma/client';
 import { db as prisma } from '@/lib/db';
 import { zodOutputFormat } from '@anthropic-ai/sdk/helpers/zod';
 import { getAnthropicClient, MODEL_SONNET } from './ai';
@@ -73,7 +74,7 @@ ${queueItems.map((q) => `- ${q.type}: ${q.title} — ${q.status} (${q.createdAt.
     data: {
       opportunityId,
       outcome,
-      analysis: response.parsed_output as Record<string, unknown>,
+      analysis: response.parsed_output as Prisma.InputJsonValue,
     },
   });
 }
