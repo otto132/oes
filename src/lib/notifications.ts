@@ -56,7 +56,7 @@ export async function notifyUsers(
   params: Omit<CreateNotificationParams, 'userId' | 'actorId'>,
 ): Promise<void> {
   const targets = actorId ? userIds.filter((id) => id !== actorId) : userIds;
-  await Promise.all(
+  await Promise.allSettled(
     targets.map((userId) =>
       createNotification(db, { ...params, userId, actorId }),
     ),
