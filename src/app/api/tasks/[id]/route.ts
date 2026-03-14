@@ -4,6 +4,7 @@ import { auth } from '@/lib/auth';
 import { adaptTask } from '@/lib/adapters';
 import { patchTaskSchema } from '@/lib/schemas/tasks';
 import { unauthorized, notFound, zodError } from '@/lib/api-errors';
+import { notifyUsers } from '@/lib/notifications';
 
 const TASK_INCLUDE = {
   owner: true,
@@ -48,6 +49,17 @@ export async function PATCH(
     data,
     include: TASK_INCLUDE,
   });
+
+  // Notify new assignees if assigneeIds changed
+  if (body.assigneeIds !== undefined) {
+    await notifyUsers(db, body.assigneeIds, session.user.id, {
+      type: 'TASK_ASSIGNED',
+      title: 'Task assigned to you',
+      message: updated.title.slice(0, 100),
+      entityType: 'Task',
+      entityId: id,
+    });
+  }
 
   return NextResponse.json({ data: adaptTask(updated as any) });
 }
