@@ -35,6 +35,19 @@ export async function runRetentionCleanup() {
     'archived emails',
   );
 
+  // ── Auto-dismiss stale new signals (>90 days) ──────────────
+  const staleSignalCutoff = new Date(now.getTime() - 90 * 864e5);
+  const staleSignals = await db.signal.updateMany({
+    where: {
+      status: 'new_signal',
+      detectedAt: { lt: staleSignalCutoff },
+    },
+    data: { status: 'dismissed' },
+  });
+  if (staleSignals.count > 0) {
+    logger.info(`Auto-dismissed ${staleSignals.count} stale signals (>90 days)`);
+  }
+
   const dismissedSignals = await deleteStale(
     db.signal,
     { status: 'dismissed', createdAt: { lt: new Date(now.getTime() - 180 * 864e5) } },
