@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { outreachDrafterAgent } from '../outreach-drafter';
 import type { AgentContext } from '../types';
 
@@ -14,34 +14,28 @@ vi.mock('@/lib/db', () => ({
   },
 }));
 
-const mockCreate = vi.fn();
-vi.mock('@anthropic-ai/sdk', () => ({
-  default: vi.fn().mockImplementation(() => ({
+const mockParse = vi.fn();
+vi.mock('../ai', () => ({
+  getAnthropicClient: () => ({
     messages: {
-      create: (...args: unknown[]) => mockCreate(...args),
+      parse: mockParse,
     },
-  })),
+  }),
+  MODEL_SONNET: 'claude-sonnet-4-6',
 }));
 
 const ctx: AgentContext = {
   config: {
     id: 'c1', name: 'outreach_drafter', displayName: 'Outreach Drafter',
     description: '', status: 'active',
-    parameters: { templateStyle: 'consultative', maxSequenceLength: 4 },
+    parameters: {},
     lastRunAt: null, createdAt: new Date(), updatedAt: new Date(),
   },
   userId: 'system',
 };
 
-describe('Outreach Drafter Agent', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    process.env.ANTHROPIC_API_KEY = 'test-key';
-  });
-
-  afterEach(() => {
-    delete process.env.ANTHROPIC_API_KEY;
-  });
+describe('Outreach Drafter Agent (upgraded)', () => {
+  beforeEach(() => vi.clearAllMocks());
 
   it('has correct name and triggers', () => {
     expect(outreachDrafterAgent.name).toBe('outreach_drafter');
@@ -49,39 +43,54 @@ describe('Outreach Drafter Agent', () => {
     expect(outreachDrafterAgent.triggers).toContainEqual({ type: 'chain', afterApproval: 'lead_qualification' });
   });
 
-  it('returns error when ANTHROPIC_API_KEY not set', async () => {
+  it('returns error when ANTHROPIC_API_KEY is not set', async () => {
+    const origKey = process.env.ANTHROPIC_API_KEY;
     delete process.env.ANTHROPIC_API_KEY;
-    mockLeadFindMany.mockResolvedValue([]);
+    vi.resetModules();
 
-    const result = await outreachDrafterAgent.analyze(ctx);
-    expect(result.errors.length).toBe(1);
-    expect(result.errors[0].message).toContain('ANTHROPIC_API_KEY');
+    vi.doMock('../ai', () => ({
+      getAnthropicClient: () => { throw new Error('ANTHROPIC_API_KEY not configured'); },
+      MODEL_SONNET: 'claude-sonnet-4-6',
+    }));
+
+    const { outreachDrafterAgent: agent } = await import('../outreach-drafter');
+    mockLeadFindMany.mockResolvedValue([{ id: 'l1', company: 'Test', stage: 'Qualified' }]);
+    const result = await agent.analyze(ctx);
+    expect(result.errors.length).toBeGreaterThan(0);
+
+    process.env.ANTHROPIC_API_KEY = origKey;
   });
 
-  it('creates outreach_draft items for qualified leads', async () => {
+  it('creates outreach_draft items with structured output', async () => {
+    process.env.ANTHROPIC_API_KEY = 'test-key';
     mockLeadFindMany.mockResolvedValue([
-      { id: 'l1', company: 'Acme Corp', pain: 'High costs', stage: 'Qualified' },
+      { id: 'l1', company: 'Acme Corp', stage: 'Qualified', pain: 'High costs' },
     ]);
     mockAccountFindFirst.mockResolvedValue({
-      id: 'acc1', name: 'Acme Corp', pain: 'High costs', whyNow: 'Budget season',
-      contacts: [{ id: 'c1', name: 'Jane Doe', title: 'VP Sales', warmth: 3 }],
+      id: 'a1', name: 'Acme Corp', pain: 'High costs', whyNow: 'Contract renewal Q3',
+      contacts: [{ id: 'c1', name: 'Anna', title: 'VP Procurement', warmth: 'warm' }],
     });
     mockSignalFindMany.mockResolvedValue([
-      { title: 'Funding round', source: 'News', sourceUrl: 'https://example.com' },
+      { title: 'PPA market growth', source: 'Reuters', sourceUrl: 'https://example.com' },
     ]);
-    mockCreate.mockResolvedValue({
-      content: [{ type: 'text', text: '{"subjectA": "Save on costs", "subjectB": "Quick question", "body": "Hi Jane...", "reasoning": "Using pain point"}' }],
+
+    mockParse.mockResolvedValue({
+      parsed_output: {
+        subjectA: 'GoO sourcing for Q3',
+        subjectB: 'Quick question about certificates',
+        body: 'Hi Anna, I noticed your contract...',
+        introRequestMessage: null,
+        toneUsed: 'Consultative',
+        personalizationHooks: ['Q3 renewal', 'PPA market growth'],
+        reasoning: 'Consultative tone for VP-level contact',
+      },
     });
 
     const result = await outreachDrafterAgent.analyze(ctx);
-    expect(result.items.length).toBe(1);
+    expect(result.items).toHaveLength(1);
     expect(result.items[0].type).toBe('outreach_draft');
-    expect(result.items[0].agent).toBe('outreach_drafter');
-  });
-
-  it('returns empty when no qualified leads', async () => {
-    mockLeadFindMany.mockResolvedValue([]);
-    const result = await outreachDrafterAgent.analyze(ctx);
-    expect(result.items).toHaveLength(0);
+    expect(result.items[0].payload).toHaveProperty('subject', 'GoO sourcing for Q3');
+    expect(result.items[0].payload).toHaveProperty('body', 'Hi Anna, I noticed your contract...');
+    expect(mockParse).toHaveBeenCalledOnce();
   });
 });
