@@ -28,6 +28,7 @@ vi.mock('@/lib/auth', () => ({
 }));
 
 vi.mock('@/lib/db', () => ({ db: mockDb }));
+vi.mock('@/lib/scoped-db', () => ({ scopedDb: () => mockDb, ScopedDb: {} }));
 
 vi.mock('@/lib/agents/chain', () => ({
   handleApproval: vi.fn().mockResolvedValue(undefined),

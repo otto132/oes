@@ -13,6 +13,10 @@ const { mockDb, mockRefresh } = vi.hoisted(() => {
 
 vi.mock('@/lib/db', () => ({ db: mockDb }));
 vi.mock('../microsoft-graph', () => ({ refreshAccessToken: mockRefresh }));
+vi.mock('@/lib/crypto', () => ({
+  decrypt: (v: string) => v,
+  encrypt: (v: string) => `encrypted:${v}`,
+}));
 
 import { runSync } from '../run-sync';
 
