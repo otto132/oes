@@ -178,6 +178,6 @@ describe('POST /api/signals', () => {
     const json = await res.json();
 
     expect(res.status).toBe(401);
-    expect(json.error).toEqual({ code: 'UNAUTHORIZED', message: 'Unauthorized' });
+    expect(json.error).toMatchObject({ code: 'UNAUTHORIZED', message: 'Unauthorized' });
   });
 });
