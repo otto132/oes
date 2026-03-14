@@ -13,6 +13,7 @@ import { RotateCw } from 'lucide-react';
 import { SearchInput } from '@/components/ui/SearchInput';
 import { api } from '@/lib/api-client';
 import { UserMentionInput } from '@/components/ui/UserMentionInput';
+import { UserPicker } from '@/components/ui/UserPicker';
 
 function CommentInput({ taskId, teamMembers }: { taskId: string; teamMembers: any[] }) {
   const [text, setText] = useState('');
@@ -458,24 +459,32 @@ function TasksPageInner() {
               className="px-2.5 py-1.5 text-[12px] rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] placeholder:text-[var(--muted)] focus:outline-none focus:border-brand/40 resize-y"
             />
           </label>
-          <label className="flex flex-col gap-1">
+          <div className="flex flex-col gap-1">
             <span className="text-[10px] font-semibold uppercase tracking-wide text-muted">Assignees</span>
-            <div className="flex flex-col gap-1 max-h-[120px] overflow-y-auto">
-              {teamMembers.map((m: any) => (
-                <label key={m.id} className="flex items-center gap-2 px-2 py-1 rounded hover:bg-[var(--hover)] cursor-pointer text-[12px]">
-                  <input
-                    type="checkbox"
-                    defaultChecked={state.assigneeIds.includes(m.id)}
-                    onChange={e => {
-                      if (e.target.checked) state.assigneeIds = [...state.assigneeIds, m.id];
-                      else state.assigneeIds = state.assigneeIds.filter((id: string) => id !== m.id);
-                    }}
-                  />
-                  {m.name}
-                </label>
-              ))}
+            <div className="flex items-center gap-1 flex-wrap">
+              {state.assigneeIds.map((aid: string) => {
+                const u = teamMembers.find((m: any) => m.id === aid);
+                if (!u) return null;
+                return (
+                  <div key={aid} className="flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-[var(--surface)] border border-[var(--border)] text-[11px]">
+                    <Avatar initials={u.initials} color={u.color} size="xs" />
+                    <span>{u.name}</span>
+                    <button
+                      className="text-muted hover:text-danger text-[10px]"
+                      onClick={() => { state.assigneeIds = state.assigneeIds.filter((id: string) => id !== aid); openEditTaskDrawer({ ...t, assignees: state.assigneeIds.map((id: string) => teamMembers.find((m: any) => m.id === id)).filter(Boolean) } as any); }}
+                    >
+                      ✕
+                    </button>
+                  </div>
+                );
+              })}
+              <AssignButton
+                teamMembers={teamMembers}
+                selectedIds={state.assigneeIds}
+                onSelect={(u: any) => { state.assigneeIds = [...state.assigneeIds, u.id]; openEditTaskDrawer({ ...t, assignees: state.assigneeIds.map((id: string) => teamMembers.find((m: any) => m.id === id)).filter(Boolean) } as any); }}
+              />
             </div>
-          </label>
+          </div>
           <label className="flex flex-col gap-1">
             <span className="text-[10px] font-semibold uppercase tracking-wide text-muted">Reviewer</span>
             <select
@@ -609,6 +618,52 @@ function TasksPageInner() {
     });
   }
 
+  function AssignButton({ teamMembers: members, selectedIds, onSelect }: { teamMembers: any[]; selectedIds: string[]; onSelect: (u: any) => void }) {
+    const [open, setOpen] = useState(false);
+    return (
+      <div className="relative">
+        <button
+          className="w-6 h-6 rounded-full bg-[var(--surface)] border border-dashed border-[var(--border)] flex items-center justify-center text-[12px] text-muted hover:border-brand hover:text-brand transition-colors"
+          onClick={() => setOpen(true)}
+        >+</button>
+        {open && (
+          <UserPicker
+            users={members}
+            selectedIds={selectedIds}
+            onSelect={(u) => { onSelect(u); setOpen(false); }}
+            onClose={() => setOpen(false)}
+            className="top-full mt-1"
+          />
+        )}
+      </div>
+    );
+  }
+
+  function QuickAssign({ taskId, currentAssigneeIds, teamMembers: members }: { taskId: string; currentAssigneeIds: string[]; teamMembers: any[] }) {
+    const [open, setOpen] = useState(false);
+
+    return (
+      <div className="relative" onClick={e => e.stopPropagation()}>
+        <button
+          className="w-5 h-5 rounded-full bg-[var(--surface)] border border-dashed border-[var(--border)] flex items-center justify-center text-[10px] text-muted hover:border-brand hover:text-brand transition-colors ml-1"
+          onClick={() => setOpen(true)}
+        >+</button>
+        {open && (
+          <UserPicker
+            users={members}
+            selectedIds={currentAssigneeIds}
+            onSelect={(u) => {
+              updateTask.mutate({ id: taskId, data: { assigneeIds: [...currentAssigneeIds, u.id] } });
+              setOpen(false);
+            }}
+            onClose={() => setOpen(false)}
+            className="right-0 top-full mt-1"
+          />
+        )}
+      </div>
+    );
+  }
+
   function renderMentionText(text: string, mentions: string[], team: any[]) {
     const mentionNames = mentions
       .map(mid => team.find((u: any) => u.id === mid)?.name || mid)
@@ -680,7 +735,14 @@ function TasksPageInner() {
             <span className="font-mono text-[10.5px] flex-shrink-0 text-sub">{fDate(t.dueDate)}</span>
           );
         })()}
-        <Avatar initials={(t.assignees?.[0] || t.owner).initials} color={(t.assignees?.[0] || t.owner).color} size="xs" />
+        <div className="flex items-center -space-x-1">
+          {(t.assignees || [t.owner]).slice(0, 3).map(u => (
+            <Avatar key={u.id} initials={u.initials} color={u.color} size="xs" />
+          ))}
+          {!done && (
+            <QuickAssign taskId={t.id} currentAssigneeIds={(t.assignees || [t.owner]).map(u => u.id)} teamMembers={teamMembers} />
+          )}
+        </div>
       </div>
     );
   }
