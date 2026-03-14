@@ -58,6 +58,14 @@ const MICROSOFT_CLIENT_ID = getOptionalEnv("MICROSOFT_CLIENT_ID");
 const MICROSOFT_CLIENT_SECRET = getOptionalEnv("MICROSOFT_CLIENT_SECRET");
 const MICROSOFT_REDIRECT_URI = getOptionalEnv("MICROSOFT_REDIRECT_URI");
 
+const tokenEncryptionKey = getOptionalEnv('TOKEN_ENCRYPTION_KEY');
+if (!tokenEncryptionKey && MICROSOFT_CLIENT_ID) {
+  console.warn(
+    '[env] WARNING: TOKEN_ENCRYPTION_KEY not set but MICROSOFT_CLIENT_ID is configured. ' +
+    'OAuth tokens will not be encrypted at rest.'
+  );
+}
+
 // ---------------------------------------------------------------------------
 // Typed export
 // ---------------------------------------------------------------------------
@@ -80,6 +88,7 @@ export const env = {
   MICROSOFT_CLIENT_ID,
   MICROSOFT_CLIENT_SECRET,
   MICROSOFT_REDIRECT_URI,
+  TOKEN_ENCRYPTION_KEY: tokenEncryptionKey,
 } as const;
 
 export type Env = typeof env;
