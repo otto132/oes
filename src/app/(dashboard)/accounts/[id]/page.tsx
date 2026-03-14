@@ -10,9 +10,9 @@ import { useCreateOpportunity } from '@/lib/queries/opportunities';
 import { useLogActivity } from '@/lib/queries/activities';
 import { useStore } from '@/lib/store';
 import { KANBAN_STAGES, STAGE_PROB } from '@/lib/types';
-import type { Account, AccountStatus, Opportunity, Activity, Task, Goal } from '@/lib/types';
+import type { Account, AccountStatus, Opportunity, Activity, Task, Goal, User } from '@/lib/types';
 import { api } from '@/lib/api-client';
-import { fmt, fRelative, fDate, isOverdue, cn, confNum } from '@/lib/utils';
+import { fmt, fRelative, fDate, isOverdue, cn, confNum, displayLabel } from '@/lib/utils';
 import { Badge, ScorePill, FIUACBars, ConfBadge, AgentTag, Avatar, StageBadge, HealthBar, SectionTitle, EmptyState, Skeleton, SkeletonCard, SkeletonText, ErrorState } from '@/components/ui';
 
 const ACT_COLOR: Record<string, string> = { Email: '#5b9cf6', Meeting: '#33a882', Call: '#33a882', Note: '#e8a838' };
@@ -31,7 +31,7 @@ function OpportunityCreateForm({
   const [name, setName] = useState('');
   const [accountId, setAccountId] = useState(prefilledAccountId || '');
   const [accountQuery, setAccountQuery] = useState(prefilledAccountName || '');
-  const [accountResults, setAccountResults] = useState<any[]>([]);
+  const [accountResults, setAccountResults] = useState<Account[]>([]);
   const [showDropdown, setShowDropdown] = useState(false);
   const [selectedAccountName, setSelectedAccountName] = useState(prefilledAccountName || '');
   const [stage, setStage] = useState('Contacted');
@@ -100,7 +100,7 @@ function OpportunityCreateForm({
             />
             {showDropdown && (
               <div className="absolute top-full left-0 right-0 z-10 mt-0.5 rounded-md bg-[var(--elevated)] border border-[var(--border)] shadow-lg max-h-[160px] overflow-y-auto">
-                {accountResults.map((acc: any) => (
+                {accountResults.map((acc: Account) => (
                   <button
                     key={acc.id}
                     type="button"
@@ -134,7 +134,7 @@ function OpportunityCreateForm({
             onChange={e => setStage(e.target.value)}
             className="px-2.5 py-1.5 text-[12px] rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] focus:outline-none focus:border-brand/40"
           >
-            {KANBAN_STAGES.map(s => <option key={s} value={s}>{s}</option>)}
+            {KANBAN_STAGES.map(s => <option key={s} value={s}>{displayLabel(s)}</option>)}
           </select>
           <span className="text-[10px] text-[var(--muted)]">Probability: {prob}%</span>
         </label>
@@ -176,7 +176,7 @@ export default function AccountDetailPage() {
   const { openDrawer, closeDrawer, addToast } = useStore();
   const updateAccount = useUpdateAccount(id);
   const { data: teamData } = useTeamQuery();
-  const teamMembers = (teamData?.data ?? []).filter((u: any) => u.isActive);
+  const teamMembers = (teamData?.data ?? []).filter((u: User & { isActive: boolean }) => u.isActive);
   const { data: session } = useSession();
 
   /* ── Loading skeleton ── */
@@ -254,12 +254,12 @@ export default function AccountDetailPage() {
 
   const a: Account = data.data;
   const accOpps: Opportunity[] = data.opportunities ?? [];
-  const accActs: Activity[] = (data.activities ?? []).sort((x: Activity, y: Activity) => new Date(y.date).getTime() - new Date(x.date).getTime());
+  const accActs: Activity[] = (data.activities ?? []).sort((x: Activity, y: Activity) => new Date(y.createdAt).getTime() - new Date(x.createdAt).getTime());
   const accTasks: Task[] = data.tasks ?? [];
   const accGoals: Goal[] = data.goals ?? [];
-  const openPipe = accOpps.filter(o => !['Closed Won', 'Closed Lost'].includes(o.stage)).reduce((s, o) => s + o.amt, 0);
-  const stale = (Date.now() - new Date(a.lastAct).getTime()) / 864e5 > 14;
-  const conf = confNum(a.aiConf);
+  const openPipe = accOpps.filter(o => !['ClosedWon', 'ClosedLost'].includes(o.stage)).reduce((s, o) => s + o.amount, 0);
+  const stale = (Date.now() - new Date(a.lastActivityAt).getTime()) / 864e5 > 14;
+  const conf = confNum(a.aiConfidence);
 
   function openLogActivityDrawer(preselectedType?: string) {
     const state = { type: preselectedType || 'Note', summary: '', detail: '' };
@@ -452,11 +452,7 @@ export default function AccountDetailPage() {
   }
 
   function openEditContactDrawer(c: { id: string; name: string; title: string; role: string; warmth: string; email: string; phone?: string }) {
-    // Map display role back to enum value for the select
-    const ROLE_DISPLAY_TO_ENUM: Record<string, string> = { 'Economic Buyer': 'EconomicBuyer', 'Technical Buyer': 'TechnicalBuyer' };
-    const roleEnum = ROLE_DISPLAY_TO_ENUM[c.role] ?? c.role;
-
-    const state = { name: c.name, title: c.title, role: roleEnum, warmth: c.warmth, email: c.email, phone: c.phone || '' };
+    const state = { name: c.name, title: c.title, role: c.role, warmth: c.warmth, email: c.email, phone: c.phone || '' };
 
     openDrawer({
       title: 'Edit Contact',
@@ -623,7 +619,7 @@ export default function AccountDetailPage() {
       status: a.status,
       pain: a.pain || '',
       whyNow: a.whyNow || '',
-      moduleFit: (a.fit || []).join(', '),
+      moduleFit: (a.moduleFit || []).join(', '),
       competitors: a.competitors || '',
     };
 
@@ -768,8 +764,6 @@ export default function AccountDetailPage() {
 
   function openNewOppDrawer() {
     const submitRef = { current: () => {} };
-    const DISPLAY_TO_PRISMA: Record<string, string> = { 'Solution Fit': 'SolutionFit', 'Verbal Commit': 'VerbalCommit' };
-
     openDrawer({
       title: 'New Opportunity',
       subtitle: `For ${a.name}`,
@@ -779,9 +773,8 @@ export default function AccountDetailPage() {
           prefilledAccountName={a.name}
           onSubmit={(data) => {
             if (!data.name.trim()) { addToast({ type: 'error', message: 'Name is required' }); return; }
-            const prismaStage = DISPLAY_TO_PRISMA[data.stage] ?? data.stage;
             createOpp.mutate(
-              { name: data.name.trim(), accountId: id, stage: prismaStage, amount: data.amount, closeDate: data.closeDate || undefined },
+              { name: data.name.trim(), accountId: id, stage: data.stage, amount: data.amount, closeDate: data.closeDate || undefined },
               {
                 onSuccess: () => { addToast({ type: 'success', message: `Opportunity created: ${data.name}` }); closeDrawer(); },
                 onError: (err) => addToast({ type: 'error', message: err.message }),
@@ -839,7 +832,7 @@ export default function AccountDetailPage() {
             </div>
             <div className="mt-1"><FIUACBars scores={a.scores} /></div>
             <div className={cn('text-[10.5px] mt-1', stale ? 'text-warn' : 'text-muted')}>
-              {stale && '\u26A0 '}Last: {fRelative(a.lastAct)}
+              {stale && '\u26A0 '}Last: {fRelative(a.lastActivityAt)}
             </div>
           </div>
         </div>
@@ -848,7 +841,7 @@ export default function AccountDetailPage() {
         <div className="flex gap-2 mt-3.5 pt-3 border-t border-[var(--border)] flex-wrap">
           {[
             { l: 'Pipeline', v: fmt(openPipe) },
-            { l: 'Open Opps', v: accOpps.filter(o => !['Closed Won', 'Closed Lost'].includes(o.stage)).length },
+            { l: 'Open Opps', v: accOpps.filter(o => !['ClosedWon', 'ClosedLost'].includes(o.stage)).length },
             { l: 'Contacts', v: a.contacts.length },
             { l: 'Confidence', v: `${Math.round(conf * 100)}%` },
             { l: 'Owner', v: a.owner?.name ?? 'Unassigned' },
@@ -875,7 +868,7 @@ export default function AccountDetailPage() {
               }}
               className="px-2 py-1 text-[11px] rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)]"
             >
-              {teamMembers.map((u: any) => (
+              {teamMembers.map((u: User & { isActive: boolean }) => (
                 <option key={u.id} value={u.id}>{u.name}</option>
               ))}
             </select>
@@ -924,8 +917,8 @@ export default function AccountDetailPage() {
               <div>
                 <SectionTitle>Module Fit</SectionTitle>
                 <div className="flex flex-wrap gap-1">
-                  {(a.fit || []).map(m => <Badge key={m} variant="ok">{m}</Badge>)}
-                  {!a.fit?.length && <span className="text-[12px] text-muted">{'\u2014'}</span>}
+                  {(a.moduleFit || []).map(m => <Badge key={m} variant="ok">{m}</Badge>)}
+                  {!a.moduleFit?.length && <span className="text-[12px] text-muted">{'\u2014'}</span>}
                 </div>
               </div>
               {a.competitors && (
@@ -938,7 +931,7 @@ export default function AccountDetailPage() {
             <div className="mt-2 flex items-center gap-1.5">
               <AgentTag name="Account Enricher" />
               <ConfBadge value={conf} />
-              <span className="text-[10px] text-muted">Last updated {fRelative(a.lastAct)}</span>
+              <span className="text-[10px] text-muted">Last updated {fRelative(a.lastActivityAt)}</span>
             </div>
           </div>
 
@@ -965,7 +958,7 @@ export default function AccountDetailPage() {
                         <button onClick={() => openDeleteContactDrawer(c)} className="p-0.5 rounded hover:bg-[var(--hover)] text-[var(--muted)] hover:text-danger transition-colors" title="Delete contact"><Trash2 size={12} /></button>
                       </div>
                       <div className="flex flex-col items-end gap-0.5">
-                        <Badge variant={c.role === 'Champion' ? 'ok' : c.role === 'Economic Buyer' ? 'info' : 'neutral'} className="!text-[8.5px]">{c.role}</Badge>
+                        <Badge variant={c.role === 'Champion' ? 'ok' : c.role === 'EconomicBuyer' ? 'info' : 'neutral'} className="!text-[8.5px]">{displayLabel(c.role)}</Badge>
                         <span className={cn('text-[9px]', c.warmth === 'Strong' ? 'text-brand' : c.warmth === 'Warm' ? 'text-warn' : 'text-info')}>{c.warmth}</span>
                       </div>
                     </div>
@@ -1005,7 +998,7 @@ export default function AccountDetailPage() {
                     <button onClick={() => openEditContactDrawer(c)} className="p-1 rounded hover:bg-[var(--hover)] text-[var(--muted)] hover:text-[var(--text)] transition-colors" title="Edit contact"><Pencil size={14} /></button>
                     <button onClick={() => openDeleteContactDrawer(c)} className="p-1 rounded hover:bg-[var(--hover)] text-[var(--muted)] hover:text-danger transition-colors" title="Delete contact"><Trash2 size={14} /></button>
                   </div>
-                  <Badge variant={c.role === 'Champion' ? 'ok' : c.role === 'Economic Buyer' ? 'info' : 'neutral'}>{c.role}</Badge>
+                  <Badge variant={c.role === 'Champion' ? 'ok' : c.role === 'EconomicBuyer' ? 'info' : 'neutral'}>{displayLabel(c.role)}</Badge>
                   <Badge variant={c.warmth === 'Strong' ? 'ok' : c.warmth === 'Warm' ? 'warn' : 'info'}>{c.warmth}</Badge>
                 </div>
               </div>
@@ -1038,13 +1031,13 @@ export default function AccountDetailPage() {
                     <StageBadge stage={o.stage} />
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="font-mono font-semibold">{fmt(o.amt)}</span>
+                    <span className="font-mono font-semibold">{fmt(o.amount)}</span>
                     <div className="flex items-center gap-2">
                       <HealthBar health={o.health} />
-                      <span className="text-[10.5px] text-sub">Close: {fDate(o.close)}</span>
+                      <span className="text-[10.5px] text-sub">Close: {fDate(o.closeDate)}</span>
                     </div>
                   </div>
-                  {o.next && <div className="text-[10.5px] text-muted mt-1">{'\u2192'} {o.next}</div>}
+                  {o.nextAction && <div className="text-[10.5px] text-muted mt-1">{'\u2192'} {o.nextAction}</div>}
                 </div>
               </Link>
             ))}
@@ -1096,11 +1089,11 @@ export default function AccountDetailPage() {
                       style={{ color: ACT_COLOR[x.type] || '#4f576b' }}
                     >
                       {x.type}
-                      <Badge variant="neutral" className="!text-[8.5px]">{x.src}</Badge>
+                      <Badge variant="neutral" className="!text-[8.5px]">{x.source}</Badge>
                     </div>
-                    <div className="text-[12.5px] font-medium mb-0.5">{x.sum}</div>
+                    <div className="text-[12.5px] font-medium mb-0.5">{x.summary}</div>
                     <div className="text-[11.5px] text-sub leading-relaxed">{x.detail}</div>
-                    <div className="text-[10px] text-muted mt-0.5">{x.who.name} · {fRelative(x.date)}</div>
+                    <div className="text-[10px] text-muted mt-0.5">{x.author.name} · {fRelative(x.createdAt)}</div>
                   </div>
                 ))}
               </div>
@@ -1116,15 +1109,15 @@ export default function AccountDetailPage() {
             <EmptyState icon="\u2611" title="No open tasks" description="Tasks for this account will appear here." />
           ) : (
             accTasks.filter(t => t.status !== 'Done').map(t => {
-              const od = isOverdue(t.due);
+              const od = isOverdue(t.dueDate);
               return (
                 <div key={t.id} className="flex items-center gap-2.5 px-3.5 py-2.5 rounded-lg bg-[var(--elevated)] border border-[var(--border)] hover:border-[var(--border-strong)] transition-colors">
                   <div className={cn('w-3.5 h-3.5 rounded border-[1.5px] flex-shrink-0', od ? 'border-danger' : 'border-[var(--border-strong)]')} />
                   <div className="flex-1 min-w-0">
                     <div className="text-[12.5px] font-medium truncate">{t.title}</div>
                   </div>
-                  <Badge variant={t.pri === 'High' ? 'err' : 'neutral'} className="!text-[9px]">{t.pri}</Badge>
-                  <span className={cn('font-mono text-[10.5px] flex-shrink-0', od ? 'text-danger' : 'text-sub')}>{fDate(t.due)}</span>
+                  <Badge variant={t.priority === 'High' ? 'err' : 'neutral'} className="!text-[9px]">{t.priority}</Badge>
+                  <span className={cn('font-mono text-[10.5px] flex-shrink-0', od ? 'text-danger' : 'text-sub')}>{fDate(t.dueDate)}</span>
                 </div>
               );
             })

@@ -138,15 +138,15 @@ describe('isOverdue', () => {
 describe('weightedValue', () => {
   it('calculates weighted value for known stage', () => {
     // Solution Fit = 50%
-    expect(weightedValue(100_000, 'Solution Fit')).toBe(50_000);
+    expect(weightedValue(100_000, 'SolutionFit')).toBe(50_000);
   });
 
   it('returns 0 for Closed Lost (0%)', () => {
-    expect(weightedValue(200_000, 'Closed Lost')).toBe(0);
+    expect(weightedValue(200_000, 'ClosedLost')).toBe(0);
   });
 
   it('returns full amount for Closed Won (100%)', () => {
-    expect(weightedValue(200_000, 'Closed Won')).toBe(200_000);
+    expect(weightedValue(200_000, 'ClosedWon')).toBe(200_000);
   });
 
   it('returns 0 for unknown stage', () => {
@@ -204,29 +204,29 @@ describe('confLabel', () => {
 
 describe('riskColor', () => {
   it('returns text-brand for healthy deal (avg >= 60)', () => {
-    expect(riskColor({ eng: 80, stake: 70, comp: 60, time: 70 })).toBe('text-brand');
+    expect(riskColor({ healthEngagement: 80, healthStakeholders: 70, healthCompetitive: 60, healthTimeline: 70 })).toBe('text-brand');
   });
 
   it('returns text-warn for medium risk (avg 40-59)', () => {
-    expect(riskColor({ eng: 50, stake: 40, comp: 50, time: 40 })).toBe('text-warn');
+    expect(riskColor({ healthEngagement: 50, healthStakeholders: 40, healthCompetitive: 50, healthTimeline: 40 })).toBe('text-warn');
   });
 
   it('returns text-danger for high risk (avg < 40)', () => {
-    expect(riskColor({ eng: 20, stake: 30, comp: 10, time: 20 })).toBe('text-danger');
+    expect(riskColor({ healthEngagement: 20, healthStakeholders: 30, healthCompetitive: 10, healthTimeline: 20 })).toBe('text-danger');
   });
 });
 
 describe('riskBorderColor', () => {
   it('returns border-brand for healthy deal', () => {
-    expect(riskBorderColor({ eng: 80, stake: 70, comp: 60, time: 70 })).toBe('border-brand');
+    expect(riskBorderColor({ healthEngagement: 80, healthStakeholders: 70, healthCompetitive: 60, healthTimeline: 70 })).toBe('border-brand');
   });
 
   it('returns border-warn for medium risk', () => {
-    expect(riskBorderColor({ eng: 50, stake: 40, comp: 50, time: 40 })).toBe('border-warn');
+    expect(riskBorderColor({ healthEngagement: 50, healthStakeholders: 40, healthCompetitive: 50, healthTimeline: 40 })).toBe('border-warn');
   });
 
   it('returns border-danger for high risk', () => {
-    expect(riskBorderColor({ eng: 20, stake: 30, comp: 10, time: 20 })).toBe('border-danger');
+    expect(riskBorderColor({ healthEngagement: 20, healthStakeholders: 30, healthCompetitive: 10, healthTimeline: 20 })).toBe('border-danger');
   });
 });
 
@@ -279,18 +279,18 @@ describe('confNum', () => {
 
 describe('compositeScore', () => {
   it('calculates weighted composite (25/25/20/15/15)', () => {
-    const s: FIUACScores = { f: 80, i: 60, u: 100, a: 40, c: 20 };
+    const s: FIUACScores = { scoreFit: 80, scoreIntent: 60, scoreUrgency: 100, scoreAccess: 40, scoreCommercial: 20 };
     // 80*0.25 + 60*0.25 + 100*0.20 + 40*0.15 + 20*0.15
     // = 20 + 15 + 20 + 6 + 3 = 64
     expect(compositeScore(s)).toBe(64);
   });
 
   it('returns 0 for all-zero scores', () => {
-    expect(compositeScore({ f: 0, i: 0, u: 0, a: 0, c: 0 })).toBe(0);
+    expect(compositeScore({ scoreFit: 0, scoreIntent: 0, scoreUrgency: 0, scoreAccess: 0, scoreCommercial: 0 })).toBe(0);
   });
 
   it('returns 100 for all-100 scores', () => {
-    expect(compositeScore({ f: 100, i: 100, u: 100, a: 100, c: 100 })).toBe(100);
+    expect(compositeScore({ scoreFit: 100, scoreIntent: 100, scoreUrgency: 100, scoreAccess: 100, scoreCommercial: 100 })).toBe(100);
   });
 });
 
@@ -298,16 +298,16 @@ describe('compositeScore', () => {
 
 describe('healthAvg', () => {
   it('returns average of four health dimensions rounded', () => {
-    expect(healthAvg({ eng: 70, stake: 50, comp: 80, time: 60 })).toBe(65);
+    expect(healthAvg({ healthEngagement: 70, healthStakeholders: 50, healthCompetitive: 80, healthTimeline: 60 })).toBe(65);
   });
 
   it('rounds to nearest integer', () => {
     // (71 + 50 + 80 + 60) / 4 = 65.25 → 65
-    expect(healthAvg({ eng: 71, stake: 50, comp: 80, time: 60 })).toBe(65);
+    expect(healthAvg({ healthEngagement: 71, healthStakeholders: 50, healthCompetitive: 80, healthTimeline: 60 })).toBe(65);
   });
 
   it('handles all zeros', () => {
-    expect(healthAvg({ eng: 0, stake: 0, comp: 0, time: 0 })).toBe(0);
+    expect(healthAvg({ healthEngagement: 0, healthStakeholders: 0, healthCompetitive: 0, healthTimeline: 0 })).toBe(0);
   });
 });
 
@@ -315,14 +315,14 @@ describe('healthAvg', () => {
 
 describe('riskLevel', () => {
   it('returns "low" for avg >= 60', () => {
-    expect(riskLevel({ eng: 80, stake: 70, comp: 60, time: 70 })).toBe('low');
+    expect(riskLevel({ healthEngagement: 80, healthStakeholders: 70, healthCompetitive: 60, healthTimeline: 70 })).toBe('low');
   });
 
   it('returns "medium" for avg 40-59', () => {
-    expect(riskLevel({ eng: 50, stake: 40, comp: 50, time: 40 })).toBe('medium');
+    expect(riskLevel({ healthEngagement: 50, healthStakeholders: 40, healthCompetitive: 50, healthTimeline: 40 })).toBe('medium');
   });
 
   it('returns "high" for avg < 40', () => {
-    expect(riskLevel({ eng: 20, stake: 30, comp: 10, time: 20 })).toBe('high');
+    expect(riskLevel({ healthEngagement: 20, healthStakeholders: 30, healthCompetitive: 10, healthTimeline: 20 })).toBe('high');
   });
 });

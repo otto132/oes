@@ -34,7 +34,7 @@ describe('api-errors helpers', () => {
 
   it('zodError returns 400 with VALIDATION_ERROR and field details', async () => {
     const err = new ZodError([
-      { code: 'too_small', minimum: 1, type: 'string', inclusive: true, exact: false, message: 'Required', path: ['company'] },
+      { code: 'too_small', minimum: 1, type: 'string', inclusive: true, exact: false, message: 'Required', path: ['company'] } as any,
     ]);
     const res = zodError(err);
     expect(res.status).toBe(400);

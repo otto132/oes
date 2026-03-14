@@ -202,21 +202,21 @@ function AccountsPageInner() {
           </thead>
           <tbody>
             {sorted.map(a => {
-              const stale = (Date.now() - new Date(a.lastAct).getTime()) / 864e5 > 14;
+              const stale = (Date.now() - new Date(a.lastActivityAt).getTime()) / 864e5 > 14;
               return (
                 <tr key={a.id} className="hover:bg-[var(--hover)] cursor-pointer transition-colors" onClick={() => window.location.href = `/accounts/${a.id}`}>
                   <td className="px-3.5 py-2.5 border-b border-[var(--border)]">
                     <div className="flex items-center gap-2">
                       <div className="w-[26px] h-[26px] rounded-md bg-brand/[.06] border border-brand/40 text-brand flex items-center justify-center text-[10px] font-semibold flex-shrink-0">{a.name[0]}</div>
-                      <div><div className="font-medium text-[12.5px]">{a.name}</div><div className="text-[10px] text-[var(--muted)]">{a.cc} · {a.region}</div></div>
+                      <div><div className="font-medium text-[12.5px]">{a.name}</div><div className="text-[10px] text-[var(--muted)]">{a.countryCode} · {a.region}</div></div>
                     </div>
                   </td>
                   <td className="px-3.5 py-2.5 border-b border-[var(--border)]"><Badge className="!text-[9.5px]">{a.type}</Badge></td>
                   <td className="px-3.5 py-2.5 border-b border-[var(--border)]"><ScorePill scores={a.scores} /></td>
                   <td className="px-3.5 py-2.5 border-b border-[var(--border)]"><FIUACBars scores={a.scores} /></td>
-                  <td className="px-3.5 py-2.5 border-b border-[var(--border)]"><span className="font-mono font-semibold text-[12px]">{a.pipe > 0 ? fmt(a.pipe) : '\u2014'}</span></td>
-                  <td className="px-3.5 py-2.5 border-b border-[var(--border)]"><span className={cn('text-[11.5px]', stale ? 'text-warn' : 'text-[var(--sub)]')}>{fRelative(a.lastAct)}</span></td>
-                  <td className="px-3.5 py-2.5 border-b border-[var(--border)]"><Avatar initials={a.owner.ini} color={a.owner.ac} size="xs" /></td>
+                  <td className="px-3.5 py-2.5 border-b border-[var(--border)]"><span className="font-mono font-semibold text-[12px]">{a.pipelineValue > 0 ? fmt(a.pipelineValue) : '\u2014'}</span></td>
+                  <td className="px-3.5 py-2.5 border-b border-[var(--border)]"><span className={cn('text-[11.5px]', stale ? 'text-warn' : 'text-[var(--sub)]')}>{fRelative(a.lastActivityAt)}</span></td>
+                  <td className="px-3.5 py-2.5 border-b border-[var(--border)]"><Avatar initials={a.owner.initials} color={a.owner.color} size="xs" /></td>
                   <td className="px-3.5 py-2.5 border-b border-[var(--border)] text-[var(--muted)] text-[11px]">{'\u2192'}</td>
                 </tr>
               );
@@ -235,8 +235,8 @@ function AccountsPageInner() {
               </div>
               <div className="flex items-center gap-1.5 mb-1">
                 <Badge className="!text-[9px]">{a.type}</Badge>
-                <span className="text-[10px] text-[var(--muted)]">{a.cc} · {a.region}</span>
-                {a.pipe > 0 && <span className="font-mono font-semibold text-[10px]">{fmt(a.pipe)}</span>}
+                <span className="text-[10px] text-[var(--muted)]">{a.countryCode} · {a.region}</span>
+                {a.pipelineValue > 0 && <span className="font-mono font-semibold text-[10px]">{fmt(a.pipelineValue)}</span>}
               </div>
               <FIUACBars scores={a.scores} />
             </div>

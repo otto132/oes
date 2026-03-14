@@ -1,15 +1,15 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
-import { useOpportunitiesQuery, useCreateOpportunity } from '@/lib/queries/opportunities';
+import { useOpportunitiesQuery, useCreateOpportunity, useMoveStage } from '@/lib/queries/opportunities';
 import { Avatar, HealthBar, StageBadge, EmptyState, Skeleton, SkeletonCard, ErrorState } from '@/components/ui';
-import { fmt, fDate, isOverdue, cn } from '@/lib/utils';
-import { KANBAN_STAGES, STAGE_PROB, healthAvg } from '@/lib/types';
+import { fmt, fDate, isOverdue, cn, displayLabel } from '@/lib/utils';
+import { KANBAN_STAGES, STAGE_COLOR, STAGE_PROB, healthAvg } from '@/lib/types';
 import { useStore } from '@/lib/store';
 import { api } from '@/lib/api-client';
 import type { Opportunity } from '@/lib/types';
 
-function riskHex(h: { eng: number; stake: number; comp: number; time: number }): string {
+function riskHex(h: { healthEngagement: number; healthStakeholders: number; healthCompetitive: number; healthTimeline: number }): string {
   const a = healthAvg(h);
   return a >= 60 ? '#33a882' : a >= 40 ? '#e8a838' : '#e05c5c';
 }
@@ -159,7 +159,7 @@ function OpportunityCreateForm({
             onChange={e => setStage(e.target.value)}
             className="px-2.5 py-1.5 text-[12px] rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] focus:outline-none focus:border-brand/40"
           >
-            {KANBAN_STAGES.map(s => <option key={s} value={s}>{s}</option>)}
+            {KANBAN_STAGES.map(s => <option key={s} value={s}>{displayLabel(s)}</option>)}
           </select>
           <span className="text-[10px] text-[var(--muted)]">Probability: {prob}%</span>
         </label>
@@ -191,17 +191,15 @@ function OpportunityCreateForm({
 export default function PipelinePage() {
   const { data, isLoading, error, refetch } = useOpportunitiesQuery();
   const createOpp = useCreateOpportunity();
+  const moveStage = useMoveStage();
   const { openDrawer, closeDrawer, addToast } = useStore();
   const [view, setView] = useState<'kanban' | 'table'>('kanban');
+  const [dragId, setDragId] = useState<string | null>(null);
+  const [dropStage, setDropStage] = useState<string | null>(null);
+  const dragCounter = useRef<Record<string, number>>({});
 
   function openNewOppDrawer(prefilledAccountId?: string, prefilledAccountName?: string) {
     const submitRef = { current: () => {} };
-
-    // Map display stage names to Prisma enum values for the API
-    const DISPLAY_TO_PRISMA: Record<string, string> = {
-      'Solution Fit': 'SolutionFit',
-      'Verbal Commit': 'VerbalCommit',
-    };
 
     openDrawer({
       title: 'New Opportunity',
@@ -213,9 +211,8 @@ export default function PipelinePage() {
           onSubmit={(data) => {
             if (!data.name.trim()) { addToast({ type: 'error', message: 'Name is required' }); return; }
             if (!data.accountId) { addToast({ type: 'error', message: 'Account is required' }); return; }
-            const prismaStage = DISPLAY_TO_PRISMA[data.stage] ?? data.stage;
             createOpp.mutate(
-              { name: data.name.trim(), accountId: data.accountId, stage: prismaStage, amount: data.amount, closeDate: data.closeDate || undefined },
+              { name: data.name.trim(), accountId: data.accountId, stage: data.stage, amount: data.amount, closeDate: data.closeDate || undefined },
               {
                 onSuccess: () => { addToast({ type: 'success', message: `Opportunity created: ${data.name}` }); closeDrawer(); },
                 onError: (err) => addToast({ type: 'error', message: err.message }),
@@ -281,35 +278,105 @@ export default function PipelinePage() {
         </div>
       </div>
 
-      {/* Desktop kanban */}
+      {/* Desktop kanban with drag & drop */}
       {view === 'kanban' && (
         <div className="hidden md:flex gap-2.5 overflow-x-auto pb-4">
           {KANBAN_STAGES.map(stage => {
             const cards = open.filter(o => o.stage === stage);
-            const stageAmt = cards.reduce((s, o) => s + o.amt, 0);
+            const stageAmt = cards.reduce((s, o) => s + o.amount, 0);
+            const isOver = dropStage === stage;
             return (
-              <div key={stage} className="flex-shrink-0 w-[230px]">
+              <div
+                key={stage}
+                className={cn(
+                  'flex-shrink-0 w-[230px] rounded-lg transition-colors',
+                  isOver && 'bg-brand/5 ring-1 ring-brand/20'
+                )}
+                onDragOver={e => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; }}
+                onDragEnter={() => {
+                  dragCounter.current[stage] = (dragCounter.current[stage] || 0) + 1;
+                  setDropStage(stage);
+                }}
+                onDragLeave={() => {
+                  dragCounter.current[stage] = (dragCounter.current[stage] || 0) - 1;
+                  if (dragCounter.current[stage] <= 0) {
+                    dragCounter.current[stage] = 0;
+                    setDropStage(prev => prev === stage ? null : prev);
+                  }
+                }}
+                onDrop={e => {
+                  e.preventDefault();
+                  const id = e.dataTransfer.getData('text/plain');
+                  dragCounter.current = {};
+                  setDropStage(null);
+                  setDragId(null);
+                  if (id) {
+                    const opp = open.find(o => o.id === id);
+                    if (opp && opp.stage !== stage) {
+                      moveStage.mutate(
+                        { id, stage },
+                        { onError: (err) => addToast({ type: 'error', message: err.message }) }
+                      );
+                    }
+                  }
+                }}
+              >
                 <div className="flex items-center justify-between mb-1.5 px-1">
                   <StageBadge stage={stage} />
                   {stageAmt > 0 && <span className="font-mono text-[9px] uppercase text-[var(--muted)]">{fmt(stageAmt)}</span>}
                 </div>
                 <div className="min-h-[50px]">
                   {cards.length === 0 ? (
-                    <div className="h-[50px] rounded-lg border border-dashed border-[var(--border)] flex items-center justify-center text-[10px] text-[var(--muted)]">No items</div>
-                  ) : cards.map(o => (
-                    <Link key={o.id} href={`/pipeline/${o.id}`}>
-                      <div className="rounded-lg p-3 mb-1.5 bg-[var(--elevated)] border border-[var(--border)] cursor-pointer hover:-translate-y-px hover:border-[var(--border-strong)] transition-all" style={{ borderLeft: `2px solid ${riskHex(o.health)}` }}>
-                        <div className="text-[10px] text-[var(--muted)] mb-0.5">{o.accName}</div>
-                        <div className="text-[11.5px] font-medium leading-tight mb-2 text-[var(--text)]">{o.name}</div>
-                        <div className="flex items-center justify-between mb-1">
-                          <span className="font-mono font-semibold text-[11px] text-[var(--text)]">{fmt(o.amt)}</span>
-                          <HealthBar health={o.health} />
+                    <div className={cn(
+                      'h-[50px] rounded-lg border border-dashed flex items-center justify-center text-[10px] text-[var(--muted)] transition-colors',
+                      isOver ? 'border-brand/40 bg-brand/5' : 'border-[var(--border)]'
+                    )}>
+                      {isOver ? 'Drop here' : 'No items'}
+                    </div>
+                  ) : cards.map(o => {
+                    const stageIdx = KANBAN_STAGES.indexOf(o.stage);
+                    const progress = ((stageIdx + 1) / KANBAN_STAGES.length) * 100;
+                    const stageColor = STAGE_COLOR[o.stage] || '#3ecf8e';
+                    return (
+                    <Link key={o.id} href={`/pipeline/${o.id}`} draggable={false}>
+                      <div
+                        draggable
+                        onDragStart={e => {
+                          e.dataTransfer.setData('text/plain', o.id);
+                          e.dataTransfer.effectAllowed = 'move';
+                          requestAnimationFrame(() => setDragId(o.id));
+                        }}
+                        onDragEnd={() => {
+                          setDragId(null);
+                          setDropStage(null);
+                          dragCounter.current = {};
+                        }}
+                        className={cn(
+                          'stagger-item rounded-lg mb-1.5 bg-[var(--elevated)] border border-[var(--border)] cursor-grab hover:-translate-y-px hover:border-[var(--border-strong)] transition-all overflow-hidden',
+                          dragId === o.id && 'opacity-40 scale-[0.97] shadow-lg rotate-[1deg]'
+                        )}
+                        style={{ borderLeft: `2px solid ${riskHex(o.health)}` }}
+                      >
+                        {/* Stage progress bar */}
+                        <div className="h-[2px] bg-[var(--surface)]">
+                          <div className="h-full rounded-r-full transition-all" style={{ width: `${progress}%`, background: stageColor }} />
                         </div>
-                        <Avatar initials={o.owner.ini} color={o.owner.ac} size="xs" />
-                        {o.next && <div className="text-[9.5px] text-[var(--muted)] mt-1.5 leading-tight line-clamp-2">→ {o.next}</div>}
+                        <div className="p-3">
+                          <div className="text-[10px] text-[var(--muted)] mb-0.5">{o.accountName}</div>
+                          <div className="text-[11.5px] font-medium leading-tight mb-2 text-[var(--text)]">{o.name}</div>
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="font-mono font-semibold text-[11px] text-[var(--text)]">{fmt(o.amount)}</span>
+                            <HealthBar health={o.health} />
+                          </div>
+                          <div className="flex items-center justify-between">
+                            <Avatar initials={o.owner.initials} color={o.owner.color} size="xs" />
+                            <span className="text-[9px] text-[var(--muted)] bg-[var(--surface)] px-1.5 py-0.5 rounded">{STAGE_PROB[o.stage]}%</span>
+                          </div>
+                          {o.nextAction && <div className="text-[9.5px] text-[var(--muted)] mt-1.5 leading-tight line-clamp-2">→ {o.nextAction}</div>}
+                        </div>
                       </div>
                     </Link>
-                  ))}
+                  );})}
                 </div>
               </div>
             );
@@ -329,12 +396,12 @@ export default function PipelinePage() {
             <tbody>
               {open.map(o => (
                 <tr key={o.id} className="hover:bg-[var(--hover)] cursor-pointer transition-colors" onClick={() => window.location.href = `/pipeline/${o.id}`}>
-                  <td className="px-3.5 py-2.5 border-b border-[var(--border)]"><div className="font-medium text-[12.5px] text-[var(--text)]">{o.name}</div><div className="text-[10px] text-[var(--muted)]">{o.accName}</div></td>
+                  <td className="px-3.5 py-2.5 border-b border-[var(--border)]"><div className="font-medium text-[12.5px] text-[var(--text)]">{o.name}</div><div className="text-[10px] text-[var(--muted)]">{o.accountName}</div></td>
                   <td className="px-3.5 py-2.5 border-b border-[var(--border)]"><StageBadge stage={o.stage} /></td>
-                  <td className="px-3.5 py-2.5 border-b border-[var(--border)] font-mono font-semibold text-[12px] text-[var(--text)]">{fmt(o.amt)}</td>
+                  <td className="px-3.5 py-2.5 border-b border-[var(--border)] font-mono font-semibold text-[12px] text-[var(--text)]">{fmt(o.amount)}</td>
                   <td className="px-3.5 py-2.5 border-b border-[var(--border)]"><div className="flex items-center gap-1.5"><HealthBar health={o.health} /><span className="text-[10px]" style={{ color: riskHex(o.health) }}>{healthAvg(o.health)}</span></div></td>
-                  <td className="px-3.5 py-2.5 border-b border-[var(--border)]"><span className={`font-mono text-[11px] ${isOverdue(o.close) ? 'text-danger' : 'text-[var(--sub)]'}`}>{fDate(o.close)}</span></td>
-                  <td className="px-3.5 py-2.5 border-b border-[var(--border)]"><Avatar initials={o.owner.ini} color={o.owner.ac} size="xs" /></td>
+                  <td className="px-3.5 py-2.5 border-b border-[var(--border)]"><span className={`font-mono text-[11px] ${isOverdue(o.closeDate) ? 'text-danger' : 'text-[var(--sub)]'}`}>{fDate(o.closeDate)}</span></td>
+                  <td className="px-3.5 py-2.5 border-b border-[var(--border)]"><Avatar initials={o.owner.initials} color={o.owner.color} size="xs" /></td>
                 </tr>
               ))}
             </tbody>
@@ -351,14 +418,14 @@ export default function PipelinePage() {
             <div className="rounded-lg p-3 bg-[var(--elevated)] border border-[var(--border)] cursor-pointer hover:bg-[var(--hover)] transition-colors" style={{ borderLeft: `3px solid ${riskHex(o.health)}` }}>
               <div className="flex items-center justify-between mb-1">
                 <span className="text-[12.5px] font-medium text-[var(--text)]">{o.name}</span>
-                <span className="font-mono font-semibold text-[11px] text-[var(--text)]">{fmt(o.amt)}</span>
+                <span className="font-mono font-semibold text-[11px] text-[var(--text)]">{fmt(o.amount)}</span>
               </div>
               <div className="flex items-center gap-1.5">
                 <StageBadge stage={o.stage} />
                 <HealthBar health={o.health} />
-                <span className="text-[10px] text-[var(--muted)]">{o.accName}</span>
+                <span className="text-[10px] text-[var(--muted)]">{o.accountName}</span>
               </div>
-              {o.next && <div className="text-[10px] text-[var(--muted)] mt-1">→ {o.next}</div>}
+              {o.nextAction && <div className="text-[10px] text-[var(--muted)] mt-1">→ {o.nextAction}</div>}
             </div>
           </Link>
         ))}

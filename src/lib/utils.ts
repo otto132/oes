@@ -63,6 +63,11 @@ export function cn(...classes: (string | false | null | undefined)[]) {
   return classes.filter(Boolean).join(' ');
 }
 
+/** Convert PascalCase enum values to human-readable labels: 'SolutionFit' → 'Solution Fit' */
+export function displayLabel(value: string): string {
+  return value.replace(/([a-z])([A-Z])/g, '$1 $2');
+}
+
 // ── Aliases for compatibility ────────────────────
 export const fD = fDate;
 export const fR = fRelative;

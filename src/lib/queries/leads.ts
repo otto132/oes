@@ -98,6 +98,17 @@ export function useConvertLead() {
   });
 }
 
+export function useCreateLead() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: { company: string; type?: string; country?: string; pain?: string }) =>
+      api.leads.create(data),
+    onSettled: () => {
+      qc.invalidateQueries({ queryKey: leadKeys.all });
+    },
+  });
+}
+
 const LEAD_STAGES = ['New', 'Contacted', 'Qualified', 'Converted'];
 function getNextStage(current: string): string {
   const idx = LEAD_STAGES.indexOf(current);

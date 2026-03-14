@@ -115,13 +115,13 @@ export function useCloseWon() {
         return {
           ...old,
           data: old.data.map((opp: any) =>
-            opp.id === id ? { ...opp, stage: 'Closed Won' } : opp
+            opp.id === id ? { ...opp, stage: 'ClosedWon' } : opp
           ),
         };
       });
       qc.setQueryData(oppKeys.detail(id), (old: any) => {
         if (!old) return old;
-        return { ...old, stage: 'Closed Won' };
+        return { ...old, stage: 'ClosedWon' };
       });
       return { previous, previousDetail, id };
     },
@@ -166,13 +166,13 @@ export function useCloseLost() {
         return {
           ...old,
           data: old.data.map((opp: any) =>
-            opp.id === id ? { ...opp, stage: 'Closed Lost' } : opp
+            opp.id === id ? { ...opp, stage: 'ClosedLost' } : opp
           ),
         };
       });
       qc.setQueryData(oppKeys.detail(id), (old: any) => {
         if (!old) return old;
-        return { ...old, stage: 'Closed Lost' };
+        return { ...old, stage: 'ClosedLost' };
       });
       return { previous, previousDetail, id };
     },

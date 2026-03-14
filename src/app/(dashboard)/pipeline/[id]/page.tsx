@@ -3,28 +3,18 @@ import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { useOpportunityDetail, useMoveStage, useCloseWon, useCloseLost, useUpdateOpportunity } from '@/lib/queries/opportunities';
 import { Badge, Avatar, HealthBar, StageBadge, AgentTag, Skeleton, SkeletonCard, ErrorState } from '@/components/ui';
-import { fmt, fDate, fR, isOverdue, weightedValue, cn } from '@/lib/utils';
+import { fmt, fDate, fR, isOverdue, weightedValue, cn, displayLabel } from '@/lib/utils';
 import { STAGES, STAGE_COLOR, healthAvg } from '@/lib/types';
 import type { Activity, Contact } from '@/lib/types';
 import { useStore } from '@/lib/store';
 
-function riskHex(h: { eng: number; stake: number; comp: number; time: number }): string {
+function riskHex(h: { healthEngagement: number; healthStakeholders: number; healthCompetitive: number; healthTimeline: number }): string {
   const a = healthAvg(h);
   return a >= 60 ? '#33a882' : a >= 40 ? '#e8a838' : '#e05c5c';
 }
 
 const ACT_COLOR: Record<string, string> = { Email: '#5b9cf6', Meeting: '#33a882', Call: '#33a882', Note: '#e8a838' };
 
-// Map display stage names back to Prisma enum values for the API
-const DISPLAY_TO_PRISMA: Record<string, string> = {
-  'Solution Fit': 'SolutionFit',
-  'Closed Won': 'ClosedWon',
-  'Closed Lost': 'ClosedLost',
-  'Verbal Commit': 'VerbalCommit',
-};
-function toPrismaStage(display: string): string {
-  return DISPLAY_TO_PRISMA[display] ?? display;
-}
 
 function LoadingSkeleton() {
   return (
@@ -288,7 +278,7 @@ export default function OppDetailPage() {
   }
 
   function openEditDrawer() {
-    const state = { name: o!.name, amount: o!.amt, closeDate: o!.close ? o!.close.slice(0, 10) : '' };
+    const state = { name: o!.name, amount: o!.amount, closeDate: o!.closeDate ? o!.closeDate.slice(0, 10) : '' };
     openDrawer({
       title: 'Edit Opportunity',
       subtitle: o!.name,
@@ -337,8 +327,8 @@ export default function OppDetailPage() {
             onClick={() => {
               const data: Record<string, unknown> = {};
               if (state.name !== o!.name) data.name = state.name;
-              if (state.amount !== o!.amt) data.amount = state.amount;
-              if (state.closeDate !== (o!.close ? o!.close.slice(0, 10) : '')) data.closeDate = state.closeDate;
+              if (state.amount !== o!.amount) data.amount = state.amount;
+              if (state.closeDate !== (o!.closeDate ? o!.closeDate.slice(0, 10) : '')) data.closeDate = state.closeDate;
 
               if (Object.keys(data).length === 0) {
                 closeDrawer();
@@ -365,8 +355,8 @@ export default function OppDetailPage() {
   }
 
   const healthDims = [
-    { l: 'Engagement', v: o.health.eng }, { l: 'Stakeholders', v: o.health.stake },
-    { l: 'Competitive', v: o.health.comp }, { l: 'Timeline', v: o.health.time },
+    { l: 'Engagement', v: o.health.healthEngagement }, { l: 'Stakeholders', v: o.health.healthStakeholders },
+    { l: 'Competitive', v: o.health.healthCompetitive }, { l: 'Timeline', v: o.health.healthTimeline },
   ];
 
   return (
@@ -375,7 +365,7 @@ export default function OppDetailPage() {
       <div className="rounded-lg bg-[var(--elevated)] border border-[var(--border)] p-[18px] mb-3">
         <div className="flex items-start justify-between flex-col md:flex-row gap-3 mb-3">
           <div>
-            <Link href={`/accounts/${o.accId}`} className="text-[12px] text-brand hover:underline mb-0.5 block">{o.accName} →</Link>
+            <Link href={`/accounts/${o.accountId}`} className="text-[12px] text-brand hover:underline mb-0.5 block">{o.accountName} →</Link>
             <div className="flex items-center gap-2">
               <h1 className="text-[18px] font-semibold tracking-tight text-[var(--text)]">{o.name}</h1>
               <button
@@ -388,15 +378,15 @@ export default function OppDetailPage() {
             </div>
             <div className="flex items-center gap-1.5 mt-1 flex-wrap">
               <StageBadge stage={o.stage} />
-              <Badge variant="neutral">{o.prob}%</Badge>
+              <Badge variant="neutral">{o.probability}%</Badge>
               <HealthBar health={o.health} />
               <span className="text-[10px]" style={{ color: riskHex(o.health) }}>Health: {hAvg}</span>
             </div>
           </div>
           <div className="text-right flex-shrink-0">
-            <div className="font-mono font-semibold text-[26px] text-[var(--text)]">{fmt(o.amt)}</div>
-            <div className="text-[11px] text-[var(--sub)] mt-0.5">Close: {fDate(o.close)}</div>
-            <div className="text-[10.5px] text-[var(--muted)]">{fmt(weightedValue(o.amt, o.stage))} weighted</div>
+            <div className="font-mono font-semibold text-[26px] text-[var(--text)]">{fmt(o.amount)}</div>
+            <div className="text-[11px] text-[var(--sub)] mt-0.5">Close: {fDate(o.closeDate)}</div>
+            <div className="text-[10.5px] text-[var(--muted)]">{fmt(weightedValue(o.amount, o.stage))} weighted</div>
           </div>
         </div>
 
@@ -409,13 +399,13 @@ export default function OppDetailPage() {
         </div>
 
         {/* Next action */}
-        {o.next && (
+        {o.nextAction && (
           <div className="ai-box mt-3 flex items-center gap-2.5">
             <div className="flex-1">
               <div className="text-[9px] font-semibold tracking-widest uppercase text-brand mb-0.5">Next Action</div>
-              <div className="text-[12.5px] font-medium text-[var(--text)]">{o.next}</div>
+              <div className="text-[12.5px] font-medium text-[var(--text)]">{o.nextAction}</div>
             </div>
-            {o.nextDate && <span className={cn('text-[10.5px]', isOverdue(o.nextDate) ? 'text-danger' : 'text-[var(--muted)]')}>{fDate(o.nextDate)}</span>}
+            {o.nextActionDate && <span className={cn('text-[10.5px]', isOverdue(o.nextActionDate) ? 'text-danger' : 'text-[var(--muted)]')}>{fDate(o.nextActionDate)}</span>}
             <AgentTag name="Pipeline Hygiene" className="!text-[8px]" />
           </div>
         )}
@@ -450,9 +440,9 @@ export default function OppDetailPage() {
             <div key={x.id} className="px-3.5 py-2.5 border-b border-[var(--border)] hover:bg-[var(--hover)] transition-colors">
               <div className="flex items-center justify-between mb-0.5">
                 <span className="text-[9px] font-semibold uppercase tracking-wide" style={{ color: ACT_COLOR[x.type] || '#4f576b' }}>{x.type}</span>
-                <span className="text-[10px] text-[var(--muted)]">{fR(x.date)}</span>
+                <span className="text-[10px] text-[var(--muted)]">{fR(x.createdAt)}</span>
               </div>
-              <div className="text-[12px] font-medium text-[var(--text)]">{x.sum}</div>
+              <div className="text-[12px] font-medium text-[var(--text)]">{x.summary}</div>
               <div className="text-[11px] text-[var(--sub)] mt-px">{x.detail}</div>
             </div>
           ))}
@@ -465,11 +455,11 @@ export default function OppDetailPage() {
             <div className="text-[9px] font-semibold tracking-widest uppercase text-[var(--muted)] mb-2">Details</div>
             <div className="flex items-center justify-between py-1.5 border-b border-[var(--border)]">
               <span className="text-[10.5px] text-[var(--muted)]">Owner</span>
-              <div className="flex items-center gap-1"><Avatar initials={o.owner.ini} color={o.owner.ac} size="xs" /><span className="text-[11px] text-[var(--text)]">{o.owner.name.split(' ')[0]}</span></div>
+              <div className="flex items-center gap-1"><Avatar initials={o.owner.initials} color={o.owner.color} size="xs" /><span className="text-[11px] text-[var(--text)]">{o.owner.name.split(' ')[0]}</span></div>
             </div>
             <div className="flex items-center justify-between py-1.5">
               <span className="text-[10.5px] text-[var(--muted)]">Close</span>
-              <span className={cn('font-mono text-[11px]', isOverdue(o.close) ? 'text-danger' : 'text-[var(--sub)]')}>{fDate(o.close)}</span>
+              <span className={cn('font-mono text-[11px]', isOverdue(o.closeDate) ? 'text-danger' : 'text-[var(--sub)]')}>{fDate(o.closeDate)}</span>
             </div>
           </div>
 
@@ -486,7 +476,7 @@ export default function OppDetailPage() {
                     <div className="text-[11px] font-medium text-[var(--text)]">{c.name}</div>
                     <div className="text-[9px] text-[var(--muted)]">{c.title}</div>
                   </div>
-                  <Badge variant={c.role === 'Champion' ? 'ok' : c.role === 'Economic Buyer' ? 'info' : 'neutral'} className="!text-[8px]">{c.role}</Badge>
+                  <Badge variant={c.role === 'Champion' ? 'ok' : c.role === 'EconomicBuyer' ? 'info' : 'neutral'} className="!text-[8px]">{displayLabel(c.role)}</Badge>
                 </div>
               ))}
             </div>
@@ -496,16 +486,16 @@ export default function OppDetailPage() {
           <div className="rounded-lg bg-[var(--elevated)] border border-[var(--border)] p-3.5">
             <div className="text-[9px] font-semibold tracking-widest uppercase text-[var(--muted)] mb-2">Move Stage</div>
             <div className="flex flex-col gap-0.5">
-              {STAGES.filter(s => !['Closed Won', 'Closed Lost'].includes(s)).map(s => {
+              {STAGES.filter(s => !['ClosedWon', 'ClosedLost'].includes(s)).map(s => {
                 const active = o.stage === s;
                 return (
                   <button
                     key={s}
                     disabled={active || isMutating}
                     onClick={() => move.mutate(
-                      { id: o.id, stage: toPrismaStage(s) },
+                      { id: o.id, stage: s },
                       {
-                        onSuccess: () => addToast({ type: 'success', message: `Stage → ${s}` }),
+                        onSuccess: () => addToast({ type: 'success', message: `Stage → ${displayLabel(s)}` }),
                         onError: (err: Error) => addToast({ type: 'error', message: `Move failed: ${err.message}` }),
                       }
                     )}
@@ -514,7 +504,7 @@ export default function OppDetailPage() {
                       active ? 'border-brand/30 bg-brand/[.08] text-brand' : 'border-transparent text-[var(--sub)] hover:bg-[var(--hover)]'
                     )}
                   >
-                    {active ? '✓ ' : ''}{s}
+                    {active ? '✓ ' : ''}{displayLabel(s)}
                   </button>
                 );
               })}
@@ -524,14 +514,14 @@ export default function OppDetailPage() {
                 onClick={openCloseWonDrawer}
                 className="text-left px-2 py-1.5 rounded-md text-[11.5px] text-brand font-medium hover:bg-[var(--hover)] transition-colors disabled:opacity-50"
               >
-                Closed Won
+                {displayLabel('ClosedWon')}
               </button>
               <button
                 disabled={isMutating}
                 onClick={openCloseLostDrawer}
                 className="text-left px-2 py-1.5 rounded-md text-[11.5px] text-danger hover:bg-[var(--hover)] transition-colors disabled:opacity-50"
               >
-                Closed Lost
+                {displayLabel('ClosedLost')}
               </button>
             </div>
           </div>

@@ -6,7 +6,7 @@ import { useQueueQuery, useApproveQueueItem, useRejectQueueItem } from '@/lib/qu
 import { leadKeys } from '@/lib/queries/leads';
 import { taskKeys } from '@/lib/queries/tasks';
 import { accountKeys } from '@/lib/queries/accounts';
-import { fRelative, queueTypeLabel, cn } from '@/lib/utils';
+import { fRelative, queueTypeLabel, cn, displayLabel } from '@/lib/utils';
 import { Badge, ConfBadge, AgentTag, ScorePill, FIUACBars, EmptyState, Skeleton, SkeletonCard, SkeletonText, ErrorState } from '@/components/ui';
 import type { QueueItem } from '@/lib/types';
 import { useStore } from '@/lib/store';
@@ -37,7 +37,7 @@ export default function QueuePage() {
       case 'lead_qualification':
         addToast({
           type: 'success',
-          message: `Lead created for ${p.company || q.accName || 'company'}`,
+          message: `Lead created for ${p.company || q.accountName || 'company'}`,
           action: { label: 'View Leads →', href: '/leads' },
         });
         qc.invalidateQueries({ queryKey: leadKeys.all });
@@ -54,17 +54,17 @@ export default function QueuePage() {
         addToast({
           type: 'success',
           message: `Account updated: ${p.field || 'field'}`,
-          action: q.accId ? { label: 'View Account →', href: `/accounts/${q.accId}` } : undefined,
+          action: q.accountId ? { label: 'View Account →', href: `/accounts/${q.accountId}` } : undefined,
         });
-        if (q.accId) qc.invalidateQueries({ queryKey: accountKeys.detail(q.accId) });
+        if (q.accountId) qc.invalidateQueries({ queryKey: accountKeys.detail(q.accountId) });
         break;
       case 'outreach_draft':
         addToast({
           type: 'success',
-          message: `Outreach logged for ${q.accName || 'account'}`,
-          action: q.accId ? { label: 'View Account →', href: `/accounts/${q.accId}` } : undefined,
+          message: `Outreach logged for ${q.accountName || 'account'}`,
+          action: q.accountId ? { label: 'View Account →', href: `/accounts/${q.accountId}` } : undefined,
         });
-        if (q.accId) qc.invalidateQueries({ queryKey: accountKeys.detail(q.accId) });
+        if (q.accountId) qc.invalidateQueries({ queryKey: accountKeys.detail(q.accountId) });
         break;
       default:
         addToast({ type: 'success', message: 'Approved' });
@@ -203,20 +203,20 @@ export default function QueuePage() {
         <div className="flex items-center justify-between mb-2 flex-wrap gap-1.5">
           <div className="flex items-center gap-1.5 flex-wrap">
             <span className={cn('text-[9px] font-semibold uppercase tracking-wide px-1.5 py-[1px] rounded border', TYPE_STYLE[q.type])}>{queueTypeLabel[q.type]}</span>
-            {q.pri === 'High' && <Badge variant="err" className="!text-[8px]">High</Badge>}
+            {q.priority === 'High' && <Badge variant="err" className="!text-[8px]">High</Badge>}
             <AgentTag name={q.agent} className="!text-[8px]" />
             {q.status === 'approved' && <Badge variant="ok" className="!text-[8px]">Approved</Badge>}
-            {q.status === 'rejected' && <><Badge variant="err" className="!text-[8px]">Rejected</Badge>{q.rejReason && <span className="text-[9px] text-muted">{q.rejReason}</span>}</>}
+            {q.status === 'rejected' && <><Badge variant="err" className="!text-[8px]">Rejected</Badge>{q.rejectionReason && <span className="text-[9px] text-muted">{q.rejectionReason}</span>}</>}
           </div>
           <div className="flex items-center gap-1.5">
-            <ConfBadge value={q.conf} />
+            <ConfBadge value={q.confidence} />
             <span className="text-[10px] text-muted">{fRelative(q.createdAt)}</span>
           </div>
         </div>
 
         {/* Title */}
         <div className="text-[13px] font-medium leading-tight mb-0.5">{q.title}</div>
-        {q.accName && <div className="text-[10.5px] text-sub mb-1.5">{q.accName}</div>}
+        {q.accountName && <div className="text-[10.5px] text-sub mb-1.5">{q.accountName}</div>}
 
         {/* Type-specific payload */}
         {q.type === 'outreach_draft' && q.payload && (
@@ -253,7 +253,7 @@ export default function QueuePage() {
             <div className="text-[10px] text-muted border-t border-[var(--border)] pt-1.5">
               <strong>Sources:</strong> {q.sources.map((s, i) => <span key={i}>{s.url ? <a href={s.url} target="_blank" rel="noreferrer" className="text-info underline decoration-dotted">{s.name}</a> : s.name}{i < q.sources.length - 1 ? ' · ' : ''}</span>)}
             </div>
-            <div className="mt-1 text-[9px] text-muted">Confidence: {Object.entries(q.confBreak).map(([k, v]) => `${k}: ${Math.round(v * 100)}%`).join(' · ')}</div>
+            <div className="mt-1 text-[9px] text-muted">Confidence: {Object.entries(q.confidenceBreakdown).map(([k, v]) => `${displayLabel(k)}: ${Math.round(v * 100)}%`).join(' · ')}</div>
           </div>
         )}
 
@@ -350,7 +350,7 @@ export default function QueuePage() {
         <EmptyState icon={tab === 'pending' ? '✓' : '📋'} title={tab === 'pending' ? 'All clear — no pending approvals' : 'No completed items yet'} description={tab === 'pending' ? 'AI agents are running. Items will appear here when they need your review.' : 'Approved and rejected items will appear here.'} />
       ) : (
         <div className="flex flex-col gap-2">
-          {items.sort((a, b) => (a.pri === 'High' ? 0 : 1) - (b.pri === 'High' ? 0 : 1)).map(q => <QueueCard key={q.id} q={q} />)}
+          {items.sort((a, b) => (a.priority === 'High' ? 0 : 1) - (b.priority === 'High' ? 0 : 1)).map(q => <QueueCard key={q.id} q={q} />)}
         </div>
       )}
 

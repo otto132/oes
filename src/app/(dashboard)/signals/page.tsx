@@ -4,7 +4,7 @@ import { useStore } from '@/lib/store';
 import { ApiError } from '@/lib/api-client';
 import { useSignalsQuery, useConvertSignal, useDismissSignal } from '@/lib/queries/signals';
 import { Badge, ConfBadge, AgentTag, EmptyState, Skeleton, SkeletonCard, SkeletonText, ErrorState } from '@/components/ui';
-import { signalLabel, signalColor, fR, cn, confNum } from '@/lib/utils';
+import { signalLabel, signalColor, fR, cn } from '@/lib/utils';
 import { Zap, Check } from 'lucide-react';
 import type { Signal } from '@/lib/types';
 
@@ -139,22 +139,22 @@ export default function SignalsPage() {
     if (!s) return;
     openDrawer({
       title: 'Signal Detail',
-      subtitle: `${signalLabel[s.type] || s.type} · ${s.src}`,
+      subtitle: `${signalLabel[s.type] || s.type} · ${s.source}`,
       body: (
         <div className="flex flex-col gap-3.5">
           <div className="text-[15px] font-semibold leading-snug">{s.title}</div>
           <div className="flex items-center gap-2 flex-wrap">
             <Badge variant="neutral">{signalLabel[s.type]}</Badge>
-            <span className="text-[11px] text-[var(--muted)]">Relevance: <span className={`font-mono font-semibold ${s.rel > 80 ? 'text-[var(--brand)]' : 'text-[#eab308]'}`}>{s.rel}/100</span></span>
-            <ConfBadge value={confNum(s.conf)} />
+            <span className="text-[11px] text-[var(--muted)]">Relevance: <span className={`font-mono font-semibold ${s.relevance > 80 ? 'text-[var(--brand)]' : 'text-[#eab308]'}`}>{s.relevance}/100</span></span>
+            <ConfBadge value={s.confidence} />
             <AgentTag name={s.agent} />
           </div>
-          <div className="ai-box"><div className="text-[9px] font-semibold tracking-widest uppercase text-[var(--brand)] mb-1">AI Analysis</div><p className="text-[12.5px] text-[var(--sub)] leading-relaxed">{s.sum}</p></div>
-          <div className="ai-box"><div className="text-[9px] font-semibold tracking-widest uppercase text-[var(--brand)] mb-1">AI Reasoning</div><p className="text-[12.5px] text-[var(--sub)] leading-relaxed">{s.why}</p></div>
+          <div className="ai-box"><div className="text-[9px] font-semibold tracking-widest uppercase text-[var(--brand)] mb-1">AI Analysis</div><p className="text-[12.5px] text-[var(--sub)] leading-relaxed">{s.summary}</p></div>
+          <div className="ai-box"><div className="text-[9px] font-semibold tracking-widest uppercase text-[var(--brand)] mb-1">AI Reasoning</div><p className="text-[12.5px] text-[var(--sub)] leading-relaxed">{s.reasoning}</p></div>
           <div className="text-[10px] text-[var(--muted)] border-t border-[var(--border)] pt-2">
             <strong>Source:</strong>{' '}
-            {s.srcUrl ? <a href={s.srcUrl} target="_blank" rel="noreferrer" className="text-[var(--brand)] underline decoration-dotted">{s.src}</a> : s.src}
-            {' · Retrieved '}{fR(s.at)}
+            {s.sourceUrl ? <a href={s.sourceUrl} target="_blank" rel="noreferrer" className="text-[var(--brand)] underline decoration-dotted">{s.source}</a> : s.source}
+            {' · Retrieved '}{fR(s.detectedAt)}
           </div>
         </div>
       ),
@@ -198,13 +198,13 @@ export default function SignalsPage() {
               </div>
               <div className="flex-1 min-w-0">
                 <div className="text-[13px] font-medium leading-tight text-[var(--text)]">{s.title}</div>
-                <div className="text-[12.5px] text-[var(--sub)] mt-0.5 line-clamp-2">{s.sum}</div>
+                <div className="text-[12.5px] text-[var(--sub)] mt-0.5 line-clamp-2">{s.summary}</div>
                 <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
                   <Badge variant="neutral" className="!text-[9px]">{signalLabel[s.type]}</Badge>
-                  <span className="text-[10px] text-[var(--muted)]">Rel: <span className={`font-mono font-semibold ${s.rel > 80 ? 'text-[var(--brand)]' : 'text-[#eab308]'}`}>{s.rel}</span></span>
-                  <ConfBadge value={confNum(s.conf)} />
+                  <span className="text-[10px] text-[var(--muted)]">Rel: <span className={`font-mono font-semibold ${s.relevance > 80 ? 'text-[var(--brand)]' : 'text-[#eab308]'}`}>{s.relevance}</span></span>
+                  <ConfBadge value={s.confidence} />
                   <AgentTag name={s.agent} />
-                  <span className="text-[10px] text-[var(--muted)]">{s.src} · {fR(s.at)}</span>
+                  <span className="text-[10px] text-[var(--muted)]">{s.source} · {fR(s.detectedAt)}</span>
                 </div>
               </div>
               {!converted && (
