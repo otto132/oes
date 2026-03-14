@@ -7,6 +7,7 @@
 import { db } from '@/lib/db';
 import { refreshAccessToken } from './microsoft-graph';
 import { decrypt, encrypt } from '@/lib/crypto';
+import { logger } from '@/lib/logger';
 import type { IntegrationToken, User } from '@prisma/client';
 
 export interface SyncResult {
@@ -149,8 +150,8 @@ async function createSyncFailureAlert(
         authorId: userId,
       },
     });
-  } catch {
+  } catch (err) {
     // Best-effort: don't let alert creation break the sync flow
-    console.error(`Failed to create sync failure alert for user ${userId}`);
+    logger.error('Failed to create sync failure alert', { error: err instanceof Error ? err.message : String(err) });
   }
 }
