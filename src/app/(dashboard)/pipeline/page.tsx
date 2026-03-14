@@ -432,7 +432,7 @@ export default function PipelinePage() {
       {/* Mobile list */}
       <div className="md:hidden flex flex-col gap-1.5">
         {open.length === 0 ? (
-          <EmptyState icon="↗" title="No open opportunities" description="Create one from an account or convert a qualified lead." />
+          <EmptyState icon="↗" title="No open opportunities" description="Create one from an account or convert a qualified lead." action={{ label: 'Create Opportunity', onClick: () => openNewOppDrawer() }} />
         ) : open.sort((a, b) => healthAvg(a.health) - healthAvg(b.health)).map(o => (
           <Link key={o.id} href={`/pipeline/${o.id}`}>
             <div className="rounded-lg p-3 bg-[var(--elevated)] border border-[var(--border)] cursor-pointer hover:bg-[var(--hover)] transition-colors" style={{ borderLeft: `3px solid ${riskHex(o.health)}` }}>

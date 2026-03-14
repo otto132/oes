@@ -143,12 +143,25 @@ export function SectionTitle({ children }: { children: React.ReactNode }) {
 }
 
 /* ── Empty State ── */
-export function EmptyState({ icon, title, description }: { icon: string; title: string; description: string }) {
+export function EmptyState({ icon, title, description, action }: {
+  icon: string;
+  title: string;
+  description: string;
+  action?: { label: string; onClick: () => void };
+}) {
   return (
     <div className="py-12 px-6 text-center">
       <div className="text-2xl mb-2 opacity-30">{icon}</div>
       <div className="text-[13px] font-medium text-sub mb-1">{title}</div>
       <div className="text-[12px] text-muted leading-relaxed max-w-[280px] mx-auto">{description}</div>
+      {action && (
+        <button
+          onClick={action.onClick}
+          className="mt-3 px-3 py-1.5 text-[12px] font-medium text-brand hover:text-brand/80 transition-colors"
+        >
+          + {action.label}
+        </button>
+      )}
     </div>
   );
 }
