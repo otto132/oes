@@ -191,7 +191,7 @@ export default function HomePage() {
               <Link href="/signals" className="text-[10.5px] text-muted hover:text-brand transition-colors">View all →</Link>
             </div>
             {topSignals.map((s: UISignal) => (
-              <Link key={s.id} href="/signals" className="flex items-start gap-3 px-4 py-3 border-b border-[var(--border)] hover:bg-[var(--hover)] transition-colors">
+              <Link key={s.id} href={`/signals?open=${s.id}`} className="flex items-start gap-3 px-4 py-3 border-b border-[var(--border)] hover:bg-[var(--hover)] transition-colors">
                 <div className="w-7 h-7 rounded-md bg-[var(--surface)] text-info flex items-center justify-center flex-shrink-0">
                   <Zap className="w-3.5 h-3.5" />
                 </div>

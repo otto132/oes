@@ -1,5 +1,6 @@
 'use client';
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { useStore } from '@/lib/store';
 import { ApiError } from '@/lib/api-client';
 import { useSignalsQuery, useConvertSignal, useDismissSignal } from '@/lib/queries/signals';
@@ -41,6 +42,7 @@ function SignalsSkeleton() {
 
 export default function SignalsPage() {
   const { openDrawer, closeDrawer } = useStore();
+  const searchParams = useSearchParams();
   const [filter, setFilter] = useState('all');
   const { data: resp, isLoading, isError, refetch } = useSignalsQuery(filter !== 'all' ? filter : undefined);
   const signals: Signal[] = resp?.data ?? [];
@@ -50,6 +52,17 @@ export default function SignalsPage() {
   const pendingIds = usePendingMutations(['signals']);
   const failedMutations = useFailedMutations(['signals']);
   const [confirmDismiss, setConfirmDismiss] = useState<string | null>(null);
+  const openedRef = useRef(false);
+
+  // Auto-open signal detail when navigating with ?open=<id>
+  const openId = searchParams.get('open');
+  useEffect(() => {
+    if (openId && signals.length > 0 && !openedRef.current) {
+      openedRef.current = true;
+      const target = signals.find(s => s.id === openId);
+      if (target) viewDetail(target.id);
+    }
+  });
 
   if (isLoading) return <SignalsSkeleton />;
   if (isError) return <ErrorState onRetry={() => refetch()} />;

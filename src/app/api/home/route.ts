@@ -4,6 +4,7 @@ import { scopedDb } from '@/lib/scoped-db';
 import { adaptSignal, adaptMeeting, adaptActivity, adaptOpportunity } from '@/lib/adapters';
 import { auth } from '@/lib/auth';
 import { unauthorized } from '@/lib/api-errors';
+import { STAGE_PROB } from '@/lib/types';
 
 export async function GET() {
   const session = await auth();
@@ -33,8 +34,7 @@ export async function GET() {
   ]);
 
   const totalPipeline = opps.reduce((s, o) => s + o.amount, 0);
-  const probMap: Record<string, number> = { Identified: 5, Contacted: 10, Discovery: 20, Qualified: 35, SolutionFit: 50, Proposal: 65, Negotiation: 80, VerbalCommit: 90 };
-  const weightedPipeline = opps.reduce((s, o) => s + Math.round(o.amount * (probMap[o.stage] || 0) / 100), 0);
+  const weightedPipeline = opps.reduce((s, o) => s + Math.round(o.amount * (STAGE_PROB[o.stage] || 0) / 100), 0);
   const atRisk = opps.filter(o => Math.round((o.healthEngagement + o.healthStakeholders + o.healthCompetitive + o.healthTimeline) / 4) < 50);
 
   return NextResponse.json({

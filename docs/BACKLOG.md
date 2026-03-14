@@ -133,7 +133,7 @@ Pre-beta blockers and embarrassing bugs. Complete before any other work.
 | **Owner** | Frontend + Backend |
 | **Required before beta** | Yes |
 | **Value type** | Trust, Speed |
-| **Status** | Open |
+| **Status** | Done |
 
 ---
 
@@ -169,7 +169,7 @@ Pre-beta blockers and embarrassing bugs. Complete before any other work.
 | **Owner** | Backend |
 | **Required before beta** | Yes |
 | **Value type** | Risk reduction |
-| **Status** | Open |
+| **Status** | Done |
 
 ---
 
@@ -187,7 +187,7 @@ Pre-beta blockers and embarrassing bugs. Complete before any other work.
 | **Owner** | Backend |
 | **Required before beta** | Yes |
 | **Value type** | Risk reduction |
-| **Status** | Open |
+| **Status** | Done |
 
 ---
 
@@ -205,7 +205,7 @@ Pre-beta blockers and embarrassing bugs. Complete before any other work.
 | **Owner** | Backend |
 | **Required before beta** | No |
 | **Value type** | Risk reduction |
-| **Status** | Open |
+| **Status** | Done |
 
 ---
 
@@ -259,7 +259,7 @@ Pre-beta blockers and embarrassing bugs. Complete before any other work.
 | **Owner** | Backend |
 | **Required before beta** | Yes |
 | **Value type** | Risk reduction |
-| **Status** | Open |
+| **Status** | Done |
 
 ---
 
@@ -319,7 +319,7 @@ High-leverage builds. Tackle after DO NOW is complete.
 | **Owner** | Backend + Frontend |
 | **Required before beta** | Yes |
 | **Value type** | Speed, Adoption |
-| **Status** | Open |
+| **Status** | Done |
 
 ---
 
@@ -337,7 +337,7 @@ High-leverage builds. Tackle after DO NOW is complete.
 | **Owner** | Backend |
 | **Required before beta** | Yes |
 | **Value type** | Risk reduction, Trust |
-| **Status** | Open |
+| **Status** | Done |
 
 ---
 
@@ -355,7 +355,7 @@ High-leverage builds. Tackle after DO NOW is complete.
 | **Owner** | Backend |
 | **Required before beta** | No |
 | **Value type** | Risk reduction, Speed |
-| **Status** | Open |
+| **Status** | Done |
 
 ---
 
@@ -373,7 +373,7 @@ High-leverage builds. Tackle after DO NOW is complete.
 | **Owner** | Backend |
 | **Required before beta** | No |
 | **Value type** | Speed |
-| **Status** | Open |
+| **Status** | Done |
 
 ---
 
@@ -391,7 +391,7 @@ High-leverage builds. Tackle after DO NOW is complete.
 | **Owner** | Backend |
 | **Required before beta** | No |
 | **Value type** | Trust, Speed |
-| **Status** | Open |
+| **Status** | Done |
 
 ---
 
@@ -499,7 +499,7 @@ High-leverage builds. Tackle after DO NOW is complete.
 | **Owner** | Frontend |
 | **Required before beta** | No |
 | **Value type** | Speed |
-| **Status** | Open |
+| **Status** | Done |
 
 ---
 
