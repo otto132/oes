@@ -8,7 +8,7 @@
 
 ## 1. Overview
 
-Eight backlog items across three categories, ordered by dependency:
+Nine backlog items across three categories, ordered by dependency:
 
 **Infrastructure (build first):**
 1. S-04 — Encrypt OAuth tokens at rest
@@ -32,7 +32,8 @@ Eight backlog items across three categories, ordered by dependency:
 ```prisma
 model AuditLog {
   id         String   @id @default(cuid())
-  userId     String
+  userId     String?  // null for system-triggered actions (cron jobs)
+  user       User?    @relation("AuditLogUser", fields: [userId], references: [id])
   action     String   // constants from AUDIT_ACTIONS, not an enum
   entityType String   // "User", "Contact", "AgentConfig", etc.
   entityId   String
@@ -50,6 +51,7 @@ model AuditLog {
 model AccessLog {
   id         String   @id @default(cuid())
   userId     String
+  user       User     @relation("AccessLogUser", fields: [userId], references: [id])
   entityType String   // "Account", "Meeting", "Export"
   entityId   String
   createdAt  DateTime @default(now())
@@ -58,6 +60,13 @@ model AccessLog {
   @@index([userId, createdAt(sort: Desc)])
   @@map("access_logs")
 }
+```
+
+Note: Both models have a formal `@relation` to `User` for FK integrity and join support. The `User` model gains corresponding relation fields:
+```prisma
+// Add to User model:
+auditLogs  AuditLog[]  @relation("AuditLogUser")
+accessLogs AccessLog[] @relation("AccessLogUser")
 
 model DataRetentionRun {
   id               String    @id @default(cuid())
@@ -115,7 +124,10 @@ decrypt(encrypted: string): string
   - Rotation happens lazily on next token access
 
 **Integration points:**
-- `src/app/api/auth/callback/route.ts` — encrypt before `db.integrationToken.create()`
+
+Note: Microsoft was removed as a *login* provider (commit `b1f2840`), but Microsoft Graph is still used for email and calendar sync via a separate OAuth flow. The `IntegrationToken` table stores Graph API tokens for this sync — these are the tokens being encrypted.
+
+- `src/app/api/auth/callback/route.ts` — encrypt before `db.integrationToken.create()` (Graph OAuth callback)
 - `src/lib/integrations/microsoft-graph.ts` — `refreshAccessToken()` decrypts refresh token, re-encrypts new tokens on save
 - `src/lib/integrations/email-sync.ts` — decrypt access token before Graph API calls
 - `src/lib/integrations/calendar-sync.ts` — same
@@ -126,7 +138,7 @@ decrypt(encrypted: string): string
 - Sets `tokenVersion = 1`
 - Run manually after deploy, idempotent (skips already-encrypted tokens by checking `v1:` prefix)
 
-**Env validation:** Add `TOKEN_ENCRYPTION_KEY` to `src/lib/env.ts` as required.
+**Env validation:** Add `TOKEN_ENCRYPTION_KEY` to `src/lib/env.ts` as **conditionally required** — required if any `IntegrationToken` records exist or if the Microsoft Graph integration is configured (`MICROSOFT_CLIENT_ID` is set). Otherwise emit a startup warning. This avoids crashing local dev environments that don't use the Graph integration.
 
 ### 3.2 S-12 — Sensitive Data Log Redaction
 
@@ -164,7 +176,7 @@ export const AUDIT_ACTIONS = {
 } as const;
 
 export async function auditLog(entry: {
-  userId: string;
+  userId: string | null;  // null for system/cron-triggered actions
   action: string;
   entityType: string;
   entityId: string;
@@ -212,11 +224,12 @@ export function scopedDb(userId: string, role: string) {
 - **VIEWER** — same visibility as MEMBER (already write-blocked by middleware)
 
 **Models scoped by `ownerId`:** Account, Lead, Opportunity, Task, Goal
-**Models scoped transitively (via parent joins):** Contact (→Account), Activity (→Account), Meeting (→Account.ownerId)
+**Models scoped transitively (via parent joins):** Contact (→Account), Activity (→Account), Opportunity (→Account)
+**Meeting scoping:** Meeting has a nullable `accountId` (no Prisma relation). For non-ADMIN users, the `scopedDb` extension uses a two-step approach: (1) query the user's owned account IDs, (2) filter meetings where `accountId IN (ownedAccountIds) OR accountId IS NULL`. Meetings without an account link (accountId = null) are visible to all authenticated users since they can't be ownership-scoped.
 **Models not scoped (shared):** Signal, QueueItem, InboxEmail, AgentConfig (visible to all authenticated users)
 
 **Integration with `withHandler`:**
-- `HandlerContext` gains `ctx.db` — the scoped Prisma client
+- `HandlerContext` gains `ctx.db` — the scoped Prisma client (type: `ReturnType<typeof scopedDb>`)
 - All route handlers switch from `db.model.findMany(...)` to `ctx.db.model.findMany(...)`
 - Route handlers that need unscoped access (e.g., admin endpoints) continue using `db` directly
 
@@ -256,6 +269,7 @@ export async function logAccess(entry: {
 | Archived emails | `isArchived: true` | 90 days |
 | Dismissed signals | `status: dismissed` | 180 days |
 | Completed sync logs | `status: success` | 30 days |
+| Failed sync logs | `status: failed` | 90 days |
 | Access logs | all | 90 days |
 
 **New file:** `src/lib/retention.ts`
@@ -264,10 +278,10 @@ export async function logAccess(entry: {
 export async function runRetentionCleanup(): Promise<DataRetentionRun>
 ```
 
-- Batch deletes with `LIMIT 1000` per category per run to avoid long transactions
-- If a batch hits the limit, logs a warning (next scheduled run will catch the rest)
+- Batch deletes: find IDs with `findMany({ where, select: { id: true }, take: 1000 })`, then `deleteMany({ where: { id: { in: ids } } })`. Prisma's `deleteMany` doesn't support `LIMIT`, so this two-step pattern is used.
+- If a batch hits 1000, logs a warning (next scheduled run will catch the rest)
 - Creates `DataRetentionRun` record with counts
-- Creates audit log entry (`RETENTION_RUN_COMPLETED`)
+- Creates audit log entry (`RETENTION_RUN_COMPLETED`) with `userId: null` (cron-triggered, no user session)
 
 **New route:** `POST /api/retention`
 - Protected by `x-cron-secret` header (same pattern as `/api/sync`)
@@ -294,7 +308,7 @@ export async function runRetentionCleanup(): Promise<DataRetentionRun>
   }
   ```
 - Uses `ReadableStream` for large datasets
-- Rate-limited: checks AuditLog for `DATA_EXPORTED` action in last hour, returns 429 if found
+- Rate-limited: uses a **synchronous** (awaited, not fire-and-forget) AuditLog check for `DATA_EXPORTED` action in last hour, returns 429 if found. The audit log write for exports is also synchronous to ensure the rate limit check is reliable.
 - Creates audit log entry with metadata: `{ format: "json", recordCount: N }`
 - Creates access log entry (entityType: "Export")
 
@@ -303,7 +317,7 @@ export async function runRetentionCleanup(): Promise<DataRetentionRun>
 **New route:** `DELETE /api/accounts/[id]/contacts/[contactId]`
 
 - ADMIN or MEMBER (`requireRole(session, 'ADMIN', 'MEMBER')`)
-- Scoped: contact must belong to the specified account
+- Scoped: contact must belong to the specified account, AND the account must be within the user's access boundary (use `ctx.db` scoped client to verify account ownership)
 - **Anonymizes** rather than hard-deletes:
   - `name → "Deleted Contact"`
   - `email → ""`
@@ -389,7 +403,7 @@ Actions:
 4. If `createFollowUp`: create `Task` linked to account, owned by current user
 5. Return created activity + optional task
 
-**Idempotency:** Before creating, check if an Activity with `type: Meeting` and `source: "Meeting Outcome"` already exists for this account + same calendar date. If so, return the existing one with 200 (not 201).
+**Idempotency:** Before creating, check if an Activity with `type: Meeting` and `source: "Meeting Outcome"` already exists where the detail contains the meeting ID (stored as metadata in the detail field, e.g., `[meeting:${meetingId}]` prefix). This handles multiple meetings with the same account on the same day. If found, return the existing one with 200 (not 201).
 
 #### React Query Hooks
 
