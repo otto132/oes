@@ -59,8 +59,8 @@ export const accountEnricherAgent: Agent = {
         ...accountFilter,
         OR: [
           { updatedAt: { lt: staleCutoff } },
-          { pain: null },
-          { whyNow: null },
+          { pain: "" },
+          { whyNow: "" },
         ],
       },
     });
