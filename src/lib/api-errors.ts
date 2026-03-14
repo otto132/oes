@@ -1,6 +1,12 @@
 import { NextResponse } from 'next/server';
 import { ZodError } from 'zod';
 
+let _crypto: typeof import('crypto') | null = null;
+function generateRequestId(): string {
+  if (!_crypto) { _crypto = require('crypto'); }
+  return _crypto!.randomUUID();
+}
+
 export type ApiErrorCode =
   | 'BAD_REQUEST'
   | 'UNAUTHORIZED'
@@ -31,9 +37,10 @@ export function apiError(
   status?: number,
   requestId?: string,
 ): NextResponse {
+  const rid = requestId ?? generateRequestId();
   return NextResponse.json(
-    { error: { code, message, ...(requestId && { requestId }) } },
-    { status: status ?? DEFAULT_STATUS[code] },
+    { error: { code, message, requestId: rid } },
+    { status: status ?? DEFAULT_STATUS[code], headers: { 'x-request-id': rid } },
   );
 }
 
@@ -64,15 +71,16 @@ export function internalError(message = 'Internal server error') {
 }
 
 export function zodError(err: ZodError, requestId?: string) {
+  const rid = requestId ?? generateRequestId();
   return NextResponse.json(
     {
       error: {
         code: 'VALIDATION_ERROR' as const,
         message: 'Validation failed',
         details: err.flatten().fieldErrors,
-        ...(requestId && { requestId }),
+        requestId: rid,
       },
     },
-    { status: 400 },
+    { status: 400, headers: { 'x-request-id': rid } },
   );
 }
