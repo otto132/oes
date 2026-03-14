@@ -1,12 +1,15 @@
 import { db as prisma } from '@/lib/db';
-import type { Agent, AgentContext, AgentResult, NewQueueItem } from './types';
+import { zodOutputFormat } from '@anthropic-ai/sdk/helpers/zod';
+import { getAnthropicClient, MODEL_HAIKU } from './ai';
+import { RecoveryPlaybookSchema } from './schemas';
+import type { Agent, AgentContext, AgentResult, AgentError, NewQueueItem } from './types';
 
 const DEFAULT_PARAMS = {
   staleThresholdDays: 7,
   healthAlertThreshold: 40,
-  decayPointsPerWeek: 5,
-  stuckStageThresholds: { Discovery: 14, Proposal: 21, Negotiation: 14 },
 };
+
+const SYSTEM_PROMPT = `You are a deal health analyst for a B2B sales team in the GoO (Guarantees of Origin) and renewable certificates market. When a deal is flagged as at-risk, diagnose exactly why it's struggling and provide a specific, actionable recovery plan. Reference specific activities, emails, and timeline data rather than giving generic advice.`;
 
 export const pipelineHygieneAgent: Agent = {
   name: 'pipeline_hygiene',
@@ -17,18 +20,26 @@ export const pipelineHygieneAgent: Agent = {
     const staleThreshold = Number(params.staleThresholdDays) || 7;
     const healthThreshold = Number(params.healthAlertThreshold) || 40;
 
-    // Fetch open opportunities with account
+    let client: ReturnType<typeof getAnthropicClient>;
+    try {
+      client = getAnthropicClient();
+    } catch {
+      return {
+        items: [],
+        metrics: { scanned: 0, matched: 0, skipped: 0 },
+        errors: [{ message: 'ANTHROPIC_API_KEY not configured', recoverable: false }],
+      };
+    }
+
     const opportunities = await prisma.opportunity.findMany({
-      where: {
-        stage: { notIn: ['ClosedWon', 'ClosedLost'] },
-      },
+      where: { stage: { notIn: ['ClosedWon', 'ClosedLost'] } },
       include: {
-        account: { select: { id: true, name: true, lastActivityAt: true } },
+        account: { select: { id: true, name: true, lastActivityAt: true, pain: true, whyNow: true } },
       },
     });
 
     const items: NewQueueItem[] = [];
-    let matched = 0;
+    const errors: AgentError[] = [];
 
     for (const opp of opportunities) {
       const lastActivityDate = opp.account?.lastActivityAt;
@@ -40,101 +51,108 @@ export const pipelineHygieneAgent: Agent = {
         (opp.healthEngagement + opp.healthStakeholders + opp.healthCompetitive + opp.healthTimeline) / 4
       );
 
-      // Check: stale (no activity)
-      if (daysSinceActivity > staleThreshold) {
-        matched++;
-        items.push({
-          type: 'task_creation',
-          title: `Stale deal: ${opp.name} (${daysSinceActivity}d inactive)`,
-          accName: opp.account?.name || '',
-          accId: opp.account?.id || null,
-          agent: 'pipeline_hygiene',
-          confidence: Math.min(0.5 + daysSinceActivity * 0.05, 0.95),
-          confidenceBreakdown: { staleness: daysSinceActivity / (staleThreshold * 2) },
-          sources: [],
-          payload: {
-            opportunityId: opp.id,
-            reason: 'stale',
-            daysSinceActivity,
-            currentHealth: avgHealth,
-            suggestedAction: getSuggestedAction(opp.stage, 'stale'),
-          },
-          reasoning: `No activity for ${daysSinceActivity} days (threshold: ${staleThreshold}). Stage: ${opp.stage}.`,
-          priority: daysSinceActivity > staleThreshold * 2 ? 'High' : 'Normal',
-        });
-        continue; // Only flag once per opp
-      }
+      // Determine issue type
+      let issueType: 'stale' | 'low_health' | 'overdue_close' | null = null;
+      if (daysSinceActivity > staleThreshold) issueType = 'stale';
+      else if (avgHealth < healthThreshold) issueType = 'low_health';
+      else if (opp.closeDate && opp.closeDate < new Date()) issueType = 'overdue_close';
 
-      // Check: low health
-      if (avgHealth < healthThreshold) {
-        matched++;
-        items.push({
-          type: 'task_creation',
-          title: `Low health: ${opp.name} (health: ${avgHealth}%)`,
-          accName: opp.account?.name || '',
-          accId: opp.account?.id || null,
-          agent: 'pipeline_hygiene',
-          confidence: 0.7,
-          confidenceBreakdown: { health: avgHealth / 100 },
-          sources: [],
-          payload: {
-            opportunityId: opp.id,
-            reason: 'low_health',
-            daysSinceActivity,
-            currentHealth: avgHealth,
-            suggestedAction: getSuggestedAction(opp.stage, 'low_health'),
-          },
-          reasoning: `Deal health at ${avgHealth}% (threshold: ${healthThreshold}%). Needs attention.`,
-          priority: avgHealth < healthThreshold / 2 ? 'High' : 'Normal',
-        });
-        continue;
-      }
+      if (!issueType) continue;
 
-      // Check: overdue close date
-      if (opp.closeDate && opp.closeDate < new Date()) {
-        matched++;
-        const daysOverdue = Math.floor((Date.now() - opp.closeDate.getTime()) / (24 * 60 * 60 * 1000));
+      try {
+        // Get recent activities for context
+        const recentActivities = opp.account
+          ? await prisma.activity.findMany({
+              where: { accountId: opp.account.id },
+              take: 5,
+              orderBy: { createdAt: 'desc' },
+              select: { type: true, summary: true, createdAt: true },
+            })
+          : [];
+
+        const competitorSignals = opp.account
+          ? await prisma.signal.findMany({
+              where: { companies: { has: opp.account.name } },
+              take: 3,
+              orderBy: { createdAt: 'desc' },
+              select: { title: true, summary: true },
+            })
+          : [];
+
+        const daysOverdue = opp.closeDate && opp.closeDate < new Date()
+          ? Math.floor((Date.now() - opp.closeDate.getTime()) / (24 * 60 * 60 * 1000))
+          : 0;
+
+        const userPrompt = `Analyze this at-risk deal and create a recovery plan:
+
+Deal: ${opp.name}
+Stage: ${opp.stage}
+Issue: ${issueType} ${issueType === 'stale' ? `(${daysSinceActivity} days since last activity)` : issueType === 'low_health' ? `(health: ${avgHealth}%)` : `(${daysOverdue} days overdue)`}
+Health: Engagement=${opp.healthEngagement}%, Stakeholders=${opp.healthStakeholders}%, Competitive=${opp.healthCompetitive}%, Timeline=${opp.healthTimeline}%
+Account: ${opp.account?.name || 'Unknown'}
+Pain: ${opp.account?.pain || 'Unknown'}
+WhyNow: ${opp.account?.whyNow || 'Unknown'}
+Close date: ${opp.closeDate?.toISOString().slice(0, 10) || 'Not set'}
+
+Recent activities:
+${recentActivities.map((a) => `- ${a.type}: ${a.summary || 'No summary'} (${a.createdAt.toISOString().slice(0, 10)})`).join('\n') || 'None'}
+
+Recent signals:
+${competitorSignals.map((s) => `- ${s.title}: ${s.summary || ''}`).join('\n') || 'None'}`;
+
+        const response = await client.messages.parse({
+          model: MODEL_HAIKU,
+          max_tokens: 1024,
+          cache_control: { type: 'ephemeral' },
+          system: SYSTEM_PROMPT,
+          output_config: { format: zodOutputFormat(RecoveryPlaybookSchema) },
+          messages: [{ role: 'user', content: userPrompt }],
+        });
+
+        const playbook = response.parsed_output;
+
         items.push({
           type: 'task_creation',
-          title: `Overdue close: ${opp.name} (${daysOverdue}d past)`,
+          title: issueType === 'stale'
+            ? `Stale deal: ${opp.name} (${daysSinceActivity}d inactive)`
+            : issueType === 'low_health'
+            ? `Low health: ${opp.name} (${avgHealth}%)`
+            : `Overdue close: ${opp.name} (${daysOverdue}d past)`,
           accName: opp.account?.name || '',
           accId: opp.account?.id || null,
           agent: 'pipeline_hygiene',
-          confidence: 0.85,
-          confidenceBreakdown: { overdue: Math.min(daysOverdue / 30, 1) },
+          confidence: playbook.riskLevel === 'likely_lost' ? 0.9 : playbook.riskLevel === 'at_risk' ? 0.7 : 0.5,
+          confidenceBreakdown: {
+            staleness: daysSinceActivity / (staleThreshold * 2),
+            health: avgHealth / 100,
+          },
           sources: [],
           payload: {
             opportunityId: opp.id,
-            reason: 'overdue_close',
+            reason: issueType,
             daysSinceActivity,
             currentHealth: avgHealth,
-            suggestedAction: 'Update close date or mark as Closed Lost',
+            diagnosis: playbook.diagnosis,
+            recoverySteps: playbook.recoverySteps,
+            riskLevel: playbook.riskLevel,
+            competitorThreat: playbook.competitorThreat,
           },
-          reasoning: `Close date was ${daysOverdue} days ago. Update or close the deal.`,
-          priority: 'High',
+          reasoning: playbook.diagnosis,
+          priority: playbook.riskLevel === 'likely_lost' || daysOverdue > 0 ? 'High' : 'Normal',
+        });
+      } catch (err) {
+        errors.push({
+          message: `Failed to analyze ${opp.name}: ${err instanceof Error ? err.message : String(err)}`,
+          source: opp.id,
+          recoverable: true,
         });
       }
     }
 
     return {
       items,
-      metrics: { scanned: opportunities.length, matched, skipped: opportunities.length - matched },
-      errors: [],
+      metrics: { scanned: opportunities.length, matched: items.length, skipped: opportunities.length - items.length },
+      errors,
     };
   },
 };
-
-function getSuggestedAction(stage: string, reason: string): string {
-  if (reason === 'stale') {
-    const actions: Record<string, string> = {
-      Discovery: 'Schedule discovery call or send check-in email',
-      Proposal: 'Follow up on proposal — ask if they have questions',
-      Negotiation: 'Reach out about pricing/terms concerns',
-    };
-    return actions[stage] || 'Schedule check-in call';
-  }
-  if (reason === 'low_health') {
-    return 'Review deal health — identify which areas need improvement';
-  }
-  return 'Review and take action';
-}

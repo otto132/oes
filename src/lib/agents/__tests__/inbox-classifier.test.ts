@@ -4,79 +4,76 @@ import type { AgentContext } from '../types';
 
 const mockEmailFindMany = vi.fn();
 const mockAccountFindFirst = vi.fn();
+const mockAccountUpdate = vi.fn();
 
 vi.mock('@/lib/db', () => ({
   db: {
     inboxEmail: { findMany: (...args: unknown[]) => mockEmailFindMany(...args) },
-    account: { findFirst: (...args: unknown[]) => mockAccountFindFirst(...args) },
+    account: {
+      findFirst: (...args: unknown[]) => mockAccountFindFirst(...args),
+      update: (...args: unknown[]) => mockAccountUpdate(...args),
+    },
   },
+}));
+
+const mockParse = vi.fn();
+vi.mock('../ai', () => ({
+  getAnthropicClient: () => ({
+    messages: { parse: mockParse },
+  }),
+  MODEL_HAIKU: 'claude-haiku-4-5',
 }));
 
 const ctx: AgentContext = {
   config: {
     id: 'c1', name: 'inbox_classifier', displayName: 'Inbox Classifier',
     description: '', status: 'active',
-    parameters: { urgencyKeywords: ['urgent', 'deadline', 'asap'] },
+    parameters: {},
     lastRunAt: null, createdAt: new Date(), updatedAt: new Date(),
   },
   userId: 'system',
-  triggerEvent: { id: 'evt1', event: 'emails_synced', payload: { count: 3 } },
 };
 
-describe('Inbox Classifier Agent', () => {
+describe('Inbox Classifier Agent (upgraded)', () => {
   beforeEach(() => vi.clearAllMocks());
 
   it('has correct name and event trigger', () => {
     expect(inboxClassifierAgent.name).toBe('inbox_classifier');
-    expect(inboxClassifierAgent.triggers).toContainEqual({
-      type: 'event', event: 'emails_synced',
+    expect(inboxClassifierAgent.triggers).toContainEqual({ type: 'event', event: 'emails_synced' });
+  });
+
+  it('uses Claude to classify emails with sentiment', async () => {
+    mockEmailFindMany.mockResolvedValue([
+      {
+        id: 'e1', subject: 'Re: GoO pricing', preview: 'We have budget approved for Q3',
+        fromEmail: 'anna@acme.com', domain: 'acme.com', accountId: 'acc1',
+        classification: null, createdAt: new Date(),
+      },
+    ]);
+    mockAccountFindFirst.mockResolvedValue({
+      id: 'acc1', name: 'Acme Corp', sentimentTrajectory: null,
     });
-  });
 
-  it('creates task_creation items for urgent emails', async () => {
-    mockEmailFindMany.mockResolvedValue([
-      {
-        id: 'em1', subject: 'URGENT: Need response today',
-        fromEmail: 'john@acme.com', fromName: 'John',
-        preview: 'Please respond ASAP', domain: 'acme.com',
-        classification: 'question', accountId: 'acc1',
-        createdAt: new Date(),
+    mockParse.mockResolvedValue({
+      parsed_output: {
+        classifications: [{
+          emailIndex: 0,
+          intent: 'positive_reply',
+          sentiment: 'very_positive',
+          urgency: 'high',
+          buyingSignals: ['budget approved for Q3'],
+          competitorMentions: [],
+          suggestedResponse: 'Respond within 24h — they have budget. Offer discovery call.',
+          suggestedPriority: 'High',
+          accountLinkSuggestion: null,
+        }],
       },
-    ]);
-    mockAccountFindFirst.mockResolvedValue({ id: 'acc1', name: 'Acme' });
+    });
 
     const result = await inboxClassifierAgent.analyze(ctx);
-    expect(result.items.some((i) => i.type === 'task_creation')).toBe(true);
-  });
-
-  it('creates enrichment items for unlinked emails from new domains', async () => {
-    mockEmailFindMany.mockResolvedValue([
-      {
-        id: 'em2', subject: 'Partnership inquiry',
-        fromEmail: 'jane@newcorp.com', fromName: 'Jane',
-        preview: 'Interested in your product', domain: 'newcorp.com',
-        classification: 'positive_reply', accountId: null,
-        createdAt: new Date(),
-      },
-    ]);
-    mockAccountFindFirst.mockResolvedValue(null);
-
-    const result = await inboxClassifierAgent.analyze(ctx);
-    expect(result.items.some((i) => i.type === 'enrichment')).toBe(true);
-  });
-
-  it('returns empty when no actionable emails', async () => {
-    mockEmailFindMany.mockResolvedValue([
-      {
-        id: 'em3', subject: 'Newsletter',
-        fromEmail: 'noreply@news.com', fromName: 'News',
-        preview: 'Weekly update', domain: 'news.com',
-        classification: 'auto_reply', accountId: null,
-        createdAt: new Date(),
-      },
-    ]);
-
-    const result = await inboxClassifierAgent.analyze(ctx);
-    expect(result.items).toHaveLength(0);
+    expect(result.items.length).toBeGreaterThan(0);
+    expect(result.items[0].type).toBe('task_creation');
+    expect(result.items[0].payload).toHaveProperty('buyingSignals');
+    expect(result.items[0].priority).toBe('High');
   });
 });

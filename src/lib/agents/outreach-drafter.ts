@@ -1,13 +1,16 @@
 import { db as prisma } from '@/lib/db';
-import Anthropic from '@anthropic-ai/sdk';
+import { zodOutputFormat } from '@anthropic-ai/sdk/helpers/zod';
+import { getAnthropicClient, MODEL_SONNET } from './ai';
+import { OutreachDraftSchema } from './schemas';
 import type { Agent, AgentContext, AgentResult, AgentError, NewQueueItem } from './types';
 
 const DEFAULT_PARAMS = {
   templateStyle: 'consultative',
   maxSequenceLength: 4,
   maxEmailWords: 200,
-  claudeModel: 'claude-sonnet-4-6',
 };
+
+const SYSTEM_PROMPT = `You are a B2B sales outreach specialist for the GoO (Guarantees of Origin) and renewable certificates market. Write personalized, compelling outreach emails. Always adapt your tone to the contact's communication style and use specific details from the context provided.`;
 
 export const outreachDrafterAgent: Agent = {
   name: 'outreach_drafter',
@@ -18,9 +21,12 @@ export const outreachDrafterAgent: Agent = {
 
   async analyze(ctx: AgentContext): Promise<AgentResult> {
     const params = { ...DEFAULT_PARAMS, ...(ctx.config.parameters as Record<string, unknown>) };
-    const apiKey = process.env.ANTHROPIC_API_KEY;
+    const learnings = (ctx.config.parameters as Record<string, unknown>)?.learnings as string | undefined;
 
-    if (!apiKey) {
+    let client: ReturnType<typeof getAnthropicClient>;
+    try {
+      client = getAnthropicClient();
+    } catch {
       return {
         items: [],
         metrics: { scanned: 0, matched: 0, skipped: 0 },
@@ -28,9 +34,8 @@ export const outreachDrafterAgent: Agent = {
       };
     }
 
-    const anthropic = new Anthropic({ apiKey });
+    const upstreamContext = ctx.triggerEvent?.payload?.contextBundle as Record<string, unknown> | undefined;
 
-    // Find leads/accounts needing outreach
     const leads = await prisma.lead.findMany({
       where: { stage: 'Qualified' },
       take: 10,
@@ -41,13 +46,10 @@ export const outreachDrafterAgent: Agent = {
 
     for (const lead of leads) {
       try {
-        // Get account context if exists
         const account = lead.company
           ? await prisma.account.findFirst({
               where: { name: { contains: lead.company, mode: 'insensitive' } },
-              include: {
-                contacts: { take: 1, orderBy: { warmth: 'desc' } },
-              },
+              include: { contacts: { take: 1, orderBy: { warmth: 'desc' } } },
             })
           : null;
 
@@ -60,7 +62,11 @@ export const outreachDrafterAgent: Agent = {
             })
           : [];
 
-        const prompt = `You are a B2B sales outreach specialist. Write a ${params.templateStyle} email.
+        const systemPrompt = learnings
+          ? `${SYSTEM_PROMPT}\n\nLearnings from past deals:\n${learnings}`
+          : SYSTEM_PROMPT;
+
+        const userPrompt = `Write a ${params.templateStyle} email.
 
 Context:
 - Company: ${lead.company}
@@ -69,27 +75,22 @@ Context:
 - Contact: ${contact ? `${contact.name}, ${contact.title}` : 'Unknown'}
 - Recent signals: ${signals.map((s) => s.title).join('; ') || 'None'}
 - Sequence step: 1 of ${params.maxSequenceLength}
+- Max words: ${params.maxEmailWords}
+${upstreamContext ? `\nUpstream context: ${JSON.stringify(upstreamContext)}` : ''}
 
-Generate a JSON response with:
-- subjectA: first subject line option
-- subjectB: second subject line option
-- body: email body (max ${params.maxEmailWords} words)
-- reasoning: one line explaining your approach`;
+Generate the outreach email with two subject line variants.`;
 
-        const response = await anthropic.messages.create({
-          model: String(params.claudeModel),
+        const response = await client.messages.parse({
+          model: MODEL_SONNET,
           max_tokens: 1024,
-          messages: [{ role: 'user', content: prompt }],
+          thinking: { type: 'adaptive' },
+          cache_control: { type: 'ephemeral' },
+          system: systemPrompt,
+          output_config: { format: zodOutputFormat(OutreachDraftSchema) },
+          messages: [{ role: 'user', content: userPrompt }],
         });
 
-        const text = response.content[0].type === 'text' ? response.content[0].text : '';
-        let parsed: Record<string, string>;
-        try {
-          const jsonMatch = text.match(/\{[\s\S]*\}/);
-          parsed = jsonMatch ? JSON.parse(jsonMatch[0]) : { subjectA: lead.company, subjectB: lead.company, body: text, reasoning: '' };
-        } catch {
-          parsed = { subjectA: `Introduction: ${lead.company}`, subjectB: `Quick question for ${lead.company}`, body: text, reasoning: 'Generated from raw response' };
-        }
+        const draft = response.parsed_output;
 
         items.push({
           type: 'outreach_draft',
@@ -103,10 +104,13 @@ Generate a JSON response with:
           payload: {
             contactId: contact?.id || null,
             accountId: account?.id || null,
-            subject: parsed.subjectA || `Introduction: ${lead.company}`,
-            subjectVariantB: parsed.subjectB || parsed.subjectA || '',
-            body: parsed.body || '',
+            subject: draft.subjectA,
+            subjectVariantB: draft.subjectB,
+            body: draft.body,
+            introRequestMessage: draft.introRequestMessage,
             templateStyle: String(params.templateStyle),
+            toneUsed: draft.toneUsed,
+            personalizationHooks: draft.personalizationHooks,
             contextUsed: [
               ...(account?.pain ? ['pain'] : []),
               ...(account?.whyNow ? ['whyNow'] : []),
@@ -115,8 +119,9 @@ Generate a JSON response with:
             sequenceStep: 1,
             sequenceTotal: Number(params.maxSequenceLength),
             previousOutreachId: null,
+            contextBundle: upstreamContext || undefined,
           },
-          reasoning: parsed.reasoning || `Generated ${params.templateStyle} outreach for ${lead.company}.`,
+          reasoning: draft.reasoning,
           priority: 'Normal',
         });
       } catch (err) {

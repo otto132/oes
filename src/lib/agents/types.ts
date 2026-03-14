@@ -49,3 +49,20 @@ export interface NewQueueItem {
   reasoning: string;
   priority: QueuePriority;
 }
+
+export interface ContextBundle {
+  signals?: { title: string; relevance: string; source: string }[];
+  qualification?: {
+    scores: Record<string, number>;
+    reasoning: string;
+    gaps: string[];
+  };
+  enrichment?: {
+    pain: string;
+    whyNow: string;
+    approachBrief: string;
+    personalProfile: Record<string, unknown>;
+  };
+  emailSentiment?: { trend: string; lastClassification: string };
+  competitorActivity?: { competitor: string; activity: string }[];
+}

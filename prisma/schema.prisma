@@ -184,9 +184,10 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  isActive          Boolean   @default(true)
-  notificationPrefs Json?
-  lastLoginAt       DateTime?
+  isActive             Boolean   @default(true)
+  notificationPrefs    Json?
+  lastLoginAt          DateTime?
+  linkedinConnections  Json?     // Team member's LinkedIn connection data
 
   // Relations
   ownedLeads        Lead[]             @relation("LeadOwner")
@@ -300,8 +301,9 @@ model Account {
   scoreCommercial Int @default(50)
 
   // Cached/computed
-  pipelineValue  Int      @default(0) // cached sum of open opp amounts
-  lastActivityAt DateTime @default(now())
+  pipelineValue       Int      @default(0) // cached sum of open opp amounts
+  lastActivityAt      DateTime @default(now())
+  sentimentTrajectory Json?    // Email sentiment over time [{date, sentiment}]
 
   // AI Account Brief
   pain         String   @default("") @db.Text
@@ -341,9 +343,11 @@ model Contact {
   warmth      ContactWarmth @default(Cold)
   email       String        @default("")
   phone       String?
-  linkedinUrl String?
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
+  linkedinUrl      String?
+  linkedinData     Json?    // Raw LinkedIn paste data
+  personalProfile  Json?    // Claude-generated PersonalProfile
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
 
   // Relations
   accountId String
@@ -388,10 +392,11 @@ model Opportunity {
   updatedAt DateTime @updatedAt
 
   // Relations
-  accountId String
-  account   Account @relation(fields: [accountId], references: [id])
-  ownerId   String
-  owner     User    @relation("OppOwner", fields: [ownerId], references: [id])
+  accountId       String
+  account         Account           @relation(fields: [accountId], references: [id])
+  ownerId         String
+  owner           User              @relation("OppOwner", fields: [ownerId], references: [id])
+  winLossAnalyses WinLossAnalysis[]
 
   @@index([accountId])
   @@index([ownerId])
@@ -668,6 +673,17 @@ model AgentEvent {
 
   @@index([processed, event])
   @@map("agent_events")
+}
+
+model WinLossAnalysis {
+  id            String      @id @default(cuid())
+  opportunityId String
+  opportunity   Opportunity @relation(fields: [opportunityId], references: [id])
+  outcome       String      // "won" | "lost"
+  analysis      Json        // Full WinLossAnalysisSchema output
+  createdAt     DateTime    @default(now())
+
+  @@index([opportunityId])
 }
 
 // ═══════════════════════════════════════════════════════════════

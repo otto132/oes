@@ -3,11 +3,25 @@ import { leadQualifierAgent } from '../lead-qualifier';
 import type { AgentContext } from '../types';
 
 const mockLeadFindMany = vi.fn();
+const mockSignalFindMany = vi.fn();
+const mockInboxFindMany = vi.fn();
+const mockAccountFindFirst = vi.fn();
 
 vi.mock('@/lib/db', () => ({
   db: {
     lead: { findMany: (...args: unknown[]) => mockLeadFindMany(...args) },
+    signal: { findMany: (...args: unknown[]) => mockSignalFindMany(...args) },
+    inboxEmail: { findMany: (...args: unknown[]) => mockInboxFindMany(...args) },
+    account: { findFirst: (...args: unknown[]) => mockAccountFindFirst(...args) },
   },
+}));
+
+const mockParse = vi.fn();
+vi.mock('../ai', () => ({
+  getAnthropicClient: () => ({
+    messages: { parse: mockParse },
+  }),
+  MODEL_HAIKU: 'claude-haiku-4-5',
 }));
 
 const ctx: AgentContext = {
@@ -20,7 +34,7 @@ const ctx: AgentContext = {
   userId: 'system',
 };
 
-describe('Lead Qualifier Agent', () => {
+describe('Lead Qualifier Agent (upgraded)', () => {
   beforeEach(() => vi.clearAllMocks());
 
   it('has correct name and triggers', () => {
@@ -29,42 +43,37 @@ describe('Lead Qualifier Agent', () => {
     expect(leadQualifierAgent.triggers).toContainEqual({ type: 'chain', afterApproval: 'signal_review' });
   });
 
-  it('creates qualify recommendation for high-scoring leads', async () => {
+  it('uses Claude to evaluate leads with context', async () => {
     mockLeadFindMany.mockResolvedValue([
       {
-        id: 'l1', company: 'Hot Corp', type: 'Enterprise', country: 'Finland',
-        pain: 'High energy costs', scoreFit: 80, scoreIntent: 75,
-        scoreUrgency: 70, scoreAccess: 85, scoreCommercial: 90,
-        stage: 'New', createdAt: new Date(),
+        id: 'l1', company: 'Acme Corp', stage: 'New', pain: 'High costs',
+        scoreFit: 0, scoreIntent: 0, scoreUrgency: 0, scoreAccess: 0, scoreCommercial: 0,
+        type: 'Utility',
       },
     ]);
+    mockSignalFindMany.mockResolvedValue([
+      { title: 'Acme renewable initiative', summary: 'Investing in solar' },
+    ]);
+    mockInboxFindMany.mockResolvedValue([]);
+    mockAccountFindFirst.mockResolvedValue(null);
+
+    mockParse.mockResolvedValue({
+      parsed_output: {
+        recommendation: 'qualify',
+        scores: { fit: 80, intent: 70, urgency: 60, access: 40, commercial: 85 },
+        reasoning: 'Strong fit as Nordic utility with renewable pain. Intent inferred from conference attendance.',
+        gaps: ['No direct contact identified'],
+        suggestedNextStep: 'Enrich contacts via LinkedIn',
+        inferredFrom: { intent: 'Conference attendance signal', urgency: 'Contract renewal mentioned in RSS' },
+      },
+    });
 
     const result = await leadQualifierAgent.analyze(ctx);
-    expect(result.items.length).toBe(1);
+    expect(result.items).toHaveLength(1);
     expect(result.items[0].type).toBe('lead_qualification');
-    const payload = result.items[0].payload as Record<string, unknown>;
-    expect(payload.recommendation).toBe('qualify');
-  });
-
-  it('creates disqualify recommendation for low-scoring leads', async () => {
-    mockLeadFindMany.mockResolvedValue([
-      {
-        id: 'l2', company: 'Cold Corp', type: 'SMB', country: 'Unknown',
-        pain: '', scoreFit: 10, scoreIntent: 15,
-        scoreUrgency: 20, scoreAccess: 10, scoreCommercial: 5,
-        stage: 'New', createdAt: new Date(),
-      },
-    ]);
-
-    const result = await leadQualifierAgent.analyze(ctx);
-    expect(result.items.length).toBe(1);
-    const payload = result.items[0].payload as Record<string, unknown>;
-    expect(payload.recommendation).toBe('disqualify');
-  });
-
-  it('returns empty for no leads', async () => {
-    mockLeadFindMany.mockResolvedValue([]);
-    const result = await leadQualifierAgent.analyze(ctx);
-    expect(result.items).toHaveLength(0);
+    expect(result.items[0].payload).toHaveProperty('recommendation', 'qualify');
+    expect(result.items[0].payload).toHaveProperty('gaps');
+    expect(result.items[0].reasoning).toContain('Nordic utility');
+    expect(mockParse).toHaveBeenCalledOnce();
   });
 });
