@@ -5,6 +5,8 @@ import { Badge, Avatar, FIUACBars, ScorePill, EmptyState, Skeleton, SkeletonCard
 import { compositeScore, cn } from '@/lib/utils';
 import type { Lead } from '@/lib/types';
 import { usePendingMutations, useFailedMutations } from '@/hooks/use-mutation-state';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
+import { useState } from 'react';
 import { RotateCw } from 'lucide-react';
 
 function LeadsSkeleton() {
@@ -49,6 +51,7 @@ export default function LeadsPage() {
   const convertLead = useConvertLead();
   const pendingIds = usePendingMutations(['leads']);
   const failedMutations = useFailedMutations(['leads']);
+  const [confirmDisqualify, setConfirmDisqualify] = useState<string | null>(null);
 
   function openCreateLeadDrawer() {
     const state = { company: '', type: 'Unknown', country: '', pain: '' };
@@ -354,10 +357,7 @@ export default function LeadsPage() {
                       )}
                       <button
                         disabled={disqualify.isPending}
-                        onClick={() => disqualify.mutate(l.id, {
-                          onSuccess: () => addToast({ type: 'info', message: 'Lead disqualified' }),
-                          onError: (err: Error) => addToast({ type: 'error', message: err.message }),
-                        })}
+                        onClick={() => setConfirmDisqualify(l.id)}
                         className="px-2 py-1 text-[10px] text-danger rounded-md hover:bg-[var(--hover)] transition-colors disabled:opacity-50"
                       >
                         Disqualify
@@ -407,10 +407,7 @@ export default function LeadsPage() {
               )}
               <button
                 disabled={disqualify.isPending}
-                onClick={() => disqualify.mutate(l.id, {
-                  onSuccess: () => addToast({ type: 'info', message: 'Lead disqualified' }),
-                  onError: (err: Error) => addToast({ type: 'error', message: err.message }),
-                })}
+                onClick={() => setConfirmDisqualify(l.id)}
                 className="px-2 py-1 text-[10px] text-danger rounded-md hover:bg-[var(--hover)] transition-colors disabled:opacity-50"
               >
                 Disqualify
@@ -419,6 +416,22 @@ export default function LeadsPage() {
           </div>
         ))}
       </div>
+      <ConfirmDialog
+        open={!!confirmDisqualify}
+        title="Disqualify Lead"
+        message="Are you sure you want to disqualify this lead? This action cannot be undone."
+        confirmLabel="Disqualify"
+        onConfirm={() => {
+          if (confirmDisqualify) {
+            disqualify.mutate(confirmDisqualify, {
+              onSuccess: () => addToast({ type: 'info', message: 'Lead disqualified' }),
+              onError: (err: Error) => addToast({ type: 'error', message: err.message }),
+            });
+          }
+          setConfirmDisqualify(null);
+        }}
+        onCancel={() => setConfirmDisqualify(null)}
+      />
     </div>
   );
 }

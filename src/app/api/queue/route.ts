@@ -5,7 +5,8 @@ import { resolveTenantDb } from '@/lib/tenant';
 import { adaptQueueItem } from '@/lib/adapters';
 import { withHandler } from '@/lib/api-handler';
 import { queueActionSchema } from '@/lib/schemas/queue';
-import { notFound, badRequest, unauthorized } from '@/lib/api-errors';
+import { notFound, badRequest, unauthorized, forbidden } from '@/lib/api-errors';
+import { canMutate } from '@/lib/rbac';
 import { auth } from '@/lib/auth';
 import { handleApproval } from '@/lib/agents/chain';
 
@@ -44,6 +45,48 @@ interface OutreachDraftPayload {
   subject?: string;
   body?: string;
 }
+
+import { z } from 'zod';
+
+/** Type-specific validation schemas for editedPayload */
+const payloadSchemas: Record<string, z.ZodSchema> = {
+  lead_qualification: z.object({
+    company: z.string().optional(),
+    type: z.string().optional(),
+    country: z.string().optional(),
+    stage: z.string().optional(),
+    pain: z.string().optional(),
+    scores: z.object({
+      f: z.number().min(0).max(100).optional(),
+      i: z.number().min(0).max(100).optional(),
+      u: z.number().min(0).max(100).optional(),
+      a: z.number().min(0).max(100).optional(),
+      c: z.number().min(0).max(100).optional(),
+    }).optional(),
+  }).passthrough(),
+  enrichment: z.object({
+    field: z.string().optional(),
+    after: z.unknown().optional(),
+  }).passthrough(),
+  task_creation: z.object({
+    task: z.string().optional(),
+    due: z.string().optional(),
+    pri: z.string().optional(),
+  }).passthrough(),
+  signal_review: z.object({
+    signalType: z.string().optional(),
+    headline: z.string().optional(),
+    summary: z.string().optional(),
+    sourceName: z.string().optional(),
+    sourceUrl: z.string().optional(),
+    relevanceScore: z.number().optional(),
+    matchedAccounts: z.array(z.string()).optional(),
+  }).passthrough(),
+  outreach_draft: z.object({
+    subject: z.string().optional(),
+    body: z.string().optional(),
+  }).passthrough(),
+};
 
 /**
  * Approval authority policy (U-04):
@@ -90,6 +133,11 @@ export async function GET(req: NextRequest) {
 }
 
 export const POST = withHandler(queueActionSchema, async (req, ctx) => {
+  // RBAC: only ADMIN and MEMBER can approve/reject queue items
+  if (!canMutate(ctx.session.user.role)) {
+    return forbidden('Only ADMIN or MEMBER roles can approve or reject queue items');
+  }
+
   const db = resolveTenantDb(ctx.session as any);
   const body = ctx.body;
   const userId = ctx.session.user.id;
@@ -98,6 +146,17 @@ export const POST = withHandler(queueActionSchema, async (req, ctx) => {
     const { id, editedPayload } = body;
     const item = await db.queueItem.findUnique({ where: { id } });
     if (!item) return notFound('Queue item not found');
+
+    // Validate editedPayload against type-specific schema
+    if (editedPayload) {
+      const schema = payloadSchemas[item.type];
+      if (schema) {
+        const result = schema.safeParse(editedPayload);
+        if (!result.success) {
+          return badRequest(`Invalid payload for ${item.type}: ${result.error.issues.map(i => i.message).join(', ')}`);
+        }
+      }
+    }
 
     const updated = await db.queueItem.update({
       where: { id },

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { resolveTenantDb } from '@/lib/tenant';
 import { auth } from '@/lib/auth';
+import { createContactSchema } from '@/lib/schemas/contacts';
 
 export async function POST(
   req: NextRequest,
@@ -13,12 +14,14 @@ export async function POST(
   const db = resolveTenantDb(session as any);
 
   const { id: accountId } = await params;
-  const body = await req.json();
-  const { name, title, role, warmth, email, phone } = body;
-
-  if (!name?.trim()) {
-    return NextResponse.json({ error: 'Name is required' }, { status: 400 });
+  const raw = await req.json();
+  const parsed = createContactSchema.safeParse(raw);
+  if (!parsed.success) {
+    const msg = parsed.error.issues.map(i => i.message).join(', ');
+    return NextResponse.json({ error: msg }, { status: 400 });
   }
+
+  const { name, title, role, warmth, email, phone } = parsed.data;
 
   // Verify account exists
   const account = await db.account.findUnique({ where: { id: accountId } });
@@ -28,15 +31,15 @@ export async function POST(
 
   const contact = await db.contact.create({
     data: {
-      name: name.trim(),
-      title: title?.trim() || '',
+      name,
+      title: title || '',
       role: role || 'Influencer',
       warmth: warmth || 'Cold',
-      email: email?.trim() || '',
-      phone: phone?.trim() || undefined,
+      email: email || '',
+      phone: phone || undefined,
       accountId,
     },
   });
 
-  return NextResponse.json(contact, { status: 201 });
+  return NextResponse.json({ data: contact }, { status: 201 });
 }

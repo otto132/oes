@@ -34,7 +34,7 @@ export const POST = withHandler(createActivitySchema, async (req, ctx) => {
   const db = resolveTenantDb(ctx.session as any);
   const body = ctx.body;
   const { type, summary, detail, source, noteType, accountId } = body;
-  const authorId = body.authorId || ctx.session.user.id;
+  const authorId = ctx.session.user.id;
 
   const activity = await db.activity.create({
     data: { type: (type || 'Note') as ActivityType, summary, detail: detail || '', source: source || 'Manual', noteType, accountId: accountId || undefined, authorId },

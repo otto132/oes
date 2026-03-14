@@ -126,6 +126,17 @@ export const api = {
       post<any>('/accounts', data),
     update: (id: string, data: Record<string, unknown>) =>
       patch<any>(`/accounts/${id}`, data),
+    import: async (file: File, fieldMap?: Record<string, string>) => {
+      const form = new FormData();
+      form.append('file', file);
+      if (fieldMap) form.append('fieldMap', JSON.stringify(fieldMap));
+      const res = await fetch(`${BASE}/accounts/import`, { method: 'POST', body: form });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ error: res.statusText }));
+        throw new ApiError(res.status, extractErrorMessage(err, `Import failed: ${res.status}`));
+      }
+      return res.json();
+    },
   },
 
   // ── Opportunities ──────────────────────────────
