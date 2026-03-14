@@ -35,9 +35,9 @@ export default function Sidebar() {
   const me = {
     id: session?.user?.id ?? '',
     name: session?.user?.name ?? '',
-    ini: session?.user?.name ? session.user.name.split(/\s+/).map(p => p[0]).join('').toUpperCase().slice(0, 2) : '??',
+    initials: session?.user?.name ? session.user.name.split(/\s+/).map(p => p[0]).join('').toUpperCase().slice(0, 2) : '??',
     role: session?.user?.role ?? '',
-    ac: 'green',
+    color: 'green',
   };
 
   const badgeCounts: Record<string, number> = {
@@ -110,7 +110,7 @@ export default function Sidebar() {
           Sign out
         </button>
         <div className="flex items-center gap-2 px-1">
-          <div className="w-7 h-7 rounded-md bg-surface border border-border text-sub flex items-center justify-center text-[10px] font-semibold">{me.ini}</div>
+          <div className="w-7 h-7 rounded-md bg-surface border border-border text-sub flex items-center justify-center text-[10px] font-semibold">{me.initials}</div>
           <div className="flex-1 min-w-0">
             <div className="text-[11.5px] font-medium text-text truncate">{me.name}</div>
             <div className="text-[10px] text-muted truncate">{me.role}</div>

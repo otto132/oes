@@ -5,7 +5,7 @@ import { useSession } from 'next-auth/react';
 import { useStore } from '@/lib/store';
 import { useTasksQuery, useCreateTask, useCompleteTask, useUpdateTask } from '@/lib/queries/tasks';
 import { Badge, Avatar, AgentTag, EmptyState, Skeleton, SkeletonCard, SkeletonText, ErrorState } from '@/components/ui';
-import { fDate, isOverdue, cn, fR } from '@/lib/utils';
+import { fDate, isOverdue, cn, fR, displayLabel } from '@/lib/utils';
 import type { Task, TaskPriority, Goal } from '@/lib/types';
 
 function TasksSkeleton() {
@@ -69,20 +69,20 @@ function TasksPageInner() {
   const me = {
     id: session?.user?.id ?? '',
     name: session?.user?.name ?? '',
-    ini: session?.user?.name ? session.user.name.split(/\s+/).map(p => p[0]).join('').toUpperCase().slice(0, 2) : '??',
+    initials: session?.user?.name ? session.user.name.split(/\s+/).map(p => p[0]).join('').toUpperCase().slice(0, 2) : '??',
     role: session?.user?.role ?? '',
-    ac: 'green',
+    color: 'green',
   };
 
   // Apply showCompleted filter client-side
   const tasks = showCompleted ? allTasks : allTasks.filter(t => t.status !== 'Done');
 
   let all = tasks;
-  if (search) all = all.filter(t => `${t.title} ${t.accName}`.toLowerCase().includes(search.toLowerCase()));
+  if (search) all = all.filter(t => `${t.title} ${t.accountName}`.toLowerCase().includes(search.toLowerCase()));
   const mine = all.filter(t => t.assignees?.some(u => u.id === me.id) || t.owner.id === me.id);
-  const review = all.filter(t => t.status === 'In Review' && t.reviewer?.id === me.id);
+  const review = all.filter(t => t.status === 'InReview' && t.reviewer?.id === me.id);
   const visible = tab === 'mine' ? mine : tab === 'review' ? review : all;
-  const overdue = visible.filter(t => t.status !== 'Done' && isOverdue(t.due));
+  const overdue = visible.filter(t => t.status !== 'Done' && isOverdue(t.dueDate));
 
   // Group by goals
   const goalTasks: Record<string, Task[]> = {};
@@ -93,14 +93,14 @@ function TasksPageInner() {
   });
 
   const sorted = (arr: Task[]) => [...arr].sort((a, b) => {
-    const ao = a.status === 'Done' ? 2 : isOverdue(a.due) ? 0 : 1;
-    const bo = b.status === 'Done' ? 2 : isOverdue(b.due) ? 0 : 1;
-    return ao !== bo ? ao - bo : new Date(a.due || '2099-01-01').getTime() - new Date(b.due || '2099-01-01').getTime();
+    const ao = a.status === 'Done' ? 2 : isOverdue(a.dueDate) ? 0 : 1;
+    const bo = b.status === 'Done' ? 2 : isOverdue(b.dueDate) ? 0 : 1;
+    return ao !== bo ? ao - bo : new Date(a.dueDate || '2099-01-01').getTime() - new Date(b.dueDate || '2099-01-01').getTime();
   });
 
   function openNewTaskDrawer() {
     const defaultDue = new Date(Date.now() + 7 * 864e5).toISOString().split('T')[0];
-    const state = { title: '', priority: 'Medium', due: defaultDue, accountName: '', goalId: '' };
+    const state = { title: '', priority: 'Medium', dueDate: defaultDue, accountName: '', goalId: '' };
 
     openDrawer({
       title: 'New Task',
@@ -134,7 +134,7 @@ function TasksPageInner() {
               <input
                 type="date"
                 defaultValue={defaultDue}
-                onChange={e => { state.due = e.target.value; }}
+                onChange={e => { state.dueDate = e.target.value; }}
                 className="px-2.5 py-1.5 text-[12px] rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] focus:outline-none focus:border-brand/40"
               />
             </label>
@@ -157,7 +157,7 @@ function TasksPageInner() {
               >
                 <option value="">No goal</option>
                 {goals.map(g => (
-                  <option key={g.id} value={g.id}>{g.title}{g.accName ? ` (${g.accName})` : ''}</option>
+                  <option key={g.id} value={g.id}>{g.title}{g.accountName ? ` (${g.accountName})` : ''}</option>
                 ))}
               </select>
             </label>
@@ -184,7 +184,7 @@ function TasksPageInner() {
                 {
                   title: state.title.trim(),
                   priority: state.priority,
-                  due: state.due || undefined,
+                  dueDate: state.dueDate || undefined,
                   goalId: state.goalId || undefined,
                 },
                 {
@@ -343,8 +343,8 @@ function TasksPageInner() {
   function openEditTaskDrawer(t: Task) {
     const state = {
       title: t.title,
-      priority: t.pri,
-      due: t.due ? t.due.split('T')[0] : '',
+      priority: t.priority,
+      dueDate: t.dueDate ? t.dueDate.split('T')[0] : '',
     };
 
     openDrawer({
@@ -378,8 +378,8 @@ function TasksPageInner() {
               <span className="text-[10px] font-semibold uppercase tracking-wide text-muted">Due Date</span>
               <input
                 type="date"
-                defaultValue={state.due}
-                onChange={e => { state.due = e.target.value; }}
+                defaultValue={state.dueDate}
+                onChange={e => { state.dueDate = e.target.value; }}
                 className="px-2.5 py-1.5 text-[12px] rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] focus:outline-none focus:border-brand/40"
               />
             </label>
@@ -424,7 +424,7 @@ function TasksPageInner() {
                   data: {
                     title: state.title.trim(),
                     priority: state.priority,
-                    ...(state.due ? { due: state.due } : {}),
+                    ...(state.dueDate ? { dueDate: state.dueDate } : {}),
                   },
                 },
                 {
@@ -449,27 +449,27 @@ function TasksPageInner() {
     const siblings = t.goalId ? tasks.filter(x => x.goalId === t.goalId && x.id !== t.id) : [];
     openDrawer({
       title: t.title,
-      subtitle: t.accName || 'Task Detail',
+      subtitle: t.accountName || 'Task Detail',
       body: (
         <div className="flex flex-col gap-3.5">
           <div className="flex items-center gap-1.5 flex-wrap">
-            <Badge variant={t.pri === 'High' ? 'err' : t.pri === 'Low' ? 'neutral' : 'warn'}>{t.pri}</Badge>
-            <Badge variant={t.status === 'Done' ? 'ok' : t.status === 'In Review' ? 'purple' : t.status === 'In Progress' ? 'info' : 'neutral'}>{t.status}</Badge>
-            {t.src !== 'Manual' && <AgentTag name={t.src} />}
-            {t.due && <span className={cn('text-[11px]', t.status !== 'Done' && isOverdue(t.due) ? 'text-danger' : 'text-muted')}>Due {fDate(t.due)}</span>}
+            <Badge variant={t.priority === 'High' ? 'err' : t.priority === 'Low' ? 'neutral' : 'warn'}>{t.priority}</Badge>
+            <Badge variant={t.status === 'Done' ? 'ok' : t.status === 'InReview' ? 'purple' : t.status === 'InProgress' ? 'info' : 'neutral'}>{displayLabel(t.status)}</Badge>
+            {t.source !== 'Manual' && <AgentTag name={t.source} />}
+            {t.dueDate && <span className={cn('text-[11px]', t.status !== 'Done' && isOverdue(t.dueDate) ? 'text-danger' : 'text-muted')}>Due {fDate(t.dueDate)}</span>}
           </div>
           <div>
             <div className="text-[9px] font-semibold tracking-wide uppercase text-muted mb-1.5">Assigned To</div>
             <div className="flex items-center gap-1.5 flex-wrap">
               {(t.assignees || [t.owner]).map(u => (
-                <div key={u.id} className="flex items-center gap-1"><Avatar initials={u.ini} color={u.ac} size="xs" /><span className="text-[11px]">{u.name}</span></div>
+                <div key={u.id} className="flex items-center gap-1"><Avatar initials={u.initials} color={u.color} size="xs" /><span className="text-[11px]">{u.name}</span></div>
               ))}
             </div>
           </div>
           {t.reviewer && (
             <div>
               <div className="text-[9px] font-semibold tracking-wide uppercase text-muted mb-1.5">Reviewer</div>
-              <div className="flex items-center gap-1"><Avatar initials={t.reviewer.ini} color={t.reviewer.ac} size="xs" /><span className="text-[11px]">{t.reviewer.name}</span></div>
+              <div className="flex items-center gap-1"><Avatar initials={t.reviewer.initials} color={t.reviewer.color} size="xs" /><span className="text-[11px]">{t.reviewer.name}</span></div>
             </div>
           )}
           {goal && (
@@ -491,7 +491,7 @@ function TasksPageInner() {
               <div className="text-[11px] text-muted py-2">No comments yet</div>
             ) : (t.comments || []).map((c, i) => (
               <div key={i} className="py-2 border-b border-[var(--border)] last:border-b-0 text-[11.5px]">
-                <div className="flex items-center gap-1 mb-0.5"><Avatar initials={c.by.ini} color={c.by.ac} size="xs" /><span className="text-[10.5px] font-medium">{c.by.name}</span><span className="text-[9px] text-muted">{fR(c.at)}</span></div>
+                <div className="flex items-center gap-1 mb-0.5"><Avatar initials={c.author.initials} color={c.author.color} size="xs" /><span className="text-[10.5px] font-medium">{c.author.name}</span><span className="text-[9px] text-muted">{fR(c.createdAt)}</span></div>
                 <div className="text-sub">{c.text}</div>
               </div>
             ))}
@@ -515,7 +515,7 @@ function TasksPageInner() {
   }
 
   function TaskRow({ t }: { t: Task }) {
-    const od = t.status !== 'Done' && isOverdue(t.due);
+    const od = t.status !== 'Done' && isOverdue(t.dueDate);
     const done = t.status === 'Done';
     return (
       <div className={cn('flex items-center gap-2.5 px-3.5 py-2.5 rounded-lg bg-[var(--elevated)] border border-[var(--border)] hover:bg-[var(--hover)] transition-colors', done && 'opacity-50')}>
@@ -526,15 +526,15 @@ function TasksPageInner() {
         <div className="flex-1 min-w-0 cursor-pointer" onClick={() => openTaskDetail(t)}>
           <div className={cn('text-[12.5px] font-medium', done && 'line-through text-muted')}>{t.title}</div>
           <div className="flex items-center gap-1 mt-0.5 flex-wrap">
-            {t.accName && <span className="text-[10px] text-muted">{t.accName}</span>}
-            {t.src !== 'Manual' && <AgentTag name={t.src} className="!text-[8px]" />}
-            {t.status === 'In Review' && <Badge variant="purple" className="!text-[8px]">In Review · {t.reviewer?.ini || '?'}</Badge>}
+            {t.accountName && <span className="text-[10px] text-muted">{t.accountName}</span>}
+            {t.source !== 'Manual' && <AgentTag name={t.source} className="!text-[8px]" />}
+            {t.status === 'InReview' && <Badge variant="purple" className="!text-[8px]">In Review · {t.reviewer?.initials || '?'}</Badge>}
             {(t.comments || []).length > 0 && <span className="text-[9px] text-muted">💬 {t.comments!.length}</span>}
           </div>
         </div>
-        <Badge variant={t.pri === 'High' ? 'err' : t.pri === 'Low' ? 'neutral' : 'warn'} className="!text-[9px]">{t.pri}</Badge>
-        {!done && <span className={cn('font-mono text-[10.5px] flex-shrink-0', od ? 'text-danger' : 'text-sub')}>{od ? '⚠ ' : ''}{fDate(t.due)}</span>}
-        <Avatar initials={(t.assignees?.[0] || t.owner).ini} color={(t.assignees?.[0] || t.owner).ac} size="xs" />
+        <Badge variant={t.priority === 'High' ? 'err' : t.priority === 'Low' ? 'neutral' : 'warn'} className="!text-[9px]">{t.priority}</Badge>
+        {!done && <span className={cn('font-mono text-[10.5px] flex-shrink-0', od ? 'text-danger' : 'text-sub')}>{od ? '⚠ ' : ''}{fDate(t.dueDate)}</span>}
+        <Avatar initials={(t.assignees?.[0] || t.owner).initials} color={(t.assignees?.[0] || t.owner).color} size="xs" />
       </div>
     );
   }
@@ -600,7 +600,7 @@ function TasksPageInner() {
                   <span className="text-[12px] font-semibold flex-1">{g.title}</span>
                   <div className="w-20 h-[3px] rounded-full bg-[var(--surface)] overflow-hidden"><div className="h-full rounded-full bg-brand transition-all" style={{ width: `${pct}%` }} /></div>
                   <span className="text-[10px] text-muted">{done}/{total}</span>
-                  {g.accName && <Badge variant="neutral" className="!text-[8px]">{g.accName}</Badge>}
+                  {g.accountName && <Badge variant="neutral" className="!text-[8px]">{g.accountName}</Badge>}
                 </div>
                 <div className="p-1 flex flex-col gap-1">{sorted(gTasks).map(t => <TaskRow key={t.id} t={t} />)}</div>
               </div>

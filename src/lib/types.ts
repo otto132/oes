@@ -1,29 +1,28 @@
 // Eco-Insight Revenue OS — Core Types
 // ═══════════════════════════════════════════════════
+// Field names match Prisma schema for direct data flow.
 
 export type ID = string;
 
 export interface User {
-  id: ID; name: string; ini: string; role: string; ac: string;
-  // Aliases for compatibility
-  initials?: string; color?: string;
+  id: ID; name: string; initials: string; role: string; color: string;
 }
 
 // ── FIUAC Scoring ────────────────────────────────
 export interface FIUACScores {
-  f: number; i: number; u: number; a: number; c: number;
+  scoreFit: number; scoreIntent: number; scoreUrgency: number; scoreAccess: number; scoreCommercial: number;
 }
 
 export function compositeScore(s: FIUACScores): number {
-  return Math.round(s.f * 0.25 + s.i * 0.25 + s.u * 0.20 + s.a * 0.15 + s.c * 0.15);
+  return Math.round(s.scoreFit * 0.25 + s.scoreIntent * 0.25 + s.scoreUrgency * 0.20 + s.scoreAccess * 0.15 + s.scoreCommercial * 0.15);
 }
 
 // ── Deal Health ──────────────────────────────────
 export interface DealHealth {
-  eng: number; stake: number; comp: number; time: number;
+  healthEngagement: number; healthStakeholders: number; healthCompetitive: number; healthTimeline: number;
 }
 export function healthAvg(h: DealHealth): number {
-  return Math.round((h.eng + h.stake + h.comp + h.time) / 4);
+  return Math.round((h.healthEngagement + h.healthStakeholders + h.healthCompetitive + h.healthTimeline) / 4);
 }
 export function riskLevel(h: DealHealth): 'low' | 'medium' | 'high' {
   const a = healthAvg(h);
@@ -35,8 +34,8 @@ export type SignalType = 'ppa_announcement' | 'renewable_target' | 'job_posting'
 export type SignalStatus = 'new' | 'reviewed' | 'converted' | 'dismissed';
 
 export interface Signal {
-  id: ID; type: SignalType; title: string; src: string; srcUrl: string | null;
-  at: string; sum: string; rel: number; conf: string; why: string;
+  id: ID; type: SignalType; title: string; source: string; sourceUrl: string | null;
+  detectedAt: string; summary: string; relevance: number; confidence: number; reasoning: string;
   status: SignalStatus; agent: string;
 }
 
@@ -44,14 +43,14 @@ export interface Signal {
 export type LeadStage = 'New' | 'Researching' | 'Qualified' | 'Converted' | 'Disqualified';
 
 export interface Lead {
-  id: ID; company: string; domain: string; src: string; signalId: ID | null;
+  id: ID; company: string; domain: string; source: string; signalId: ID | null;
   type: string; country: string; region: string; stage: LeadStage;
-  pain: string; fit: string[]; scores: FIUACScores; conf: string;
+  pain: string; moduleFit: string[]; scores: FIUACScores; confidence: number;
   owner: User; createdAt: string;
 }
 
 // ── Contacts ─────────────────────────────────────
-export type ContactRole = 'Champion' | 'Economic Buyer' | 'Technical Buyer' | 'Influencer' | 'Blocker';
+export type ContactRole = 'Champion' | 'EconomicBuyer' | 'TechnicalBuyer' | 'Influencer' | 'Blocker';
 export type ContactWarmth = 'Strong' | 'Warm' | 'Cold';
 
 export interface Contact {
@@ -64,29 +63,29 @@ export type AccountStatus = 'Prospect' | 'Active' | 'Partner' | 'Churned';
 export type CertScheme = 'GoO' | 'ELcert' | 'REGO' | 'I-REC' | 'EECS';
 
 export interface Account {
-  id: ID; name: string; type: string; country: string; cc: string;
+  id: ID; name: string; type: string; country: string; countryCode: string;
   region: string; status: AccountStatus; schemes: CertScheme[];
-  scores: FIUACScores; ownerId: string; owner: User; pipe: number; lastAct: string;
-  pain: string; whyNow: string; fit: string[];
-  aiConf: number | string; competitors?: string;
+  scores: FIUACScores; ownerId: string; owner: User; pipelineValue: number; lastActivityAt: string;
+  pain: string; whyNow: string; moduleFit: string[];
+  aiConfidence: number | string; competitors?: string;
   contacts: Contact[];
 }
 
 // ── Opportunities ────────────────────────────────
-export type OppStage = 'Identified' | 'Contacted' | 'Discovery' | 'Qualified' | 'Solution Fit' | 'Proposal' | 'Negotiation' | 'Verbal Commit' | 'Closed Won' | 'Closed Lost';
+export type OppStage = 'Identified' | 'Contacted' | 'Discovery' | 'Qualified' | 'SolutionFit' | 'Proposal' | 'Negotiation' | 'VerbalCommit' | 'ClosedWon' | 'ClosedLost';
 
-export const STAGES: OppStage[] = ['Identified','Contacted','Discovery','Qualified','Solution Fit','Proposal','Negotiation','Verbal Commit','Closed Won','Closed Lost'];
-export const KANBAN_STAGES: OppStage[] = ['Contacted','Discovery','Qualified','Solution Fit','Proposal','Negotiation','Verbal Commit'];
-export const STAGE_PROB: Record<string, number> = { Identified:5,Contacted:10,Discovery:20,Qualified:35,'Solution Fit':50,Proposal:65,Negotiation:80,'Verbal Commit':90,'Closed Won':100,'Closed Lost':0 };
-export const STAGE_COLOR: Record<string, string> = { Contacted:'#3b82f6',Discovery:'#8b5cf6',Qualified:'#14b8a6','Solution Fit':'#33a882',Proposal:'#f59e0b',Negotiation:'#f97316','Verbal Commit':'#ec4899' };
+export const STAGES: OppStage[] = ['Identified','Contacted','Discovery','Qualified','SolutionFit','Proposal','Negotiation','VerbalCommit','ClosedWon','ClosedLost'];
+export const KANBAN_STAGES: OppStage[] = ['Contacted','Discovery','Qualified','SolutionFit','Proposal','Negotiation','VerbalCommit'];
+export const STAGE_PROB: Record<string, number> = { Identified:5,Contacted:10,Discovery:20,Qualified:35,SolutionFit:50,Proposal:65,Negotiation:80,VerbalCommit:90,ClosedWon:100,ClosedLost:0 };
+export const STAGE_COLOR: Record<string, string> = { Contacted:'#3b82f6',Discovery:'#8b5cf6',Qualified:'#14b8a6',SolutionFit:'#33a882',Proposal:'#f59e0b',Negotiation:'#f97316',VerbalCommit:'#ec4899' };
 export const LEAD_STAGES: LeadStage[] = ['New','Researching','Qualified','Converted','Disqualified'];
 
 export interface Opportunity {
-  id: ID; name: string; accId: ID; accName: string;
-  stage: OppStage; amt: number; prob: number; close: string;
+  id: ID; name: string; accountId: ID; accountName: string;
+  stage: OppStage; amount: number; probability: number; closeDate: string;
   owner: User; health: DealHealth;
-  next: string; nextDate: string;
-  lossReason?: string; lossComp?: string;
+  nextAction: string; nextActionDate: string;
+  lossReason?: string; lossCompetitor?: string;
 }
 
 // ── Queue ────────────────────────────────────────
@@ -96,32 +95,32 @@ export type QueueStatus = 'pending' | 'approved' | 'rejected';
 export interface QueueSource { name: string; url: string | null; }
 
 export interface QueueItem {
-  id: ID; type: QueueType; title: string; accName: string; accId: ID | null;
-  agent: string; conf: number;
-  confBreak: Record<string, number>;
+  id: ID; type: QueueType; title: string; accountName: string; accountId: ID | null;
+  agent: string; confidence: number;
+  confidenceBreakdown: Record<string, number>;
   reasoning: string; sources: QueueSource[];
   payload: Record<string, any>;
-  status: QueueStatus; pri: string; createdAt: string;
-  reviewedBy?: string; reviewedAt?: string; rejReason?: string;
+  status: QueueStatus; priority: string; createdAt: string;
+  reviewedBy?: string; reviewedAt?: string; rejectionReason?: string;
 }
 
 // ── Tasks ────────────────────────────────────────
-export type TaskStatus = 'Open' | 'In Progress' | 'In Review' | 'Done';
+export type TaskStatus = 'Open' | 'InProgress' | 'InReview' | 'Done';
 export type TaskPriority = 'High' | 'Medium' | 'Low';
 
-export interface TaskComment { by: User; text: string; at: string; mentions?: string[]; }
+export interface TaskComment { author: User; text: string; createdAt: string; mentions?: string[]; }
 
 export interface Task {
-  id: ID; title: string; accName: string; accId: ID;
-  due: string; owner: User; assignees?: User[];
-  pri: TaskPriority; status: TaskStatus; src: string;
+  id: ID; title: string; accountName: string; accountId: ID;
+  dueDate: string; owner: User; assignees?: User[];
+  priority: TaskPriority; status: TaskStatus; source: string;
   goalId?: ID; reviewer?: User; comments: TaskComment[];
   completedAt?: string;
 }
 
 // ── Goals ────────────────────────────────────────
 export interface Goal {
-  id: ID; title: string; accName: string; accId: ID;
+  id: ID; title: string; accountName: string; accountId: ID;
   owner: User; status: 'active' | 'completed' | 'archived';
 }
 
@@ -129,27 +128,27 @@ export interface Goal {
 export type ActivityType = 'Email' | 'Meeting' | 'Call' | 'Note';
 
 export interface Activity {
-  id: ID; type: ActivityType; date: string;
-  accId: ID; accName: string; sum: string; detail: string;
-  who: User; src: string;
+  id: ID; type: ActivityType; createdAt: string;
+  accountId: ID; accountName: string; summary: string; detail: string;
+  author: User; source: string;
 }
 
 // ── Emails ───────────────────────────────────────
 export type EmailClassification = 'positive_reply' | 'question' | 'objection' | 'meeting_request' | 'bounce' | 'unsubscribe' | 'new_domain' | 'auto_reply' | 'internal' | 'spam';
 
 export interface Email {
-  id: ID; subj: string; from: string; fromName: string;
-  prev: string; dt: string; unread: boolean; archived?: boolean;
-  cls: EmailClassification; clsConf: number;
-  linked: boolean; acc?: string; accId?: ID;
-  domain?: string; agent: string;
+  id: ID; subject: string; fromEmail: string; fromName: string;
+  preview: string; receivedAt: string; isUnread: boolean; isArchived?: boolean;
+  classification: EmailClassification; classificationConf: number;
+  isLinked: boolean; accountName?: string; accountId?: ID;
+  domain?: string; classifierAgent: string;
 }
 
 // ── Meetings ─────────────────────────────────────
 export interface Meeting {
-  id: ID; title: string; time: string; dur: string;
-  acc: string; accId: ID; who: string[];
-  prep: 'draft' | 'ready'; date: string;
+  id: ID; title: string; startTime: string; duration: string;
+  accountName: string; accountId: ID; attendees: string[];
+  prepStatus: 'draft' | 'ready'; date: string;
 }
 
 // ── Agent Config ─────────────────────────────────

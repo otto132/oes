@@ -67,13 +67,13 @@ export function useUpdateTask() {
 export function useCreateTask() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (data: { title: string; accountId?: string; priority?: string; due?: string; goalId?: string }) =>
+    mutationFn: (data: { title: string; accountId?: string; priority?: string; dueDate?: string; goalId?: string }) =>
       api.tasks.create(data),
     onMutate: async (data) => {
       await qc.cancelQueries({ queryKey: taskKeys.all });
       const queries = qc.getQueriesData({ queryKey: taskKeys.all });
       const previous = queries.map(([key, d]) => [key, d] as const);
-      const tempTask = { id: `temp-${Date.now()}`, title: data.title, status: 'To Do', pri: data.priority || 'Medium', due: data.due || '' };
+      const tempTask = { id: `temp-${Date.now()}`, title: data.title, status: 'Open', priority: data.priority || 'Medium', dueDate: data.dueDate || '' };
       qc.setQueriesData({ queryKey: taskKeys.all }, (old: any) => {
         if (!old?.data) return old;
         return { ...old, data: [tempTask, ...old.data] };

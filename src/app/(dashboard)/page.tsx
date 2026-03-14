@@ -4,7 +4,7 @@ import { Shield, AlertTriangle, TrendingUp, ArrowRight, Zap, Signal, Calendar, A
 import { useSession } from 'next-auth/react';
 import { useHomeSummary } from '@/lib/queries/home';
 import { healthAvg } from '@/lib/types';
-import { fmt, fRelative } from '@/lib/utils';
+import { fmt, fRelative, displayLabel } from '@/lib/utils';
 import { Badge, HealthBar, AgentTag, Skeleton, SkeletonCard, SkeletonText, ErrorState } from '@/components/ui';
 
 import type { Signal as UISignal, Opportunity as UIOpportunity, Meeting as UIMeeting, Activity as UIActivity } from '@/lib/types';
@@ -192,12 +192,12 @@ export default function HomePage() {
             ) : todayMeetings.map((m: UIMeeting) => (
               <div key={m.id} className="px-4 py-3 border-b border-[var(--border)] hover:bg-[var(--hover)] transition-colors">
                 <div className="flex items-center gap-2 mb-0.5">
-                  <span className="font-mono text-[11px] text-brand font-semibold">{m.time}</span>
-                  <span className="text-[10px] text-muted font-mono">{m.dur}</span>
-                  <Badge variant={m.prep === 'ready' ? 'ok' : 'warn'} className="!text-[8px]">{m.prep === 'ready' ? 'Prep ready' : 'Prep needed'}</Badge>
+                  <span className="font-mono text-[11px] text-brand font-semibold">{m.startTime}</span>
+                  <span className="text-[10px] text-muted font-mono">{m.duration}</span>
+                  <Badge variant={m.prepStatus === 'ready' ? 'ok' : 'warn'} className="!text-[8px]">{m.prepStatus === 'ready' ? 'Prep ready' : 'Prep needed'}</Badge>
                 </div>
                 <div className="text-[12.5px] font-medium">{m.title}</div>
-                <div className="text-[10px] text-muted mt-0.5">{m.who.join(', ')}</div>
+                <div className="text-[10px] text-muted mt-0.5">{m.attendees.join(', ')}</div>
               </div>
             ))}
           </div>
@@ -214,7 +214,7 @@ export default function HomePage() {
                     <span className="text-[12.5px] font-medium">{o.name}</span>
                     <HealthBar health={o.health} />
                   </div>
-                  <div className="text-[10.5px] text-danger">Health: {healthAvg(o.health)} · {o.accName}</div>
+                  <div className="text-[10.5px] text-danger">Health: {healthAvg(o.health)} · {o.accountName}</div>
                 </Link>
               ))}
             </div>
@@ -227,9 +227,9 @@ export default function HomePage() {
             </div>
             {recentActivity.slice(0, 4).map((x: UIActivity) => (
               <div key={x.id} className="px-4 py-2.5 border-b border-[var(--border)] hover:bg-[var(--hover)] transition-colors">
-                {x.accId && <div className="text-[9px] font-semibold tracking-wide text-muted uppercase">{x.accName}</div>}
-                <div className="text-[12px] font-medium mt-0.5">{x.sum}</div>
-                <div className="text-[10px] text-muted mt-0.5">{x.who.ini} · {fRelative(x.date)}</div>
+                {x.accountId && <div className="text-[9px] font-semibold tracking-wide text-muted uppercase">{x.accountName}</div>}
+                <div className="text-[12px] font-medium mt-0.5">{x.summary}</div>
+                <div className="text-[10px] text-muted mt-0.5">{x.author.initials} · {fRelative(x.createdAt)}</div>
               </div>
             ))}
           </div>

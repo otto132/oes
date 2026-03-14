@@ -1,9 +1,12 @@
 // ═══════════════════════════════════════════════════════════════
 // Eco-Insight — Prisma → UI Type Adapters
 // ═══════════════════════════════════════════════════════════════
-// Pure functions that convert Prisma database records to the
-// abbreviated UI types in src/lib/types.ts.
-// Used at API boundaries only — pages stay unchanged.
+// Converts Prisma database records to UI types.
+// Field names now match between Prisma and UI — adapters handle:
+//   - Date → ISO string conversion
+//   - Nested object flattening (account → accountId/accountName)
+//   - Optional field spreading
+//   - Meeting time/duration formatting
 
 import type {
   FIUACScores,
@@ -21,56 +24,7 @@ import type {
   Email as UIEmail,
   Meeting as UIMeeting,
   Activity as UIActivity,
-  OppStage,
-  ContactRole,
-  SignalStatus,
-  TaskStatus,
 } from './types';
-
-// ── Enum Maps ────────────────────────────────────────────────
-// Maps Prisma enum values to UI display strings.
-// Only divergent values listed; unmapped values pass through.
-
-const OPP_STAGE_MAP: Record<string, string> = {
-  SolutionFit: 'Solution Fit',
-  ClosedWon: 'Closed Won',
-  ClosedLost: 'Closed Lost',
-  VerbalCommit: 'Verbal Commit',
-};
-
-const CONTACT_ROLE_MAP: Record<string, string> = {
-  EconomicBuyer: 'Economic Buyer',
-  TechnicalBuyer: 'Technical Buyer',
-};
-
-const SIGNAL_STATUS_MAP: Record<string, string> = {
-  new_signal: 'new',
-};
-
-const TASK_STATUS_MAP: Record<string, string> = {
-  InProgress: 'In Progress',
-  InReview: 'In Review',
-};
-
-function mapEnum(map: Record<string, string>, value: string): string {
-  return map[value] ?? value;
-}
-
-export function mapOppStage(v: string): OppStage {
-  return mapEnum(OPP_STAGE_MAP, v) as OppStage;
-}
-
-export function mapContactRole(v: string): ContactRole {
-  return mapEnum(CONTACT_ROLE_MAP, v) as ContactRole;
-}
-
-export function mapSignalStatus(v: string): SignalStatus {
-  return mapEnum(SIGNAL_STATUS_MAP, v) as SignalStatus;
-}
-
-export function mapTaskStatus(v: string): TaskStatus {
-  return mapEnum(TASK_STATUS_MAP, v) as TaskStatus;
-}
 
 // ── Composite Type Helpers ───────────────────────────────────
 
@@ -82,11 +36,11 @@ export function adaptFIUAC(row: {
   scoreCommercial: number;
 }): FIUACScores {
   return {
-    f: row.scoreFit,
-    i: row.scoreIntent,
-    u: row.scoreUrgency,
-    a: row.scoreAccess,
-    c: row.scoreCommercial,
+    scoreFit: row.scoreFit,
+    scoreIntent: row.scoreIntent,
+    scoreUrgency: row.scoreUrgency,
+    scoreAccess: row.scoreAccess,
+    scoreCommercial: row.scoreCommercial,
   };
 }
 
@@ -97,10 +51,10 @@ export function adaptHealth(row: {
   healthTimeline: number;
 }): DealHealth {
   return {
-    eng: row.healthEngagement,
-    stake: row.healthStakeholders,
-    comp: row.healthCompetitive,
-    time: row.healthTimeline,
+    healthEngagement: row.healthEngagement,
+    healthStakeholders: row.healthStakeholders,
+    healthCompetitive: row.healthCompetitive,
+    healthTimeline: row.healthTimeline,
   };
 }
 
@@ -117,9 +71,9 @@ export function adaptUser(u: {
   return {
     id: u.id,
     name: u.name,
-    ini: u.initials,
+    initials: u.initials,
     role: u.role,
-    ac: u.color,
+    color: u.color,
   };
 }
 
@@ -137,7 +91,7 @@ export function adaptContact(c: {
     id: c.id,
     name: c.name,
     title: c.title,
-    role: mapContactRole(c.role),
+    role: c.role as UIContact['role'],
     warmth: c.warmth as UIContact['warmth'],
     email: c.email,
     ...(c.phone ? { phone: c.phone } : {}),
@@ -163,14 +117,14 @@ export function adaptSignal(s: {
     id: s.id,
     type: s.type as UISignal['type'],
     title: s.title,
-    src: s.source,
-    srcUrl: s.sourceUrl,
-    at: s.detectedAt.toISOString(),
-    sum: s.summary,
-    rel: s.relevance,
-    conf: s.confidence.toFixed(2),
-    why: s.reasoning,
-    status: mapSignalStatus(s.status),
+    source: s.source,
+    sourceUrl: s.sourceUrl,
+    detectedAt: s.detectedAt.toISOString(),
+    summary: s.summary,
+    relevance: s.relevance,
+    confidence: s.confidence,
+    reasoning: s.reasoning,
+    status: s.status as UISignal['status'],
     agent: s.agent,
   };
 }
@@ -201,16 +155,16 @@ export function adaptLead(l: {
     id: l.id,
     company: l.company,
     domain: l.domain,
-    src: l.source,
+    source: l.source,
     signalId: l.signalId,
     type: l.type,
     country: l.country,
     region: l.region,
     stage: l.stage as UILead['stage'],
     pain: l.pain,
-    fit: l.moduleFit,
+    moduleFit: l.moduleFit,
     scores: adaptFIUAC(l),
-    conf: l.confidence.toFixed(2),
+    confidence: l.confidence,
     owner: adaptUser(l.owner),
     createdAt: l.createdAt.toISOString(),
   };
@@ -247,19 +201,19 @@ export function adaptAccount(a: {
     name: a.name,
     type: a.type,
     country: a.country,
-    cc: a.countryCode,
+    countryCode: a.countryCode,
     region: a.region,
     status: a.status as UIAccount['status'],
     schemes: a.schemes as UIAccount['schemes'],
     scores: adaptFIUAC(a),
     ownerId: a.ownerId,
     owner: adaptUser(a.owner),
-    pipe: a.pipelineValue,
-    lastAct: a.lastActivityAt.toISOString(),
+    pipelineValue: a.pipelineValue,
+    lastActivityAt: a.lastActivityAt.toISOString(),
     pain: a.pain,
     whyNow: a.whyNow,
-    fit: a.moduleFit,
-    aiConf: a.aiConfidence,
+    moduleFit: a.moduleFit,
+    aiConfidence: a.aiConfidence,
     ...(a.competitors != null ? { competitors: a.competitors } : {}),
     contacts: a.contacts.map(adaptContact),
   };
@@ -287,18 +241,18 @@ export function adaptOpportunity(o: {
   return {
     id: o.id,
     name: o.name,
-    accId: o.account.id,
-    accName: o.account.name,
-    stage: mapOppStage(o.stage),
-    amt: o.amount,
-    prob: o.probability,
-    close: o.closeDate ? o.closeDate.toISOString() : '',
+    accountId: o.account.id,
+    accountName: o.account.name,
+    stage: o.stage as UIOpportunity['stage'],
+    amount: o.amount,
+    probability: o.probability,
+    closeDate: o.closeDate ? o.closeDate.toISOString() : '',
     owner: adaptUser(o.owner),
     health: adaptHealth(o),
-    next: o.nextAction ?? '',
-    nextDate: o.nextActionDate ? o.nextActionDate.toISOString() : '',
+    nextAction: o.nextAction ?? '',
+    nextActionDate: o.nextActionDate ? o.nextActionDate.toISOString() : '',
     ...(o.lossReason ? { lossReason: o.lossReason } : {}),
-    ...(o.lossCompetitor ? { lossComp: o.lossCompetitor } : {}),
+    ...(o.lossCompetitor ? { lossCompetitor: o.lossCompetitor } : {}),
   };
 }
 
@@ -310,9 +264,9 @@ export function adaptTaskComment(c: {
   [k: string]: unknown;
 }): UITaskComment {
   return {
-    by: adaptUser(c.author),
+    author: adaptUser(c.author),
     text: c.text,
-    at: c.createdAt.toISOString(),
+    createdAt: c.createdAt.toISOString(),
     ...(c.mentions.length ? { mentions: c.mentions } : {}),
   };
 }
@@ -336,14 +290,14 @@ export function adaptTask(t: {
   return {
     id: t.id,
     title: t.title,
-    accName: t.account?.name ?? '',
-    accId: t.account?.id ?? '',
-    due: t.due ? t.due.toISOString() : '',
+    accountName: t.account?.name ?? '',
+    accountId: t.account?.id ?? '',
+    dueDate: t.due ? t.due.toISOString() : '',
     owner: adaptUser(t.owner),
     ...(t.assignees.length ? { assignees: t.assignees.map(adaptUser) } : {}),
-    pri: t.priority as UITask['pri'],
-    status: mapTaskStatus(t.status),
-    src: t.source,
+    priority: t.priority as UITask['priority'],
+    status: t.status as UITask['status'],
+    source: t.source,
     ...(t.goalId ? { goalId: t.goalId } : {}),
     ...(t.reviewer ? { reviewer: adaptUser(t.reviewer) } : {}),
     comments: t.comments.map(adaptTaskComment),
@@ -362,8 +316,8 @@ export function adaptGoal(g: {
   return {
     id: g.id,
     title: g.title,
-    accName: g.account?.name ?? '',
-    accId: g.account?.id ?? '',
+    accountName: g.account?.name ?? '',
+    accountId: g.account?.id ?? '',
     owner: adaptUser(g.owner),
     status: g.status as UIGoal['status'],
   };
@@ -393,20 +347,20 @@ export function adaptQueueItem(q: {
     id: q.id,
     type: q.type as UIQueueItem['type'],
     title: q.title,
-    accName: q.accName,
-    accId: q.accId,
+    accountName: q.accName,
+    accountId: q.accId,
     agent: q.agent,
-    conf: q.confidence,
-    confBreak: q.confidenceBreakdown as Record<string, number>,
+    confidence: q.confidence,
+    confidenceBreakdown: q.confidenceBreakdown as Record<string, number>,
     reasoning: q.reasoning,
     sources: q.sources as UIQueueItem['sources'],
     payload: q.payload as Record<string, unknown>,
     status: q.status as UIQueueItem['status'],
-    pri: q.priority,
+    priority: q.priority,
     createdAt: q.createdAt.toISOString(),
     ...(q.reviewedById ? { reviewedBy: q.reviewedById } : {}),
     ...(q.reviewedAt ? { reviewedAt: q.reviewedAt.toISOString() } : {}),
-    ...(q.rejReason ? { rejReason: q.rejReason } : {}),
+    ...(q.rejReason ? { rejectionReason: q.rejReason } : {}),
   };
 }
 
@@ -430,20 +384,20 @@ export function adaptEmail(e: {
 }): UIEmail {
   return {
     id: e.id,
-    subj: e.subject,
-    from: e.fromEmail,
+    subject: e.subject,
+    fromEmail: e.fromEmail,
     fromName: e.fromName,
-    prev: e.preview,
-    dt: e.receivedAt.toISOString(),
-    unread: e.isUnread,
-    archived: e.isArchived,
-    cls: e.classification as UIEmail['cls'],
-    clsConf: e.classificationConf,
-    linked: e.isLinked,
-    ...(e.accountName != null ? { acc: e.accountName } : {}),
-    ...(e.accountId != null ? { accId: e.accountId } : {}),
+    preview: e.preview,
+    receivedAt: e.receivedAt.toISOString(),
+    isUnread: e.isUnread,
+    isArchived: e.isArchived,
+    classification: e.classification as UIEmail['classification'],
+    classificationConf: e.classificationConf,
+    isLinked: e.isLinked,
+    ...(e.accountName != null ? { accountName: e.accountName } : {}),
+    ...(e.accountId != null ? { accountId: e.accountId } : {}),
     ...(e.domain != null ? { domain: e.domain } : {}),
-    agent: e.classifierAgent,
+    classifierAgent: e.classifierAgent,
   };
 }
 
@@ -462,28 +416,28 @@ export function adaptMeeting(m: {
   // Format DateTime to "HH:MM" for display
   const hours = m.startTime.getUTCHours().toString().padStart(2, '0');
   const mins = m.startTime.getUTCMinutes().toString().padStart(2, '0');
-  const time = `${hours}:${mins}`;
+  const startTime = `${hours}:${mins}`;
 
   // Format duration (minutes) to display string
-  let dur: string;
+  let duration: string;
   if (m.duration < 60) {
-    dur = `${m.duration} min`;
+    duration = `${m.duration} min`;
   } else if (m.duration % 60 === 0) {
-    dur = `${m.duration / 60}h`;
+    duration = `${m.duration / 60}h`;
   } else {
-    dur = `${Math.floor(m.duration / 60)}h ${m.duration % 60}m`;
+    duration = `${Math.floor(m.duration / 60)}h ${m.duration % 60}m`;
   }
 
   return {
     id: m.id,
     title: m.title,
-    time,
-    dur,
+    startTime,
+    duration,
     date: m.date.toISOString(),
-    acc: m.accountName ?? '',
-    accId: m.accountId ?? '',
-    who: m.attendees,
-    prep: m.prepStatus as UIMeeting['prep'],
+    accountName: m.accountName ?? '',
+    accountId: m.accountId ?? '',
+    attendees: m.attendees,
+    prepStatus: m.prepStatus as UIMeeting['prepStatus'],
   };
 }
 
@@ -502,12 +456,12 @@ export function adaptActivity(a: {
   return {
     id: a.id,
     type: a.type as UIActivity['type'],
-    date: a.createdAt.toISOString(),
-    accId: a.account?.id ?? '',
-    accName: a.account?.name ?? '',
-    sum: a.summary,
+    createdAt: a.createdAt.toISOString(),
+    accountId: a.account?.id ?? '',
+    accountName: a.account?.name ?? '',
+    summary: a.summary,
     detail: a.detail,
-    who: adaptUser(a.author),
-    src: a.source,
+    author: adaptUser(a.author),
+    source: a.source,
   };
 }

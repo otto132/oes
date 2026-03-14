@@ -1,6 +1,6 @@
 // Eco-Insight UI primitives — strict design system
 import { type FIUACScores, type DealHealth, compositeScore, healthAvg } from '@/lib/types';
-import { cn } from '@/lib/utils';
+import { cn, displayLabel } from '@/lib/utils';
 import { AlertTriangle } from 'lucide-react';
 
 /* ── Badge ── */
@@ -28,7 +28,7 @@ export function ScorePill({ scores }: { scores: FIUACScores }) {
   const c = compositeScore(scores);
   const cls = c >= 70 ? 'score-strong' : c >= 45 ? 'score-moderate' : 'score-weak';
   return (
-    <span className={`inline-flex items-center gap-1.5 px-2 py-[2px] rounded text-[11px] font-bold font-mono ${cls}`} title={`F:${scores.f} I:${scores.i} U:${scores.u} A:${scores.a} C:${scores.c}`}>
+    <span className={`inline-flex items-center gap-1.5 px-2 py-[2px] rounded text-[11px] font-bold font-mono ${cls}`} title={`F:${scores.scoreFit} I:${scores.scoreIntent} U:${scores.scoreUrgency} A:${scores.scoreAccess} C:${scores.scoreCommercial}`}>
       <svg width="12" height="12" viewBox="0 0 36 36" className="shrink-0">
         <circle cx="18" cy="18" r="15" fill="none" stroke="currentColor" strokeOpacity="0.12" strokeWidth="3" />
         <circle cx="18" cy="18" r="15" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round"
@@ -41,11 +41,11 @@ export function ScorePill({ scores }: { scores: FIUACScores }) {
 
 /* ── FIUAC Bars ── */
 const dims: { key: keyof FIUACScores; label: string; color: string }[] = [
-  { key: 'f', label: 'F', color: 'bg-brand' },
-  { key: 'i', label: 'I', color: 'bg-info' },
-  { key: 'u', label: 'U', color: 'bg-warn' },
-  { key: 'a', label: 'A', color: 'bg-purple' },
-  { key: 'c', label: 'C', color: 'bg-teal' },
+  { key: 'scoreFit', label: 'F', color: 'bg-brand' },
+  { key: 'scoreIntent', label: 'I', color: 'bg-info' },
+  { key: 'scoreUrgency', label: 'U', color: 'bg-warn' },
+  { key: 'scoreAccess', label: 'A', color: 'bg-purple' },
+  { key: 'scoreCommercial', label: 'C', color: 'bg-teal' },
 ];
 
 export function FIUACBars({ scores }: { scores: FIUACScores }) {
@@ -121,18 +121,18 @@ const stageColors: Record<string, string> = {
   Contacted: 'text-blue-400 border-blue-400/12 bg-blue-400/[.05]',
   Discovery: 'text-purple border-purple/12 bg-purple/[.05]',
   Qualified: 'text-teal border-teal/12 bg-teal/[.05]',
-  'Solution Fit': 'text-brand border-brand/12 bg-brand/[.05]',
+  SolutionFit: 'text-brand border-brand/12 bg-brand/[.05]',
   Proposal: 'text-warn border-warn/12 bg-warn/[.05]',
   Negotiation: 'text-orange-400 border-orange-400/12 bg-orange-400/[.05]',
-  'Verbal Commit': 'text-pink-400 border-pink-400/12 bg-pink-400/[.05]',
-  'Closed Won': 'text-brand border-brand/12 bg-brand/[.05]',
-  'Closed Lost': 'text-muted border-[var(--border)] bg-white/[.02]',
+  VerbalCommit: 'text-pink-400 border-pink-400/12 bg-pink-400/[.05]',
+  ClosedWon: 'text-brand border-brand/12 bg-brand/[.05]',
+  ClosedLost: 'text-muted border-[var(--border)] bg-white/[.02]',
 };
 
 export function StageBadge({ stage }: { stage: string }) {
   return (
     <span className={`inline-flex items-center gap-1 text-[10px] font-semibold px-1.5 py-[1px] rounded border whitespace-nowrap ${stageColors[stage] || stageColors.Contacted}`}>
-      <span className="w-1.5 h-1.5 rounded-full bg-current" />{stage}
+      <span className="w-1.5 h-1.5 rounded-full bg-current" />{displayLabel(stage)}
     </span>
   );
 }

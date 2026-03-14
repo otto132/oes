@@ -223,8 +223,8 @@ export default function LeadsPage() {
                     <div className="text-[12.5px] font-medium mb-1.5">{l.company}</div>
                     <div className="text-[11px] text-sub leading-tight line-clamp-2 mb-2">{l.pain || 'No pain hypothesis yet'}</div>
                     <div className="flex items-center justify-between mb-1">
-                      <div className="flex items-center gap-1">{l.fit.slice(0, 2).map(f => <Badge key={f} variant="ok" className="!text-[8px]">{f}</Badge>)}</div>
-                      <Avatar initials={l.owner.ini} color={l.owner.ac} size="xs" />
+                      <div className="flex items-center gap-1">{l.moduleFit.slice(0, 2).map(f => <Badge key={f} variant="ok" className="!text-[8px]">{f}</Badge>)}</div>
+                      <Avatar initials={l.owner.initials} color={l.owner.color} size="xs" />
                     </div>
                     <div className="flex items-center gap-1.5"><FIUACBars scores={l.scores} /><ScorePill scores={l.scores} /></div>
                     {/* Action buttons — visible on hover (desktop) */}
