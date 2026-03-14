@@ -42,6 +42,7 @@ model Notification {
 
   @@index([userId, readAt])
   @@index([userId, createdAt])
+  @@map("notifications")
 }
 ```
 
@@ -115,6 +116,8 @@ interface AdminStats {
 ```
 
 Implementation: Single Prisma transaction with parallel count queries for entities, `findFirst` for last sync, `groupBy` for agent last runs, and a union query for recent errors (last 10 from SyncLog + AgentRun where status is error).
+
+Note: `SyncLog.errors` is `String[]` while `AgentRun.errors` is `Json` (defaults to `"[]"`). Normalize both to `{ message, createdAt }` when building the errors list.
 
 DB health: wrap the query block in try/catch; if it throws, return `db: "error"`.
 
@@ -230,6 +233,7 @@ Called from existing API route handlers:
 
 3. **Mention in task comment** (when a comment is created with mentions):
    - Notify each mentioned user (skip the actor)
+   - Mentions are stored as `String[]` in `TaskComment.mentions` — resolve each to a userId via `User.name` lookup
    - Type: `MENTION`
    - Title: "You were mentioned"
    - Message: truncated comment text
@@ -312,7 +316,7 @@ Both features display relative timestamps ("5 minutes ago"). Create a small `for
 | `src/lib/notifications.ts` | `createNotification()` utility with dedup |
 | `src/lib/queries/notifications.ts` | React Query hooks for notifications |
 | `src/lib/queries/admin.ts` | React Query hook for admin stats |
-| `src/components/shell/NotificationDropdown.tsx` | Bell icon dropdown component |
+| `src/components/layout/NotificationDropdown.tsx` | Bell icon dropdown component |
 
 ### Modified Files
 
