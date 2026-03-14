@@ -1,5 +1,12 @@
 import { z } from 'zod';
 
+const subtaskSchema = z.object({
+  id: z.string().optional(),
+  title: z.string().trim().min(1).max(200),
+  done: z.boolean(),
+  position: z.number().int().min(0),
+});
+
 export const patchTaskSchema = z.object({
   title: z.string().trim().min(1).optional(),
   priority: z.enum(['High', 'Medium', 'Low']).optional(),
@@ -7,6 +14,7 @@ export const patchTaskSchema = z.object({
   assigneeIds: z.array(z.string()).optional(),
   reviewerId: z.string().nullable().optional(),
   notes: z.string().optional(),
+  subtasks: z.array(subtaskSchema).max(20).optional(),
 }).superRefine((obj, ctx) => {
   if (!Object.values(obj).some(v => v !== undefined)) {
     ctx.addIssue({ code: 'custom', message: 'At least one field is required' });

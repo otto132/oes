@@ -11,34 +11,33 @@ import type { Task, TaskPriority, Goal } from '@/lib/types';
 import { usePendingMutations, useFailedMutations } from '@/hooks/use-mutation-state';
 import { RotateCw } from 'lucide-react';
 import { SearchInput } from '@/components/ui/SearchInput';
+import { api } from '@/lib/api-client';
+import { UserMentionInput } from '@/components/ui/UserMentionInput';
+import { UserPicker } from '@/components/ui/UserPicker';
 
-function CommentInput({ taskId }: { taskId: string }) {
+function CommentInput({ taskId, teamMembers }: { taskId: string; teamMembers: any[] }) {
   const [text, setText] = useState('');
+  const [mentionedIds, setMentionedIds] = useState<string[]>([]);
   const comment = useCommentOnTask();
 
   const submit = () => {
     const trimmed = text.trim();
     if (!trimmed) return;
     comment.mutate(
-      { id: taskId, text: trimmed },
-      { onSuccess: () => setText('') }
+      { id: taskId, text: trimmed, mentionedUserIds: mentionedIds },
+      { onSuccess: () => { setText(''); setMentionedIds([]); } }
     );
   };
 
   return (
     <div className="mt-3 flex gap-2">
-      <textarea
+      <UserMentionInput
         value={text}
-        onChange={e => setText(e.target.value)}
-        onKeyDown={e => {
-          if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
-            e.preventDefault();
-            submit();
-          }
-        }}
-        rows={2}
-        placeholder="Add a comment... (Cmd+Enter to send)"
-        className="flex-1 px-2.5 py-1.5 text-sm rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] placeholder:text-[var(--muted)] focus:outline-none focus:border-brand/40 resize-none"
+        onChange={(newText, ids) => { setText(newText); setMentionedIds(ids); }}
+        onSubmit={submit}
+        users={teamMembers}
+        placeholder="Add a comment... Use @ to mention (Cmd+Enter to send)"
+        className="flex-1"
       />
       <button
         onClick={submit}
@@ -88,7 +87,7 @@ export default function TasksPage() {
 }
 
 function TasksPageInner() {
-  const { openDrawer, closeDrawer } = useStore();
+  const { openDrawer, closeDrawer, taskViewMode, setTaskViewMode } = useStore();
   const { data: session } = useSession();
   const [tab, setTab] = useState<'mine' | 'review' | 'all'>('mine');
   const [showCompleted, setShowCompleted] = useState(false);
@@ -102,6 +101,14 @@ function TasksPageInner() {
   const { data: teamResp } = useTeamQuery();
   const teamMembers = teamResp?.data ?? [];
   const autoCreateFired = useRef(false);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined' && !sessionStorage.getItem('check-due-fired')) {
+      sessionStorage.setItem('check-due-fired', '1');
+      api.tasks.checkDue().catch(() => {});
+    }
+  }, []);
+
   const pendingIds = usePendingMutations(['tasks']);
   const failedMutations = useFailedMutations(['tasks']);
 
@@ -149,10 +156,16 @@ function TasksPageInner() {
     else ungrouped.push(t);
   });
 
+  const PRIORITY_ORDER: Record<string, number> = { High: 0, Medium: 1, Low: 2 };
+
   const sorted = (arr: Task[]) => [...arr].sort((a, b) => {
     const ao = a.status === 'Done' ? 2 : isOverdue(a.dueDate) ? 0 : 1;
     const bo = b.status === 'Done' ? 2 : isOverdue(b.dueDate) ? 0 : 1;
-    return ao !== bo ? ao - bo : new Date(a.dueDate || '2099-01-01').getTime() - new Date(b.dueDate || '2099-01-01').getTime();
+    if (ao !== bo) return ao - bo;
+    const pa = PRIORITY_ORDER[a.priority] ?? 1;
+    const pb = PRIORITY_ORDER[b.priority] ?? 1;
+    if (pa !== pb) return pa - pb;
+    return new Date(a.dueDate || '2099-01-01').getTime() - new Date(b.dueDate || '2099-01-01').getTime();
   });
 
   function openNewTaskDrawer() {
@@ -397,6 +410,7 @@ function TasksPageInner() {
       notes: t.notes ?? '',
       assigneeIds: t.assignees?.map((a: any) => a.id) ?? [],
       reviewerId: t.reviewer?.id ?? null as string | null,
+      subtasks: (t.subtasks || []).map(s => ({ ...s })),
     };
 
     openDrawer({
@@ -446,24 +460,68 @@ function TasksPageInner() {
               className="px-2.5 py-1.5 text-sm rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] placeholder:text-[var(--muted)] focus:outline-none focus:border-brand/40 resize-y"
             />
           </label>
-          <label className="flex flex-col gap-1">
-            <span className="text-2xs font-semibold uppercase tracking-wide text-muted">Assignees</span>
-            <div className="flex flex-col gap-1 max-h-[120px] overflow-y-auto">
-              {teamMembers.map((m: any) => (
-                <label key={m.id} className="flex items-center gap-2 px-2 py-1 rounded hover:bg-[var(--hover)] cursor-pointer text-sm">
-                  <input
-                    type="checkbox"
-                    defaultChecked={state.assigneeIds.includes(m.id)}
-                    onChange={e => {
-                      if (e.target.checked) state.assigneeIds = [...state.assigneeIds, m.id];
-                      else state.assigneeIds = state.assigneeIds.filter((id: string) => id !== m.id);
-                    }}
-                  />
-                  {m.name}
-                </label>
-              ))}
+          <div className="flex flex-col gap-1">
+            <span className="text-[10px] font-semibold uppercase tracking-wide text-muted">Subtasks</span>
+            {state.subtasks.map((sub: any, i: number) => (
+              <div key={sub.id || i} className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-[var(--surface)] border border-[var(--border)]">
+                <input
+                  type="checkbox"
+                  checked={sub.done}
+                  onChange={e => { state.subtasks[i].done = e.target.checked; }}
+                  className="w-3.5 h-3.5"
+                />
+                <input
+                  defaultValue={sub.title}
+                  onChange={e => { state.subtasks[i].title = e.target.value; }}
+                  className="flex-1 text-[11px] bg-transparent focus:outline-none"
+                />
+                <div className="flex items-center gap-0.5">
+                  {i > 0 && <button className="text-[10px] text-muted hover:text-[var(--text)]" onClick={() => { const s = state.subtasks.splice(i, 1)[0]; state.subtasks.splice(i - 1, 0, s); state.subtasks.forEach((s: any, idx: number) => s.position = idx); openEditTaskDrawer({ ...t, subtasks: state.subtasks } as any); }}>↑</button>}
+                  {i < state.subtasks.length - 1 && <button className="text-[10px] text-muted hover:text-[var(--text)]" onClick={() => { const s = state.subtasks.splice(i, 1)[0]; state.subtasks.splice(i + 1, 0, s); state.subtasks.forEach((s: any, idx: number) => s.position = idx); openEditTaskDrawer({ ...t, subtasks: state.subtasks } as any); }}>↓</button>}
+                  <button className="text-[10px] text-muted hover:text-danger" onClick={() => { state.subtasks.splice(i, 1); state.subtasks.forEach((s: any, idx: number) => s.position = idx); openEditTaskDrawer({ ...t, subtasks: state.subtasks } as any); }}>✕</button>
+                </div>
+              </div>
+            ))}
+            {state.subtasks.length < 20 && (
+              <input
+                placeholder="Add subtask... (Enter)"
+                className="px-2.5 py-1.5 text-[11px] rounded-md bg-[var(--surface)] border border-dashed border-[var(--border)] text-[var(--text)] placeholder:text-muted focus:outline-none focus:border-brand/40"
+                onKeyDown={e => {
+                  if (e.key === 'Enter' && e.currentTarget.value.trim()) {
+                    state.subtasks.push({ id: `temp-${Date.now()}` as any, title: e.currentTarget.value.trim(), done: false, position: state.subtasks.length });
+                    e.currentTarget.value = '';
+                    openEditTaskDrawer({ ...t, subtasks: state.subtasks } as any);
+                  }
+                }}
+              />
+            )}
+          </div>
+          <div className="flex flex-col gap-1">
+            <span className="text-[10px] font-semibold uppercase tracking-wide text-muted">Assignees</span>
+            <div className="flex items-center gap-1 flex-wrap">
+              {state.assigneeIds.map((aid: string) => {
+                const u = teamMembers.find((m: any) => m.id === aid);
+                if (!u) return null;
+                return (
+                  <div key={aid} className="flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-[var(--surface)] border border-[var(--border)] text-[11px]">
+                    <Avatar initials={u.initials} color={u.color} size="xs" />
+                    <span>{u.name}</span>
+                    <button
+                      className="text-muted hover:text-danger text-[10px]"
+                      onClick={() => { state.assigneeIds = state.assigneeIds.filter((id: string) => id !== aid); openEditTaskDrawer({ ...t, assignees: state.assigneeIds.map((id: string) => teamMembers.find((m: any) => m.id === id)).filter(Boolean) } as any); }}
+                    >
+                      ✕
+                    </button>
+                  </div>
+                );
+              })}
+              <AssignButton
+                teamMembers={teamMembers}
+                selectedIds={state.assigneeIds}
+                onSelect={(u: any) => { state.assigneeIds = [...state.assigneeIds, u.id]; openEditTaskDrawer({ ...t, assignees: state.assigneeIds.map((id: string) => teamMembers.find((m: any) => m.id === id)).filter(Boolean) } as any); }}
+              />
             </div>
-          </label>
+          </div>
           <label className="flex flex-col gap-1">
             <span className="text-2xs font-semibold uppercase tracking-wide text-muted">Reviewer</span>
             <select
@@ -505,6 +563,12 @@ function TasksPageInner() {
                     notes: state.notes,
                     assigneeIds: state.assigneeIds,
                     reviewerId: state.reviewerId,
+                    subtasks: state.subtasks.map((s: any, i: number) => ({
+                      ...(s.id && !s.id.startsWith('temp-') ? { id: s.id } : {}),
+                      title: s.title,
+                      done: s.done,
+                      position: i,
+                    })),
                   },
                 },
                 {
@@ -565,23 +629,41 @@ function TasksPageInner() {
               )}
             </div>
           )}
+          {(t.subtasks || []).length > 0 && (
+            <div>
+              <div className="text-[9px] font-semibold tracking-wide uppercase text-muted mb-1.5">
+                Subtasks <span className="text-muted font-mono">({(t.subtasks || []).filter(s => s.done).length}/{(t.subtasks || []).length})</span>
+              </div>
+              {(t.subtasks || []).map(sub => (
+                <div key={sub.id} className="flex items-center gap-1.5 py-0.5 text-[11px]">
+                  <span className={sub.done ? 'text-brand' : 'text-muted'}>{sub.done ? '✓' : '○'}</span>
+                  <span className={sub.done ? 'line-through text-muted' : ''}>{sub.title}</span>
+                </div>
+              ))}
+            </div>
+          )}
           <div>
             <div className="text-3xs font-semibold tracking-wide uppercase text-muted mb-1.5">Comments</div>
             {(t.comments || []).length === 0 ? (
               <div className="text-xs text-muted py-2">No comments yet</div>
             ) : (t.comments || []).map((c, i) => (
-              <div key={i} className="py-2 border-b border-[var(--border)] last:border-b-0 text-xs">
-                <div className="flex items-center gap-1 mb-0.5"><Avatar initials={c.author.initials} color={c.author.color} size="xs" /><span className="text-2xs font-medium">{c.author.name}</span><span className="text-3xs text-muted">{fR(c.createdAt)}</span></div>
-                <div className="text-sub">{c.text}</div>
+              <div key={i} className="py-2 border-b border-[var(--border)] last:border-b-0 text-[11.5px]">
+                <div className="flex items-center gap-1 mb-0.5"><Avatar initials={c.author.initials} color={c.author.color} size="xs" /><span className="text-[10.5px] font-medium">{c.author.name}</span><span className="text-[9px] text-muted">{fR(c.createdAt)}</span></div>
+                <div className="text-sub">
+                  {c.mentions?.length ? renderMentionText(c.text, c.mentions, teamMembers) : c.text}
+                </div>
               </div>
             ))}
-            <CommentInput taskId={t.id} />
+            <CommentInput taskId={t.id} teamMembers={teamMembers} />
           </div>
         </div>
       ),
       footer: (
         <>
-          <button className="px-3.5 py-1.5 text-sm text-sub bg-[var(--surface)] border border-[var(--border)] rounded-md hover:bg-[var(--hover)] transition-colors" onClick={closeDrawer}>Close</button>
+          <button className="px-3.5 py-1.5 text-[12.5px] text-sub bg-[var(--surface)] border border-[var(--border)] rounded-md hover:bg-[var(--hover)] transition-colors" onClick={closeDrawer}>Close</button>
+          {t.status !== 'Done' && t.status !== 'InReview' && (
+            <SendForReviewButton task={t} teamMembers={teamMembers} />
+          )}
           {t.status !== 'Done' && (
             <button
               className="px-3.5 py-1.5 text-sm font-medium bg-brand text-brand-on rounded-md hover:brightness-110 transition-colors"
@@ -593,6 +675,132 @@ function TasksPageInner() {
         </>
       ),
     });
+  }
+
+  function AssignButton({ teamMembers: members, selectedIds, onSelect }: { teamMembers: any[]; selectedIds: string[]; onSelect: (u: any) => void }) {
+    const [open, setOpen] = useState(false);
+    return (
+      <div className="relative">
+        <button
+          className="w-6 h-6 rounded-full bg-[var(--surface)] border border-dashed border-[var(--border)] flex items-center justify-center text-[12px] text-muted hover:border-brand hover:text-brand transition-colors"
+          onClick={() => setOpen(true)}
+        >+</button>
+        {open && (
+          <UserPicker
+            users={members}
+            selectedIds={selectedIds}
+            onSelect={(u) => { onSelect(u); setOpen(false); }}
+            onClose={() => setOpen(false)}
+            className="top-full mt-1"
+          />
+        )}
+      </div>
+    );
+  }
+
+  function QuickAssign({ taskId, currentAssigneeIds, teamMembers: members }: { taskId: string; currentAssigneeIds: string[]; teamMembers: any[] }) {
+    const [open, setOpen] = useState(false);
+
+    return (
+      <div className="relative" onClick={e => e.stopPropagation()}>
+        <button
+          className="w-5 h-5 rounded-full bg-[var(--surface)] border border-dashed border-[var(--border)] flex items-center justify-center text-[10px] text-muted hover:border-brand hover:text-brand transition-colors ml-1"
+          onClick={() => setOpen(true)}
+        >+</button>
+        {open && (
+          <UserPicker
+            users={members}
+            selectedIds={currentAssigneeIds}
+            onSelect={(u) => {
+              updateTask.mutate({ id: taskId, data: { assigneeIds: [...currentAssigneeIds, u.id] } });
+              setOpen(false);
+            }}
+            onClose={() => setOpen(false)}
+            className="right-0 top-full mt-1"
+          />
+        )}
+      </div>
+    );
+  }
+
+  function renderMentionText(text: string, mentions: string[], team: any[]) {
+    const mentionNames = mentions
+      .map(mid => team.find((u: any) => u.id === mid)?.name || mid)
+      .filter(Boolean);
+    if (mentionNames.length === 0) return text;
+    const escaped = mentionNames.map(n => n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
+    const regex = new RegExp(`(@(?:${escaped.join('|')}))`, 'g');
+    const parts = text.split(regex);
+    return parts.map((part, i) => {
+      if (part.startsWith('@') && mentionNames.some(n => part === `@${n}`)) {
+        return <span key={i} className="px-1 py-0.5 rounded bg-brand/10 text-brand font-medium text-[11px]">{part}</span>;
+      }
+      return <span key={i}>{part}</span>;
+    });
+  }
+
+  function SendForReviewButton({ task, teamMembers: members }: { task: Task; teamMembers: any[] }) {
+    const [showPicker, setShowPicker] = useState(false);
+    const addToastLocal = useStore(s => s.addToast);
+
+    const handleSend = async (reviewerId?: string) => {
+      try {
+        if (reviewerId) {
+          await updateTask.mutateAsync({ id: task.id, data: { reviewerId } });
+        }
+        await api.tasks.sendForReview(task.id);
+        addToastLocal({ type: 'success', message: 'Sent for review' });
+      } catch {
+        addToastLocal({ type: 'error', message: 'Failed to send for review' });
+      }
+    };
+
+    if (!task.reviewer) {
+      return (
+        <div className="relative">
+          <button
+            className="px-2.5 py-1.5 text-[11px] font-medium bg-purple/10 text-purple rounded-md hover:bg-purple/20 transition-colors"
+            onClick={() => setShowPicker(true)}
+          >
+            Send for Review
+          </button>
+          {showPicker && (
+            <UserPicker
+              users={members}
+              onSelect={(u) => { handleSend(u.id); setShowPicker(false); }}
+              onClose={() => setShowPicker(false)}
+              className="bottom-full mb-1 right-0"
+            />
+          )}
+        </div>
+      );
+    }
+
+    return (
+      <button
+        className="px-2.5 py-1.5 text-[11px] font-medium bg-purple/10 text-purple rounded-md hover:bg-purple/20 transition-colors"
+        onClick={() => handleSend()}
+      >
+        Send for Review
+      </button>
+    );
+  }
+
+  function dueDateLabel(dueDate: string): { label: string; variant: 'err' | 'warn' | 'neutral' } | null {
+    if (!dueDate) return null;
+    const due = new Date(dueDate);
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const tomorrow = new Date(today.getTime() + 86400000);
+    const dayAfterTomorrow = new Date(today.getTime() + 2 * 86400000);
+
+    if (due < today) {
+      const daysOverdue = Math.floor((today.getTime() - due.getTime()) / 86400000);
+      return { label: daysOverdue === 1 ? 'Overdue' : `${daysOverdue}d overdue`, variant: 'err' };
+    }
+    if (due < tomorrow) return { label: 'Today', variant: 'warn' };
+    if (due < dayAfterTomorrow) return { label: 'Tomorrow', variant: 'neutral' };
+    return null;
   }
 
   function TaskRow({ t }: { t: Task }) {
@@ -624,9 +832,26 @@ function TasksPageInner() {
             {(t.comments || []).length > 0 && <span className="text-3xs text-muted">💬 {t.comments!.length}</span>}
           </div>
         </div>
-        <Badge variant={t.priority === 'High' ? 'err' : t.priority === 'Low' ? 'neutral' : 'warn'} className="!text-3xs">{t.priority}</Badge>
-        {!done && <span className={cn('font-mono text-2xs flex-shrink-0', od ? 'text-danger' : 'text-sub')}>{od ? '⚠ ' : ''}{fDate(t.dueDate)}</span>}
-        <Avatar initials={(t.assignees?.[0] || t.owner).initials} color={(t.assignees?.[0] || t.owner).color} size="xs" />
+        <Badge variant={t.priority === 'High' ? 'err' : t.priority === 'Low' ? 'neutral' : 'warn'} className="!text-[9px]">{t.priority}</Badge>
+        {(t.subtasksTotal ?? 0) > 0 && (
+          <span className="text-[9px] text-muted font-mono">{t.subtasksDone}/{t.subtasksTotal}</span>
+        )}
+        {!done && t.dueDate && (() => {
+          const urgency = dueDateLabel(t.dueDate);
+          return urgency ? (
+            <Badge variant={urgency.variant} className="!text-[9px]">{urgency.label}</Badge>
+          ) : (
+            <span className="font-mono text-[10.5px] flex-shrink-0 text-sub">{fDate(t.dueDate)}</span>
+          );
+        })()}
+        <div className="flex items-center -space-x-1">
+          {(t.assignees || [t.owner]).slice(0, 3).map(u => (
+            <Avatar key={u.id} initials={u.initials} color={u.color} size="xs" />
+          ))}
+          {!done && (
+            <QuickAssign taskId={t.id} currentAssigneeIds={(t.assignees || [t.owner]).map(u => u.id)} teamMembers={teamMembers} />
+          )}
+        </div>
       </div>
     );
   }
@@ -672,13 +897,20 @@ function TasksPageInner() {
         <label className="flex items-center gap-1.5 text-xs text-sub cursor-pointer min-h-[44px] sm:min-h-0">
           <input type="checkbox" className="w-4 h-4 sm:w-3.5 sm:h-3.5" checked={showCompleted} onChange={e => setShowCompleted(e.target.checked)} /> Show completed
         </label>
+        <button
+          onClick={() => setTaskViewMode(taskViewMode === 'grouped' ? 'flat' : 'grouped')}
+          className="px-2 py-1 text-[10px] font-medium rounded-md bg-[var(--surface)] border border-[var(--border)] hover:bg-[var(--hover)] transition-colors whitespace-nowrap"
+        >
+          {taskViewMode === 'grouped' ? '☰ Flat' : '📁 Grouped'}
+        </button>
       </div>
 
       {visible.length === 0 ? (
         <EmptyState icon="☑" title={tab === 'review' ? 'No reviews pending' : 'All tasks complete'} description={tab === 'review' ? 'Tasks assigned to you for review will appear here.' : 'Nice work. New tasks will appear from AI agents and pipeline hygiene.'} />
+      ) : taskViewMode === 'flat' ? (
+        <div className="flex flex-col gap-1">{sorted(visible).map(t => <TaskRow key={t.id} t={t} />)}</div>
       ) : (
         <div className="flex flex-col gap-2">
-          {/* Goal groups */}
           {Object.entries(goalTasks).map(([gId, gTasks]) => {
             const g = goals.find(x => x.id === gId);
             if (!g) return null;
@@ -688,8 +920,9 @@ function TasksPageInner() {
             return (
               <div key={gId} className="rounded-lg bg-[var(--elevated)] border border-[var(--border)] overflow-hidden">
                 <div className="flex items-center gap-2 px-3.5 py-2.5 bg-[var(--surface)] border-b border-[var(--border)]">
-                  <span className="text-2xs">🎯</span>
-                  <span className="text-sm font-semibold flex-1">{g.title}</span>
+                  <span className="text-[10px]">🎯</span>
+                  <span className="text-[12px] font-semibold flex-1">{g.title}</span>
+                  <Badge variant={g.status === 'completed' ? 'ok' : g.status === 'archived' ? 'neutral' : 'info'} className="!text-[8px]">{g.status}</Badge>
                   <div className="w-14 sm:w-20 h-[3px] rounded-full bg-[var(--surface)] overflow-hidden"><div className="h-full rounded-full bg-brand transition-all" style={{ width: `${pct}%` }} /></div>
                   <span className="text-2xs text-muted">{done}/{total}</span>
                   {g.accountName && <Badge variant="neutral" className="!text-3xs">{g.accountName}</Badge>}
@@ -698,8 +931,6 @@ function TasksPageInner() {
               </div>
             );
           })}
-
-          {/* Ungrouped */}
           {ungrouped.length > 0 && (
             <div className="flex flex-col gap-1">{sorted(ungrouped).map(t => <TaskRow key={t.id} t={t} />)}</div>
           )}

@@ -32,7 +32,7 @@ export async function GET(req: NextRequest) {
   // Then paginated query for tasks
   const tasks = await scoped.task.findMany({
     where,
-    include: { owner: true, assignees: true, reviewer: true, goal: true, account: { select: { id: true, name: true } }, comments: { include: { author: true }, orderBy: { createdAt: 'asc' } } },
+    include: { owner: true, assignees: true, reviewer: true, goal: true, account: { select: { id: true, name: true } }, comments: { include: { author: true }, orderBy: { createdAt: 'asc' } }, subtasks: { orderBy: { position: 'asc' as const } }, _count: { select: { subtasks: true } } },
     orderBy: [{ due: 'asc' }],
     take: pagination.limit + 1,
     ...(pagination.cursor ? { cursor: { id: pagination.cursor }, skip: 1 } : {}),
@@ -127,21 +127,16 @@ export const POST = withHandler(taskActionSchema, async (req, ctx) => {
   }
 
   if (body.action === 'comment') {
-    const { id, text } = body;
+    const { id, text, mentionedUserIds } = body;
     const userId = session.user.id;
-    const mentions = (text.match(/@(\w+)/g) || []).map((m: string) => m.slice(1));
+    const mentions = mentionedUserIds || [];
     const comment = await ctx.db.taskComment.create({
       data: { text, taskId: id, authorId: userId, mentions },
       include: { author: true },
     });
     // Notify mentioned users (rawDb used — notifyUsers needs PrismaClient, not ScopedDb)
     if (mentions.length > 0) {
-      const mentionedUsers = await rawDb.user.findMany({
-        where: { name: { in: mentions, mode: 'insensitive' } },
-        select: { id: true },
-      });
-      const mentionedIds = mentionedUsers.map((u) => u.id);
-      await notifyUsers(rawDb, mentionedIds, userId, {
+      await notifyUsers(rawDb, mentions, userId, {
         type: 'MENTION',
         title: 'You were mentioned',
         message: text.slice(0, 100),

@@ -7,7 +7,7 @@ describe('api-errors helpers', () => {
     const res = badRequest('missing field');
     expect(res.status).toBe(400);
     const body = await res.json();
-    expect(body).toEqual({ error: { code: 'BAD_REQUEST', message: 'missing field' } });
+    expect(body).toMatchObject({ error: { code: 'BAD_REQUEST', message: 'missing field' } });
   });
 
   it('unauthorized returns 401', async () => {

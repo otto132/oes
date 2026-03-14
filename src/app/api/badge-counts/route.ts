@@ -14,7 +14,20 @@ export async function GET() {
     db.signal.count({ where: { status: 'new_signal' } }),
     db.lead.count({ where: { stage: 'New' } }),
     db.inboxEmail.count({ where: { isUnread: true, isArchived: false } }),
-    db.task.count({ where: { status: { not: 'Done' }, due: { lt: new Date() } } }),
+    (() => {
+      const now = new Date();
+      const endOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
+      return db.task.count({
+        where: {
+          status: { not: 'Done' },
+          due: { lte: endOfToday },
+          OR: [
+            { ownerId: session.user.id },
+            { assignees: { some: { id: session.user.id } } },
+          ],
+        },
+      });
+    })(),
     db.notification.count({ where: { userId: session.user.id, readAt: null } }),
   ]);
 

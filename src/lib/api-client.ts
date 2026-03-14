@@ -184,8 +184,9 @@ export const api = {
     },
     create: (data: any) => post<any>('/tasks', { action: 'create', ...data }),
     complete: (id: string, data?: any) => post<any>('/tasks', { action: 'complete', id, ...data }),
-    comment: (id: string, text: string) => post<any>('/tasks', { action: 'comment', id, text }),
+    comment: (id: string, text: string, mentionedUserIds?: string[]) => post<any>('/tasks', { action: 'comment', id, text, mentionedUserIds }),
     sendForReview: (id: string) => post<any>('/tasks', { action: 'send_for_review', id }),
+    checkDue: () => post<{ processed: number }>('/tasks/check-due', {}),
     update: (id: string, data: Record<string, unknown>) =>
       patch<any>(`/tasks/${id}`, data),
   },

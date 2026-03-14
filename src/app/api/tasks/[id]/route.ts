@@ -13,6 +13,8 @@ const TASK_INCLUDE = {
   reviewer: true,
   account: { select: { id: true, name: true } },
   comments: { include: { author: true }, orderBy: { createdAt: 'asc' as const } },
+  subtasks: { orderBy: { position: 'asc' as const } },
+  _count: { select: { subtasks: true } },
 };
 
 export async function PATCH(
@@ -34,6 +36,29 @@ export async function PATCH(
   const existing = await db.task.findUnique({ where: { id } });
   if (!existing) return notFound('Task not found');
 
+  // Handle subtasks in a transaction
+  if (body.subtasks !== undefined) {
+    await db.$transaction(async (tx: any) => {
+      const existingSubtasks = await tx.subtask.findMany({ where: { taskId: id }, select: { id: true } });
+      const existingIds = existingSubtasks.map((s: any) => s.id);
+      const incomingIds = body.subtasks!.filter(s => s.id).map(s => s.id!);
+
+      // Delete subtasks not in incoming array
+      if (existingIds.length > 0) {
+        await tx.subtask.deleteMany({ where: { taskId: id, id: { notIn: incomingIds } } });
+      }
+
+      // Create or update each subtask
+      for (const sub of body.subtasks!) {
+        if (sub.id && existingIds.includes(sub.id)) {
+          await tx.subtask.update({ where: { id: sub.id }, data: { title: sub.title, done: sub.done, position: sub.position } });
+        } else {
+          await tx.subtask.create({ data: { title: sub.title, done: sub.done, position: sub.position, taskId: id } });
+        }
+      }
+    });
+  }
+
   const data: Record<string, unknown> = {};
   if (body.title !== undefined) data.title = body.title;
   if (body.priority !== undefined) data.priority = body.priority;
@@ -48,7 +73,7 @@ export async function PATCH(
 
   const updated = await db.task.update({
     where: { id },
-    data,
+    data: Object.keys(data).length > 0 ? data : {},
     include: TASK_INCLUDE,
   });
 

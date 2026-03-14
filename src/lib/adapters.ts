@@ -24,6 +24,7 @@ import type {
   Email as UIEmail,
   Meeting as UIMeeting,
   Activity as UIActivity,
+  Subtask as UISubtask,
 } from './types';
 
 // ── Composite Type Helpers ───────────────────────────────────
@@ -273,6 +274,16 @@ export function adaptTaskComment(c: {
   };
 }
 
+export function adaptSubtask(s: {
+  id: string;
+  title: string;
+  done: boolean;
+  position: number;
+  [k: string]: unknown;
+}): UISubtask {
+  return { id: s.id, title: s.title, done: s.done, position: s.position };
+}
+
 export function adaptTask(t: {
   id: string;
   title: string;
@@ -288,6 +299,9 @@ export function adaptTask(t: {
   reviewer: Parameters<typeof adaptUser>[0] | null;
   goalId: string | null;
   comments: Parameters<typeof adaptTaskComment>[0][];
+  _count?: { subtasks?: number };
+  subtasks?: Parameters<typeof adaptSubtask>[0][];
+  _subtasksDone?: number;
   [k: string]: unknown;
 }): UITask {
   return {
@@ -306,6 +320,11 @@ export function adaptTask(t: {
     comments: t.comments.map(adaptTaskComment),
     ...(t.completedAt ? { completedAt: t.completedAt.toISOString() } : {}),
     ...(t.notes ? { notes: t.notes } : {}),
+    ...(t._count?.subtasks ? {
+      subtasksTotal: t._count.subtasks,
+      subtasksDone: t._subtasksDone ?? (t.subtasks || []).filter(s => s.done).length,
+    } : {}),
+    ...(t.subtasks ? { subtasks: t.subtasks.map(adaptSubtask).sort((a, b) => a.position - b.position) } : {}),
   };
 }
 

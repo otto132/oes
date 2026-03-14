@@ -23,6 +23,8 @@ interface Store {
   closePalette: () => void;
   addToast: (toast: { type: Toast['type']; message: string; action?: Toast['action'] }) => void;
   removeToast: (id: string) => void;
+  taskViewMode: 'grouped' | 'flat';
+  setTaskViewMode: (mode: 'grouped' | 'flat') => void;
 }
 
 let _toastCounter = 0;
@@ -61,4 +63,6 @@ export const useStore = create<Store>((set, get) => ({
     setTimeout(() => get().removeToast(id), toast.action ? 8000 : 5000);
   },
   removeToast: (id) => set(s => ({ toasts: s.toasts.filter(t => t.id !== id) })),
+  taskViewMode: 'grouped',
+  setTaskViewMode: (mode) => set({ taskViewMode: mode }),
 }));
