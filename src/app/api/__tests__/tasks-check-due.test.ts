@@ -1,5 +1,4 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { NextRequest } from 'next/server';
 
 const { mockDb, mockAuthFn, mockCreateNotification } = vi.hoisted(() => {
   const fn = vi.fn;
@@ -41,7 +40,7 @@ describe('POST /api/tasks/check-due', () => {
     ]);
     mockCreateNotification.mockResolvedValue({ id: 'notif-1' });
 
-    const res = await POST(new NextRequest('http://localhost/api/tasks/check-due', { method: 'POST' }));
+    const res = await POST();
     const json = await res.json();
 
     expect(res.status).toBe(200);
@@ -67,7 +66,7 @@ describe('POST /api/tasks/check-due', () => {
     ]);
     mockCreateNotification.mockResolvedValue(null);
 
-    const res = await POST(new NextRequest('http://localhost/api/tasks/check-due', { method: 'POST' }));
+    const res = await POST();
     const json = await res.json();
 
     expect(res.status).toBe(200);
@@ -76,7 +75,7 @@ describe('POST /api/tasks/check-due', () => {
 
   it('returns 401 when not authenticated', async () => {
     mockAuthFn.mockResolvedValue(null);
-    const res = await POST(new NextRequest('http://localhost/api/tasks/check-due', { method: 'POST' }));
+    const res = await POST();
     expect(res.status).toBe(401);
   });
 });
