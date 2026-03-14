@@ -92,7 +92,7 @@ export default function HomePage() {
   if (!data) return null;
 
   const { stats, nextBestActions, topSignals, todayMeetings, dealsAtRisk, recentActivity } = data as {
-    stats: { pipelineTotal: number; pipelineWeighted: number; openDeals: number; atRiskCount: number; pendingApprovals: number; newSignals: number; unreadEmails: number };
+    stats: { pipelineTotal: number; pipelineWeighted: number; openDeals: number; atRiskCount: number; pendingApprovals: number; newSignals: number; unreadEmails: number; accountCount: number };
     nextBestActions: { type: string; title: string; meta: string; urgency: number; href: string }[];
     topSignals: UISignal[];
     todayMeetings: UIMeeting[];
@@ -124,7 +124,7 @@ export default function HomePage() {
         <p className="text-[12px] text-muted mt-1">{new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' })} · {nextBestActions.length} actions pending</p>
       </div>
 
-      <WelcomeBanner name={firstName} />
+      <WelcomeBanner name={firstName} stats={{ accountCount: stats.accountCount, openDeals: stats.openDeals, newSignals: stats.newSignals }} />
 
       <div className="hidden md:grid grid-cols-5 gap-2 mb-4">
         {statCards.map(s => {

@@ -221,7 +221,7 @@ export default function PipelinePage() {
               { name: data.name.trim(), accountId: data.accountId, stage: data.stage, amount: data.amount, closeDate: data.closeDate || undefined },
               {
                 onSuccess: () => { addToast({ type: 'success', message: `Opportunity created: ${data.name}` }); closeDrawer(); },
-                onError: (err) => addToast({ type: 'error', message: err.message }),
+                onError: (err: unknown) => addToast({ type: 'error', message: err instanceof Error ? err.message : 'An error occurred' }),
               }
             );
           }}
@@ -321,7 +321,7 @@ export default function PipelinePage() {
                     if (opp && opp.stage !== stage) {
                       moveStage.mutate(
                         { id, stage },
-                        { onError: (err) => addToast({ type: 'error', message: err.message }) }
+                        { onError: (err: unknown) => addToast({ type: 'error', message: err instanceof Error ? err.message : 'An error occurred' }) }
                       );
                     }
                   }
@@ -329,8 +329,10 @@ export default function PipelinePage() {
               >
                 <div className="flex items-center justify-between mb-1.5 px-1">
                   <StageBadge stage={stage} />
-                  <span className="text-[9px] text-[var(--muted)] font-mono">{cards.length}</span>
-                  {stageAmt > 0 && <span className="font-mono text-[9px] uppercase text-[var(--muted)]">{fmt(stageAmt)}</span>}
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-[9px] text-[var(--muted)] font-mono">{cards.length}</span>
+                    <span className="font-mono text-[9px] uppercase text-[var(--muted)]">{fmt(stageAmt)}</span>
+                  </div>
                 </div>
                 <div className="min-h-[50px]">
                   {cards.length === 0 ? (

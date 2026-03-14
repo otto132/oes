@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import { api } from '@/lib/api-client';
+import { useOptimisticMutation, prependItem, replaceTempId } from './helpers';
 
 export const accountKeys = {
   all: ['accounts'] as const,
@@ -24,49 +25,23 @@ export function useAccountDetail(id: string) {
 }
 
 export function useCreateAccount() {
-  const qc = useQueryClient();
-  return useMutation({
+  return useOptimisticMutation<{ data: any }, {
+    name: string;
+    type?: string;
+    country?: string;
+    notes?: string;
+  }>({
     mutationKey: ['accounts', 'create'],
-    mutationFn: (data: {
-      name: string;
-      type?: string;
-      country?: string;
-      notes?: string;
-    }) => api.accounts.create(data),
-    onMutate: async (vars) => {
-      await qc.cancelQueries({ queryKey: accountKeys.all });
-      const queries = qc.getQueriesData({ queryKey: accountKeys.all });
-      const previous = queries.map(([key, data]) => [key, data] as const);
-      qc.setQueriesData({ queryKey: accountKeys.all }, (old: any) => {
-        if (!old) return old;
-        const tempItem = {
-          id: `temp-${Date.now()}`,
-          name: vars.name,
-          type: vars.type,
-          country: vars.country,
-          status: 'Prospect',
-        };
-        return { ...old, data: [tempItem, ...old.data] };
-      });
-      return { previous };
-    },
-    onError: (_err, _vars, context) => {
-      context?.previous.forEach(([key, data]) => qc.setQueryData(key, data));
-    },
-    onSuccess: (serverResponse) => {
-      qc.setQueriesData({ queryKey: accountKeys.all }, (old: any) => {
-        if (!old) return old;
-        return {
-          ...old,
-          data: old.data.map((item: any) =>
-            item.id?.startsWith('temp-') ? serverResponse.data : item
-          ),
-        };
-      });
-    },
-    onSettled: () => {
-      qc.invalidateQueries({ queryKey: accountKeys.all });
-    },
+    mutationFn: (data) => api.accounts.create(data),
+    queryKey: accountKeys.all,
+    updater: prependItem((vars) => ({
+      id: `temp-${Date.now()}`,
+      name: vars.name,
+      type: vars.type,
+      country: vars.country,
+      status: 'Prospect',
+    })),
+    onSuccessCallback: replaceTempId(accountKeys.all),
   });
 }
 

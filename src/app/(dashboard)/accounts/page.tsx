@@ -48,9 +48,10 @@ export default function AccountsPage() {
 
 function AccountsPageInner() {
   const [search, setSearch] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [typeFilter, setTypeFilter] = useState('all');
   const [ownerFilter, setOwnerFilter] = useState<'all' | 'me'>('all');
-  const { data: resp, isLoading, isError, refetch } = useAccountsQuery(search || undefined, typeFilter !== 'all' ? typeFilter : undefined, ownerFilter === 'me' ? 'me' : undefined);
+  const { data: resp, isLoading, isError, refetch } = useAccountsQuery(debouncedSearch || undefined, typeFilter !== 'all' ? typeFilter : undefined, ownerFilter === 'me' ? 'me' : undefined);
   const router = useRouter();
   const searchParams = useSearchParams();
   const createAccount = useCreateAccount();
@@ -144,7 +145,7 @@ function AccountsPageInner() {
                 { name: state.name.trim(), type: state.type, country: state.country || undefined, notes: state.notes || undefined },
                 {
                   onSuccess: () => { addToast({ type: 'success', message: `Account created: ${state.name}` }); closeDrawer(); },
-                  onError: (err) => addToast({ type: 'error', message: err.message }),
+                  onError: (err: unknown) => addToast({ type: 'error', message: err instanceof Error ? err.message : 'An error occurred' }),
                 }
               );
             }}
@@ -188,7 +189,7 @@ function AccountsPageInner() {
             });
           }
         },
-        onError: (err) => addToast({ type: 'error', message: err.message }),
+        onError: (err: unknown) => addToast({ type: 'error', message: err instanceof Error ? err.message : 'An error occurred' }),
       },
     );
   }
@@ -245,7 +246,7 @@ function AccountsPageInner() {
       </div>
 
       <div className="flex items-center gap-1.5 mb-2.5 flex-wrap">
-        <SearchInput value={search} onChange={setSearch} placeholder="Search accounts..." className="max-w-[240px] min-w-[140px]" />
+        <SearchInput value={search} onChange={setSearch} onDebouncedChange={setDebouncedSearch} placeholder="Search accounts..." className="max-w-[240px] min-w-[140px]" />
         <div className="flex gap-1">
           {['all', ...types].map(t => (
             <button key={t} onClick={() => setTypeFilter(t)} className={cn('px-2 py-1 text-[11.5px] rounded-md transition-colors', typeFilter === t ? 'bg-[var(--surface)] text-[var(--text)] border border-[var(--border)]' : 'text-[var(--muted)] hover:bg-[var(--hover)]')}>{t === 'all' ? 'All' : t}</button>

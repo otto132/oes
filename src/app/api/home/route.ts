@@ -18,7 +18,7 @@ export async function GET() {
 
   const openWhere: any = { stage: { notIn: ['ClosedWon', 'ClosedLost'] } };
 
-  const [stageAgg, atRiskOpps, nextActionOpps, pendingQueue, newSignals, overdueTasks, todayMeetings, recentActivity, unreadEmails, openDealCount] = await Promise.all([
+  const [stageAgg, atRiskOpps, nextActionOpps, pendingQueue, newSignals, overdueTasks, todayMeetings, recentActivity, unreadEmails, openDealCount, accountCount] = await Promise.all([
     // Aggregate pipeline totals by stage (replaces loading ALL opps)
     db.opportunity.groupBy({
       by: ['stage'],
@@ -55,6 +55,7 @@ export async function GET() {
     db.activity.findMany({ take: 5, orderBy: { createdAt: 'desc' }, include: { author: true, account: { select: { id: true, name: true } } } }),
     db.inboxEmail.count({ where: { isUnread: true, isArchived: false } }),
     db.opportunity.count({ where: openWhere }),
+    db.account.count(),
   ]);
 
   const totalPipeline = stageAgg.reduce((s, g) => s + (g._sum?.amount || 0), 0);
@@ -70,6 +71,7 @@ export async function GET() {
       pendingApprovals: pendingQueue.length,
       newSignals: newSignals.length,
       unreadEmails,
+      accountCount,
     },
     nextBestActions: [
       ...pendingQueue.length ? [{ type: 'approval', title: `${pendingQueue.length} items awaiting approval`, meta: 'Outreach drafts, leads, enrichments', urgency: 98, href: '/queue', items: pendingQueue.slice(0, 3).map(q => ({ id: q.id, title: q.title })) }] : [],

@@ -194,7 +194,7 @@ export default function OppDetailPage() {
                     addToast({ type: 'success', message: 'Deal closed as Won ✓' });
                     closeDrawer();
                   },
-                  onError: (err) => addToast({ type: 'error', message: `Failed to close deal: ${err.message}` }),
+                  onError: (err: unknown) => addToast({ type: 'error', message: `Failed to close deal: ${err instanceof Error ? err.message : 'Unknown error'}` }),
                 }
               );
             }}
@@ -294,7 +294,7 @@ export default function OppDetailPage() {
                     addToast({ type: 'info', message: 'Deal closed as Lost' });
                     closeDrawer();
                   },
-                  onError: (err) => addToast({ type: 'error', message: `Failed to close deal: ${err.message}` }),
+                  onError: (err: unknown) => addToast({ type: 'error', message: `Failed to close deal: ${err instanceof Error ? err.message : 'Unknown error'}` }),
                 }
               );
             }}
@@ -371,7 +371,7 @@ export default function OppDetailPage() {
                     addToast({ type: 'success', message: 'Opportunity updated' });
                     closeDrawer();
                   },
-                  onError: (err) => addToast({ type: 'error', message: `Update failed: ${err.message}` }),
+                  onError: (err: unknown) => addToast({ type: 'error', message: `Update failed: ${err instanceof Error ? err.message : 'Unknown error'}` }),
                 }
               );
             }}
@@ -525,7 +525,7 @@ export default function OppDetailPage() {
                       { id: o.id, stage: s },
                       {
                         onSuccess: () => addToast({ type: 'success', message: `Stage → ${displayLabel(s)}` }),
-                        onError: (err: Error) => addToast({ type: 'error', message: `Move failed: ${err.message}` }),
+                        onError: (err: unknown) => addToast({ type: 'error', message: `Move failed: ${err instanceof Error ? err.message : 'Unknown error'}` }),
                       }
                     )}
                     className={cn(

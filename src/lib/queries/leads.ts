@@ -1,8 +1,8 @@
-import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
+import { useQuery, keepPreviousData } from '@tanstack/react-query';
 import { api } from '@/lib/api-client';
 import { accountKeys } from './accounts';
 import { oppKeys } from './opportunities';
-import { useOptimisticMutation, removeById, updateById } from './helpers';
+import { useOptimisticMutation, removeById, updateById, prependItem, replaceTempId } from './helpers';
 
 export const leadKeys = {
   all: ['leads'] as const,
@@ -48,46 +48,19 @@ export function useConvertLead() {
 }
 
 export function useCreateLead() {
-  const qc = useQueryClient();
-  return useMutation({
+  return useOptimisticMutation<{ data: any }, { company: string; type?: string; country?: string; pain?: string }>({
     mutationKey: ['leads', 'create'],
-    mutationFn: (data: { company: string; type?: string; country?: string; pain?: string }) =>
-      api.leads.create(data),
-    onMutate: async (vars) => {
-      await qc.cancelQueries({ queryKey: leadKeys.all });
-      const queries = qc.getQueriesData({ queryKey: leadKeys.all });
-      const previous = queries.map(([key, data]) => [key, data] as const);
-      const tempLead = {
-        id: `temp-${Date.now()}`,
-        company: vars.company,
-        type: vars.type || '',
-        country: vars.country || '',
-        stage: 'New',
-        pain: vars.pain || '',
-      };
-      qc.setQueriesData({ queryKey: leadKeys.all }, (old: any) => {
-        if (!old) return old;
-        return { ...old, data: [tempLead, ...old.data] };
-      });
-      return { previous };
-    },
-    onError: (_err, _vars, context) => {
-      context?.previous.forEach(([key, data]) => qc.setQueryData(key, data));
-    },
-    onSuccess: (serverResponse) => {
-      qc.setQueriesData({ queryKey: leadKeys.all }, (old: any) => {
-        if (!old) return old;
-        return {
-          ...old,
-          data: old.data.map((item: any) =>
-            item.id?.startsWith('temp-') ? serverResponse.data : item
-          ),
-        };
-      });
-    },
-    onSettled: () => {
-      qc.invalidateQueries({ queryKey: leadKeys.all });
-    },
+    mutationFn: (data) => api.leads.create(data),
+    queryKey: leadKeys.all,
+    updater: prependItem((vars) => ({
+      id: `temp-${Date.now()}`,
+      company: vars.company,
+      type: vars.type || '',
+      country: vars.country || '',
+      stage: 'New',
+      pain: vars.pain || '',
+    })),
+    onSuccessCallback: replaceTempId(leadKeys.all),
   });
 }
 

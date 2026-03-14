@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import { api } from '@/lib/api-client';
 import { homeKeys } from './home';
+import { useOptimisticMutation, prependItem, updateById, replaceTempId } from './helpers';
 
 export const meetingKeys = {
   all: ['meetings'] as const,
@@ -24,86 +25,39 @@ export function useMeetingDetail(id: string) {
   });
 }
 
-// Complex optimistic logic — see useOptimisticMutation for simpler cases
 export function useCreateMeeting() {
-  const qc = useQueryClient();
-  return useMutation({
+  return useOptimisticMutation<{ data: any }, { title: string; date: string; startTime: string; duration?: string; attendees?: string[]; accountId?: string }>({
     mutationKey: ['meetings', 'create'],
-    mutationFn: (data: { title: string; date: string; startTime: string; duration?: string; attendees?: string[]; accountId?: string }) =>
-      api.meetings.create(data),
-    onMutate: async (data) => {
-      await qc.cancelQueries({ queryKey: meetingKeys.all });
-      const queries = qc.getQueriesData({ queryKey: meetingKeys.all });
-      const previous = queries.map(([key, d]) => [key, d] as const);
-      const tempMeeting = {
-        id: `temp-${Date.now()}`,
-        title: data.title,
-        time: data.startTime,
-        dur: data.duration || '30 min',
-        date: data.date,
-        acc: '',
-        accId: data.accountId || '',
-        who: data.attendees || [],
-        prep: 'draft',
-      };
-      qc.setQueriesData({ queryKey: meetingKeys.all }, (old: any) => {
-        if (!old?.data) return old;
-        return { ...old, data: [tempMeeting, ...old.data] };
-      });
-      return { previous };
-    },
-    onError: (_err, _vars, context) => {
-      context?.previous.forEach(([key, data]) => qc.setQueryData(key, data));
-    },
-    onSuccess: (serverResponse) => {
-      qc.setQueriesData({ queryKey: meetingKeys.all }, (old: any) => {
-        if (!old?.data) return old;
-        return {
-          ...old,
-          data: old.data.map((item: any) =>
-            item.id?.startsWith('temp-') ? serverResponse.data : item
-          ),
-        };
-      });
-    },
-    onSettled: () => {
-      qc.invalidateQueries({ queryKey: meetingKeys.all });
-      qc.invalidateQueries({ queryKey: homeKeys.all });
-    },
+    mutationFn: (data) => api.meetings.create(data),
+    queryKey: meetingKeys.all,
+    updater: prependItem((vars) => ({
+      id: `temp-${Date.now()}`,
+      title: vars.title,
+      time: vars.startTime,
+      dur: vars.duration || '30 min',
+      date: vars.date,
+      acc: '',
+      accId: vars.accountId || '',
+      who: vars.attendees || [],
+      prep: 'draft',
+    })),
+    onSuccessCallback: replaceTempId(meetingKeys.all),
+    invalidateKeys: [homeKeys.all],
   });
 }
 
-// Complex optimistic logic — see useOptimisticMutation for simpler cases
 export function useUpdateMeeting() {
-  const qc = useQueryClient();
-  return useMutation({
+  return useOptimisticMutation<unknown, { id: string; data: Record<string, unknown> }>({
     mutationKey: ['meetings', 'update'],
-    mutationFn: ({ id, data }: { id: string; data: Record<string, unknown> }) =>
-      api.meetings.update(id, data),
-    onMutate: async ({ id, data }) => {
-      await qc.cancelQueries({ queryKey: meetingKeys.all });
-      const queries = qc.getQueriesData({ queryKey: meetingKeys.all });
-      const previous = queries.map(([key, d]) => [key, d] as const);
-      const previousDetail = qc.getQueryData(meetingKeys.detail(id));
-      qc.setQueriesData({ queryKey: meetingKeys.all }, (old: any) => {
-        if (!old?.data) return old;
-        return { ...old, data: old.data.map((m: any) => m.id === id ? { ...m, ...data } : m) };
-      });
-      qc.setQueryData(meetingKeys.detail(id), (old: any) => {
-        if (!old?.data) return old;
-        return { ...old, data: { ...old.data, ...data } };
-      });
-      return { previous, previousDetail, id };
+    mutationFn: ({ id, data }) => api.meetings.update(id, data),
+    queryKey: meetingKeys.all,
+    updater: updateById((m, { data }) => ({ ...m, ...data })),
+    detailQueryKey: (vars) => meetingKeys.detail(vars.id),
+    detailUpdater: (old, { data }) => {
+      if (!old?.data) return old;
+      return { ...old, data: { ...old.data, ...data } };
     },
-    onError: (_err, _vars, context) => {
-      context?.previous.forEach(([key, data]) => qc.setQueryData(key, data));
-      if (context?.previousDetail) qc.setQueryData(meetingKeys.detail(context.id), context.previousDetail);
-    },
-    onSettled: (_data, _err, vars) => {
-      qc.invalidateQueries({ queryKey: meetingKeys.detail(vars.id) });
-      qc.invalidateQueries({ queryKey: meetingKeys.all });
-      qc.invalidateQueries({ queryKey: homeKeys.all });
-    },
+    invalidateKeys: [homeKeys.all],
   });
 }
 

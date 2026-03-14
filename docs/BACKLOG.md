@@ -301,7 +301,7 @@ High-leverage builds. Tackle after DO NOW is complete.
 | **Owner** | Frontend |
 | **Required before beta** | Yes |
 | **Value type** | Adoption, Trust |
-| **Status** | Open |
+| **Status** | Done (2026-03-14: kanban already implemented with drag-drop, fixed column header layout to group count+value) |
 
 ---
 
@@ -409,7 +409,7 @@ High-leverage builds. Tackle after DO NOW is complete.
 | **Owner** | Frontend |
 | **Required before beta** | No |
 | **Value type** | Trust |
-| **Status** | Open |
+| **Status** | Done (2026-03-14: enhanced SearchInput with 300ms debounce, clear button, updated tasks+accounts pages) |
 
 ---
 
@@ -445,7 +445,7 @@ High-leverage builds. Tackle after DO NOW is complete.
 | **Owner** | Frontend + Design |
 | **Required before beta** | Yes |
 | **Value type** | Adoption |
-| **Status** | Open |
+| **Status** | Done (2026-03-14: WelcomeBanner with first-run detection, step completion, auto-dismiss on first account, manual dismiss via localStorage) |
 
 ---
 
@@ -463,7 +463,7 @@ High-leverage builds. Tackle after DO NOW is complete.
 | **Owner** | Frontend |
 | **Required before beta** | No |
 | **Value type** | Speed (developer velocity) |
-| **Status** | Open |
+| **Status** | Done (2026-03-14: extended useOptimisticMutation with detailQueryKey, onSuccessCallback, prependItem, replaceTempId; converted 12 mutations across 6 files, net -113 lines) |
 
 ---
 

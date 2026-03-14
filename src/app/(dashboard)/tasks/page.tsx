@@ -93,6 +93,7 @@ function TasksPageInner() {
   const [tab, setTab] = useState<'mine' | 'review' | 'all'>('mine');
   const [showCompleted, setShowCompleted] = useState(false);
   const [search, setSearch] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const searchParams = useSearchParams();
   const createTask = useCreateTask();
   const completeTask = useCompleteTask();
@@ -134,7 +135,7 @@ function TasksPageInner() {
   const tasks = showCompleted ? allTasks : allTasks.filter(t => t.status !== 'Done');
 
   let all = tasks;
-  if (search) all = all.filter(t => `${t.title} ${t.accountName}`.toLowerCase().includes(search.toLowerCase()));
+  if (debouncedSearch) all = all.filter(t => `${t.title} ${t.accountName}`.toLowerCase().includes(debouncedSearch.toLowerCase()));
   const mine = all.filter(t => t.assignees?.some(u => u.id === me.id) || t.owner.id === me.id);
   const review = all.filter(t => t.status === 'InReview' && t.reviewer?.id === me.id);
   const visible = tab === 'mine' ? mine : tab === 'review' ? review : all;
@@ -248,7 +249,7 @@ function TasksPageInner() {
                     addToast({ type: 'success', message: `Task created: ${state.title}` });
                     closeDrawer();
                   },
-                  onError: (err) => addToast({ type: 'error', message: `Failed: ${err.message}` }),
+                  onError: (err: unknown) => addToast({ type: 'error', message: `Failed: ${err instanceof Error ? err.message : 'Unknown error'}` }),
                 }
               );
             }}
@@ -511,7 +512,7 @@ function TasksPageInner() {
                     addToast({ type: 'success', message: `Task updated: ${state.title}` });
                     closeDrawer();
                   },
-                  onError: (err) => addToast({ type: 'error', message: `Failed: ${err.message}` }),
+                  onError: (err: unknown) => addToast({ type: 'error', message: `Failed: ${err instanceof Error ? err.message : 'Unknown error'}` }),
                 }
               );
             }}
@@ -667,7 +668,7 @@ function TasksPageInner() {
 
       {/* Search + completed toggle */}
       <div className="flex flex-col sm:flex-row sm:items-center gap-2 mb-2.5">
-        <SearchInput value={search} onChange={setSearch} placeholder="Search tasks..." className="w-full sm:max-w-[240px]" />
+        <SearchInput value={search} onChange={setSearch} onDebouncedChange={setDebouncedSearch} placeholder="Search tasks..." className="w-full sm:max-w-[240px]" />
         <label className="flex items-center gap-1.5 text-[11px] text-sub cursor-pointer min-h-[44px] sm:min-h-0">
           <input type="checkbox" className="w-4 h-4 sm:w-3.5 sm:h-3.5" checked={showCompleted} onChange={e => setShowCompleted(e.target.checked)} /> Show completed
         </label>

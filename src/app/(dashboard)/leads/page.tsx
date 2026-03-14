@@ -121,7 +121,7 @@ export default function LeadsPage() {
                 { company: state.company.trim(), type: state.type || undefined, country: state.country || undefined, pain: state.pain || undefined },
                 {
                   onSuccess: () => { addToast({ type: 'success', message: `Lead created: ${state.company}` }); closeDrawer(); },
-                  onError: (err) => addToast({ type: 'error', message: err.message }),
+                  onError: (err: unknown) => addToast({ type: 'error', message: err instanceof Error ? err.message : 'An error occurred' }),
                 }
               );
             }}

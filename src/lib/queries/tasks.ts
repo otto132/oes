@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import { api } from '@/lib/api-client';
+import { useOptimisticMutation, prependItem } from './helpers';
 
 export const taskKeys = {
   all: ['tasks'] as const,
@@ -44,107 +45,69 @@ export function useCompleteTask() {
 }
 
 export function useCommentOnTask() {
-  const qc = useQueryClient();
-  return useMutation({
+  return useOptimisticMutation<unknown, { id: string; text: string }>({
     mutationKey: ['tasks', 'comment'],
-    mutationFn: ({ id, text }: { id: string; text: string }) =>
-      api.tasks.comment(id, text),
-    onMutate: async ({ id, text }) => {
-      await qc.cancelQueries({ queryKey: taskKeys.all });
-      const queries = qc.getQueriesData({ queryKey: taskKeys.all });
-      const previous = queries.map(([key, data]) => [key, data] as const);
-      // Append temp comment to task in cache
-      qc.setQueriesData({ queryKey: taskKeys.all }, (old: any) => {
-        if (!old?.data) return old;
-        return {
-          ...old,
-          data: {
-            ...old.data,
-            tasks: old.data.tasks?.map((t: any) =>
-              t.id === id
-                ? { ...t, comments: [...(t.comments || []), { id: `temp-${Date.now()}`, text, author: 'You', createdAt: new Date().toISOString() }] }
-                : t
-            ),
-          },
-        };
-      });
-      return { previous };
-    },
-    onError: (_err, _vars, context) => {
-      context?.previous.forEach(([key, data]) => qc.setQueryData(key, data));
-    },
-    onSettled: () => {
-      qc.invalidateQueries({ queryKey: taskKeys.all });
+    mutationFn: ({ id, text }) => api.tasks.comment(id, text),
+    queryKey: taskKeys.all,
+    updater: (old, { id, text }) => {
+      if (!old?.data) return old;
+      return {
+        ...old,
+        data: {
+          ...old.data,
+          tasks: old.data.tasks?.map((t: any) =>
+            t.id === id
+              ? { ...t, comments: [...(t.comments || []), { id: `temp-${Date.now()}`, text, author: 'You', createdAt: new Date().toISOString() }] }
+              : t
+          ),
+        },
+      };
     },
   });
 }
 
 export function useUpdateTask() {
-  const qc = useQueryClient();
-  return useMutation({
+  return useOptimisticMutation<unknown, { id: string; data: Record<string, unknown> }>({
     mutationKey: ['tasks', 'update'],
-    mutationFn: ({ id, data }: { id: string; data: Record<string, unknown> }) =>
-      api.tasks.update(id, data),
-    onMutate: async ({ id, data }) => {
-      await qc.cancelQueries({ queryKey: taskKeys.all });
-      const queries = qc.getQueriesData({ queryKey: taskKeys.all });
-      const previous = queries.map(([key, d]) => [key, d] as const);
-      qc.setQueriesData({ queryKey: taskKeys.all }, (old: any) => {
-        if (!old?.data) return old;
-        const updateTasks = (tasks: any[]) =>
-          tasks?.map((t: any) => (t.id === id ? { ...t, ...data } : t));
-        if (Array.isArray(old.data)) {
-          return { ...old, data: updateTasks(old.data) };
-        }
-        return {
-          ...old,
-          data: { ...old.data, tasks: updateTasks(old.data.tasks || []) },
-        };
-      });
-      return { previous };
-    },
-    onError: (_err, _vars, context) => {
-      context?.previous.forEach(([key, data]) => qc.setQueryData(key, data));
-    },
-    onSettled: () => {
-      qc.invalidateQueries({ queryKey: taskKeys.all });
+    mutationFn: ({ id, data }) => api.tasks.update(id, data),
+    queryKey: taskKeys.all,
+    updater: (old, { id, data }) => {
+      if (!old?.data) return old;
+      const updateTasks = (tasks: any[]) =>
+        tasks?.map((t: any) => (t.id === id ? { ...t, ...data } : t));
+      if (Array.isArray(old.data)) {
+        return { ...old, data: updateTasks(old.data) };
+      }
+      return {
+        ...old,
+        data: { ...old.data, tasks: updateTasks(old.data.tasks || []) },
+      };
     },
   });
 }
 
 export function useCreateTask() {
-  const qc = useQueryClient();
-  return useMutation({
+  return useOptimisticMutation<{ data: any }, { title: string; accountId?: string; priority?: string; dueDate?: string; goalId?: string }>({
     mutationKey: ['tasks', 'create'],
-    mutationFn: (data: { title: string; accountId?: string; priority?: string; dueDate?: string; goalId?: string }) =>
-      api.tasks.create(data),
-    onMutate: async (data) => {
-      await qc.cancelQueries({ queryKey: taskKeys.all });
-      const queries = qc.getQueriesData({ queryKey: taskKeys.all });
-      const previous = queries.map(([key, d]) => [key, d] as const);
-      const tempTask = { id: `temp-${Date.now()}`, title: data.title, status: 'Open', priority: data.priority || 'Medium', dueDate: data.dueDate || '' };
+    mutationFn: (data) => api.tasks.create(data),
+    queryKey: taskKeys.all,
+    updater: prependItem((vars) => ({
+      id: `temp-${Date.now()}`,
+      title: vars.title,
+      status: 'Open',
+      priority: vars.priority || 'Medium',
+      dueDate: vars.dueDate || '',
+    })),
+    onSuccessCallback: (serverResponse, _vars, qc) => {
       qc.setQueriesData({ queryKey: taskKeys.all }, (old: any) => {
         if (!old?.data) return old;
-        return { ...old, data: [tempTask, ...old.data] };
-      });
-      return { previous };
-    },
-    onError: (_err, _vars, context) => {
-      context?.previous.forEach(([key, data]) => qc.setQueryData(key, data));
-    },
-    onSuccess: (serverResponse) => {
-      qc.setQueriesData({ queryKey: taskKeys.all }, (old: any) => {
-        if (!old?.data) return old;
-        const replaceTasks = (tasks: any[]) =>
+        const replace = (tasks: any[]) =>
           tasks?.map((t: any) => t.id?.startsWith('temp-') ? serverResponse.data : t);
         if (Array.isArray(old.data)) {
-          return { ...old, data: replaceTasks(old.data) };
+          return { ...old, data: replace(old.data) };
         }
-        return { ...old, data: { ...old.data, tasks: replaceTasks(old.data.tasks || []) } };
+        return { ...old, data: { ...old.data, tasks: replace(old.data.tasks || []) } };
       });
-    },
-    onSettled: () => {
-      qc.invalidateQueries({ queryKey: taskKeys.all });
     },
   });
 }

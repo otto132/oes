@@ -323,7 +323,7 @@ export default function AccountDetailPage() {
                 { type: state.type, summary: state.summary.trim(), detail: state.detail || undefined, accountId: id, source: 'Manual' },
                 {
                   onSuccess: () => { addToast({ type: 'success', message: 'Activity logged' }); closeDrawer(); },
-                  onError: (err) => addToast({ type: 'error', message: err.message }),
+                  onError: (err: unknown) => addToast({ type: 'error', message: err instanceof Error ? err.message : 'An error occurred' }),
                 }
               );
             }}
@@ -562,7 +562,7 @@ export default function AccountDetailPage() {
                 },
                 {
                   onSuccess: () => { addToast({ type: 'success', message: `Contact updated: ${state.name}` }); closeDrawer(); },
-                  onError: (err) => addToast({ type: 'error', message: err.message }),
+                  onError: (err: unknown) => addToast({ type: 'error', message: err instanceof Error ? err.message : 'An error occurred' }),
                 }
               );
             }}
@@ -600,7 +600,7 @@ export default function AccountDetailPage() {
             onClick={() => {
               deleteContact.mutate(c.id, {
                 onSuccess: () => { addToast({ type: 'success', message: `Contact deleted: ${c.name}` }); closeDrawer(); },
-                onError: (err) => addToast({ type: 'error', message: err.message }),
+                onError: (err: unknown) => addToast({ type: 'error', message: err instanceof Error ? err.message : 'An error occurred' }),
               });
             }}
           >
@@ -750,7 +750,7 @@ export default function AccountDetailPage() {
                 },
                 {
                   onSuccess: () => { addToast({ type: 'success', message: 'Account updated' }); closeDrawer(); },
-                  onError: (err: Error) => addToast({ type: 'error', message: err.message }),
+                  onError: (err: unknown) => addToast({ type: 'error', message: err instanceof Error ? err.message : 'An error occurred' }),
                 }
               );
             }}
@@ -777,7 +777,7 @@ export default function AccountDetailPage() {
               { name: data.name.trim(), accountId: id, stage: data.stage, amount: data.amount, closeDate: data.closeDate || undefined },
               {
                 onSuccess: () => { addToast({ type: 'success', message: `Opportunity created: ${data.name}` }); closeDrawer(); },
-                onError: (err) => addToast({ type: 'error', message: err.message }),
+                onError: (err: unknown) => addToast({ type: 'error', message: err instanceof Error ? err.message : 'An error occurred' }),
               }
             );
           }}
@@ -862,7 +862,7 @@ export default function AccountDetailPage() {
                   { id, data: { ownerId: e.target.value } },
                   {
                     onSuccess: () => addToast({ type: 'success', message: 'Owner reassigned' }),
-                    onError: (err: Error) => addToast({ type: 'error', message: err.message }),
+                    onError: (err: unknown) => addToast({ type: 'error', message: err instanceof Error ? err.message : 'An error occurred' }),
                   },
                 );
               }}
