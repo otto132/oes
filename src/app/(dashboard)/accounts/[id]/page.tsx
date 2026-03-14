@@ -174,7 +174,7 @@ export default function AccountDetailPage() {
   const updateContact = useUpdateContact(id);
   const deleteContact = useDeleteContact(id);
   const { openDrawer, closeDrawer, addToast } = useStore();
-  const updateAccount = useUpdateAccount();
+  const updateAccount = useUpdateAccount(id);
   const { data: teamData } = useTeamQuery();
   const teamMembers = (teamData?.data ?? []).filter((u: any) => u.isActive);
   const { data: session } = useSession();
