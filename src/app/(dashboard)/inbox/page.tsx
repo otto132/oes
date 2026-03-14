@@ -1,7 +1,8 @@
 'use client';
+import { useRouter } from 'next/navigation';
 import { useStore } from '@/lib/store';
 import { useInboxQuery, useCreateTaskFromEmail, useCreateAccountFromEmail, useMarkEmailRead, useArchiveEmail } from '@/lib/queries/inbox';
-import { Badge, ConfBadge, AgentTag, EmptyState, Skeleton, SkeletonCard, SkeletonText, ErrorState } from '@/components/ui';
+import { Badge, ConfBadge, AgentTag, EmptyState, Skeleton, SkeletonCard, SkeletonText, ErrorState, Spinner } from '@/components/ui';
 import { fR, clsLabel, cn } from '@/lib/utils';
 import type { Email } from '@/lib/types';
 import { usePendingMutations, useFailedMutations } from '@/hooks/use-mutation-state';
@@ -38,6 +39,7 @@ function InboxSkeleton() {
 }
 
 export default function InboxPage() {
+  const router = useRouter();
   const { openDrawer, closeDrawer } = useStore();
   const addToast = useStore(s => s.addToast);
   const { data: resp, isLoading, isError, refetch } = useInboxQuery();
@@ -91,7 +93,7 @@ export default function InboxPage() {
               <div className="text-[9px] font-semibold tracking-widest uppercase text-brand mb-1">New Domain Detected</div>
               <p className="text-[12px] text-sub">{e.domain} does not match any existing account.</p>
               <button
-                className="mt-2 px-2.5 py-1.5 text-[11px] font-medium bg-brand text-[#09090b] rounded-md hover:brightness-110 transition-colors disabled:opacity-50"
+                className="inline-flex items-center gap-1.5 mt-2 px-2.5 py-1.5 text-[11px] font-medium bg-brand text-[#09090b] rounded-md hover:brightness-110 transition-colors disabled:opacity-50"
                 disabled={createAccountFromEmail.isPending}
                 onClick={(ev) => {
                   ev.stopPropagation();
@@ -104,14 +106,14 @@ export default function InboxPage() {
                   });
                 }}
               >
-                Create Account
+                {createAccountFromEmail.isPending && <Spinner className="h-3 w-3" />}Create Account
               </button>
             </div>
           )}
           <div className="text-[9px] font-semibold tracking-widest uppercase text-muted mt-1">Quick Actions</div>
           <div className="grid grid-cols-2 gap-1.5">
             <button
-              className="px-2.5 py-1.5 text-[11.5px] font-medium bg-[var(--surface)] text-[var(--text)] border border-[var(--border)] rounded-md hover:bg-[var(--hover)] transition-colors disabled:opacity-50"
+              className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-[11.5px] font-medium bg-[var(--surface)] text-[var(--text)] border border-[var(--border)] rounded-md hover:bg-[var(--hover)] transition-colors disabled:opacity-50"
               disabled={createTaskFromEmail.isPending}
               onClick={(ev) => {
                 ev.stopPropagation();
@@ -123,7 +125,7 @@ export default function InboxPage() {
                   onError: () => addToast({ type: 'error', message: 'Failed to create task' }),
                 });
               }}
-            >Create Task</button>
+            >{createTaskFromEmail.isPending && <Spinner className="h-3 w-3" />}Create Task</button>
             <button
               className="px-2.5 py-1.5 text-[11.5px] text-sub bg-[var(--surface)] border border-[var(--border)] rounded-md hover:bg-[var(--hover)] transition-colors disabled:opacity-50"
               disabled={archiveEmail.isPending}
@@ -138,7 +140,7 @@ export default function InboxPage() {
                 });
               }}
             >Archive</button>
-            {e.accountId && <button className="px-2.5 py-1.5 text-[11.5px] text-sub bg-[var(--surface)] border border-[var(--border)] rounded-md hover:bg-[var(--hover)] transition-colors col-span-2" onClick={() => { closeDrawer(); window.location.href = `/accounts/${e.accountId}`; }}>View Account</button>}
+            {e.accountId && <button className="px-2.5 py-1.5 text-[11.5px] text-sub bg-[var(--surface)] border border-[var(--border)] rounded-md hover:bg-[var(--hover)] transition-colors col-span-2" onClick={() => { closeDrawer(); router.push(`/accounts/${e.accountId}`); }}>View Account</button>}
           </div>
         </div>
       ),

@@ -297,22 +297,6 @@ export default function CommandPalette() {
           ))}
         </div>
 
-        {/* Footer hint */}
-        <div className="px-4 py-2 border-t border-[var(--border)] flex items-center gap-3 text-[10px] text-muted">
-          <span className="flex items-center gap-1">
-            <kbd className="bg-[var(--surface)] border border-[var(--border)] px-1 py-[1px] rounded text-[9px]">&uarr;</kbd>
-            <kbd className="bg-[var(--surface)] border border-[var(--border)] px-1 py-[1px] rounded text-[9px]">&darr;</kbd>
-            navigate
-          </span>
-          <span className="flex items-center gap-1">
-            <kbd className="bg-[var(--surface)] border border-[var(--border)] px-1 py-[1px] rounded text-[9px]">&crarr;</kbd>
-            select
-          </span>
-          <span className="flex items-center gap-1">
-            <kbd className="bg-[var(--surface)] border border-[var(--border)] px-1 py-[1px] rounded text-[9px]">esc</kbd>
-            close
-          </span>
-        </div>
       </div>
     </div>
   );

@@ -1,14 +1,15 @@
 'use client';
 import { Suspense, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
-import { useSearchParams } from 'next/navigation';
+import { useSearchParams, useRouter } from 'next/navigation';
 import { useAccountsQuery, useCreateAccount, useImportAccounts } from '@/lib/queries/accounts';
 import { useStore } from '@/lib/store';
 import { compositeScore } from '@/lib/types';
 import type { Account } from '@/lib/types';
 import { fmt, fRelative, cn } from '@/lib/utils';
-import { ScorePill, FIUACBars, Badge, Avatar, Skeleton, SkeletonCard, SkeletonText, ErrorState } from '@/components/ui';
+import { ScorePill, FIUACBars, Badge, Avatar, Skeleton, SkeletonCard, SkeletonText, ErrorState, Spinner } from '@/components/ui';
 import { usePendingMutations, useFailedMutations } from '@/hooks/use-mutation-state';
+import { SearchInput } from '@/components/ui/SearchInput';
 
 function AccountsSkeleton() {
   return (
@@ -50,6 +51,7 @@ function AccountsPageInner() {
   const [typeFilter, setTypeFilter] = useState('all');
   const [ownerFilter, setOwnerFilter] = useState<'all' | 'me'>('all');
   const { data: resp, isLoading, isError, refetch } = useAccountsQuery(search || undefined, typeFilter !== 'all' ? typeFilter : undefined, ownerFilter === 'me' ? 'me' : undefined);
+  const router = useRouter();
   const searchParams = useSearchParams();
   const createAccount = useCreateAccount();
   const importAccounts = useImportAccounts();
@@ -132,7 +134,7 @@ function AccountsPageInner() {
           <button
             data-submit-account
             disabled={createAccount.isPending}
-            className="px-3.5 py-1.5 text-[12px] font-medium bg-brand text-[#09090b] rounded-md hover:brightness-110 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-[12px] font-medium bg-brand text-[#09090b] rounded-md hover:brightness-110 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             onClick={() => {
               if (!state.name.trim()) {
                 addToast({ type: 'error', message: 'Company name is required' });
@@ -147,7 +149,7 @@ function AccountsPageInner() {
               );
             }}
           >
-            Create Account
+            {createAccount.isPending && <Spinner className="h-3 w-3" />}Create Account
           </button>
         </>
       ),
@@ -229,9 +231,9 @@ function AccountsPageInner() {
           <button
             onClick={() => fileInputRef.current?.click()}
             disabled={importAccounts.isPending}
-            className="px-3 py-1.5 text-[12px] font-medium bg-[var(--surface)] text-[var(--sub)] border border-[var(--border)] rounded-md hover:bg-[var(--hover)] transition-colors disabled:opacity-50"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-[12px] font-medium bg-[var(--surface)] text-[var(--sub)] border border-[var(--border)] rounded-md hover:bg-[var(--hover)] transition-colors disabled:opacity-50"
           >
-            {importAccounts.isPending ? 'Importing...' : 'Import CSV'}
+            {importAccounts.isPending && <Spinner className="h-3 w-3" />}{importAccounts.isPending ? 'Importing...' : 'Import CSV'}
           </button>
           <button
             onClick={openNewAccountDrawer}
@@ -243,7 +245,7 @@ function AccountsPageInner() {
       </div>
 
       <div className="flex items-center gap-1.5 mb-2.5 flex-wrap">
-        <input className="max-w-[240px] min-w-[140px] px-2.5 py-1.5 text-[12.5px] rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] placeholder:text-[var(--muted)] focus:outline-none focus:border-brand/40" placeholder="Search accounts..." value={search} onChange={e => setSearch(e.target.value)} />
+        <SearchInput value={search} onChange={setSearch} placeholder="Search accounts..." className="max-w-[240px] min-w-[140px]" />
         <div className="flex gap-1">
           {['all', ...types].map(t => (
             <button key={t} onClick={() => setTypeFilter(t)} className={cn('px-2 py-1 text-[11.5px] rounded-md transition-colors', typeFilter === t ? 'bg-[var(--surface)] text-[var(--text)] border border-[var(--border)]' : 'text-[var(--muted)] hover:bg-[var(--hover)]')}>{t === 'all' ? 'All' : t}</button>
@@ -275,7 +277,7 @@ function AccountsPageInner() {
               const isPending = pendingIds.has(a.id);
               const failedInfo = failedMutations.get(a.id);
               return (
-                <tr key={a.id} className={cn('hover:bg-[var(--hover)] cursor-pointer transition-colors', isPending && 'opacity-60 animate-pulse', failedInfo && 'border-l-2 border-l-red-500')} onClick={() => window.location.href = `/accounts/${a.id}`}>
+                <tr key={a.id} className={cn('hover:bg-[var(--hover)] cursor-pointer transition-colors', isPending && 'opacity-60 animate-pulse', failedInfo && 'border-l-2 border-l-red-500')} onClick={() => router.push(`/accounts/${a.id}`)}>
                   <td className="px-3.5 py-2.5 border-b border-[var(--border)]">
                     <div className="flex items-center gap-2">
                       <div className="w-[26px] h-[26px] rounded-md bg-brand/[.06] border border-brand/40 text-brand flex items-center justify-center text-[10px] font-semibold flex-shrink-0">{a.name[0]}</div>

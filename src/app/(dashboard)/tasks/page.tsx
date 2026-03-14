@@ -4,11 +4,12 @@ import { useSearchParams } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { useStore } from '@/lib/store';
 import { useTasksQuery, useCreateTask, useCompleteTask, useUpdateTask } from '@/lib/queries/tasks';
-import { Badge, Avatar, AgentTag, EmptyState, Skeleton, SkeletonCard, SkeletonText, ErrorState } from '@/components/ui';
+import { Badge, Avatar, AgentTag, EmptyState, Skeleton, SkeletonCard, SkeletonText, ErrorState, Spinner } from '@/components/ui';
 import { fDate, isOverdue, cn, fR, displayLabel } from '@/lib/utils';
 import type { Task, TaskPriority, Goal } from '@/lib/types';
 import { usePendingMutations, useFailedMutations } from '@/hooks/use-mutation-state';
 import { RotateCw } from 'lucide-react';
+import { SearchInput } from '@/components/ui/SearchInput';
 
 function TasksSkeleton() {
   return (
@@ -65,6 +66,15 @@ function TasksPageInner() {
   // can compute done/total correctly. Client-side filtering for the
   // showCompleted toggle happens below.
   const { data: resp, isLoading, isError, refetch } = useTasksQuery(true);
+
+  // Auto-open create drawer when navigated with ?create=1 (from command palette)
+  // Must be before early returns to maintain consistent hook ordering.
+  useEffect(() => {
+    if (!isLoading && searchParams.get('create') === '1' && !autoCreateFired.current) {
+      autoCreateFired.current = true;
+      openNewTaskDrawer();
+    }
+  });
 
   if (isLoading) return <TasksSkeleton />;
   if (isError) return <ErrorState onRetry={() => refetch()} />;
@@ -178,7 +188,7 @@ function TasksPageInner() {
           </button>
           <button
             disabled={createTask.isPending}
-            className="px-3.5 py-1.5 text-[12px] font-medium bg-brand text-[#09090b] rounded-md hover:brightness-110 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-[12px] font-medium bg-brand text-[#09090b] rounded-md hover:brightness-110 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             onClick={() => {
               if (!state.title.trim()) {
                 addToast({ type: 'error', message: 'Title is required' });
@@ -201,20 +211,12 @@ function TasksPageInner() {
               );
             }}
           >
-            Create Task
+            {createTask.isPending && <Spinner className="h-3 w-3" />}Create Task
           </button>
         </>
       ),
     });
   }
-
-  // Auto-open create drawer when navigated with ?create=1 (from command palette)
-  useEffect(() => {
-    if (searchParams.get('create') === '1' && !autoCreateFired.current) {
-      autoCreateFired.current = true;
-      openNewTaskDrawer();
-    }
-  });
 
   function openCompleteDrawer(t: Task) {
     const state = { outcome: 'Completed', notes: '', followUps: [] as string[] };
@@ -313,7 +315,7 @@ function TasksPageInner() {
             <button
               data-submit-complete
               disabled={completeTask.isPending}
-              className="px-3.5 py-1.5 text-[12px] font-medium bg-brand text-[#09090b] rounded-md hover:brightness-110 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-[12px] font-medium bg-brand text-[#09090b] rounded-md hover:brightness-110 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               onClick={() => {
                 completeTask.mutate(
                   {
@@ -334,7 +336,7 @@ function TasksPageInner() {
                 );
               }}
             >
-              Complete Task
+              {completeTask.isPending && <Spinner className="h-3 w-3" />}Complete Task
             </button>
           </>
         ),
@@ -416,7 +418,7 @@ function TasksPageInner() {
           </button>
           <button
             disabled={updateTask.isPending}
-            className="px-3.5 py-1.5 text-[12px] font-medium bg-brand text-[#09090b] rounded-md hover:brightness-110 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-[12px] font-medium bg-brand text-[#09090b] rounded-md hover:brightness-110 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             onClick={() => {
               if (!state.title.trim()) {
                 addToast({ type: 'error', message: 'Title is required' });
@@ -441,7 +443,7 @@ function TasksPageInner() {
               );
             }}
           >
-            Save Changes
+            {updateTask.isPending && <Spinner className="h-3 w-3" />}Save Changes
           </button>
         </>
       ),
@@ -591,7 +593,7 @@ function TasksPageInner() {
 
       {/* Search + completed toggle */}
       <div className="flex items-center gap-2 mb-2.5">
-        <input className="max-w-[240px] px-2.5 py-1.5 text-[12.5px] rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] placeholder:text-muted focus:outline-none focus:border-brand/40 transition-colors" placeholder="Search tasks…" value={search} onChange={e => setSearch(e.target.value)} />
+        <SearchInput value={search} onChange={setSearch} placeholder="Search tasks..." className="max-w-[240px]" />
         <label className="flex items-center gap-1 text-[11px] text-sub cursor-pointer">
           <input type="checkbox" checked={showCompleted} onChange={e => setShowCompleted(e.target.checked)} /> Show completed
         </label>

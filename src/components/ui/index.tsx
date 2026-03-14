@@ -170,6 +170,16 @@ export function SkeletonCard({ className, children }: { className?: string; chil
   );
 }
 
+/* ── Spinner ── */
+export function Spinner({ className }: { className?: string }) {
+  return (
+    <svg className={cn('animate-spin h-3.5 w-3.5', className)} viewBox="0 0 24 24" fill="none">
+      <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" strokeLinecap="round" className="opacity-20" />
+      <path d="M12 2a10 10 0 0 1 10 10" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
+    </svg>
+  );
+}
+
 /* ── Error State ── */
 export function ErrorState({ message = 'Something went wrong', onRetry }: { message?: string; onRetry?: () => void }) {
   return (
@@ -187,3 +197,5 @@ export function ErrorState({ message = 'Something went wrong', onRetry }: { mess
     </div>
   );
 }
+
+export { Button } from './Button';

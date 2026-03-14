@@ -13,7 +13,7 @@ import { KANBAN_STAGES, STAGE_PROB } from '@/lib/types';
 import type { Account, AccountStatus, Opportunity, Activity, Task, Goal, User } from '@/lib/types';
 import { api } from '@/lib/api-client';
 import { fmt, fRelative, fDate, isOverdue, cn, confNum, displayLabel } from '@/lib/utils';
-import { Badge, ScorePill, FIUACBars, ConfBadge, AgentTag, Avatar, StageBadge, HealthBar, SectionTitle, EmptyState, Skeleton, SkeletonCard, SkeletonText, ErrorState } from '@/components/ui';
+import { Badge, ScorePill, FIUACBars, ConfBadge, AgentTag, Avatar, StageBadge, HealthBar, SectionTitle, EmptyState, Skeleton, SkeletonCard, SkeletonText, ErrorState, Spinner } from '@/components/ui';
 
 const ACT_COLOR: Record<string, string> = { Email: '#5b9cf6', Meeting: '#33a882', Call: '#33a882', Note: '#e8a838' };
 
@@ -313,7 +313,7 @@ export default function AccountDetailPage() {
           <button
             data-submit-activity
             disabled={logActivity.isPending}
-            className="px-3.5 py-1.5 text-[12px] font-medium bg-brand text-[#09090b] rounded-md hover:brightness-110 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-[12px] font-medium bg-brand text-[#09090b] rounded-md hover:brightness-110 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             onClick={() => {
               if (!state.summary.trim()) {
                 addToast({ type: 'error', message: 'Summary is required' });
@@ -328,7 +328,7 @@ export default function AccountDetailPage() {
               );
             }}
           >
-            Log Activity
+            {logActivity.isPending && <Spinner className="h-3 w-3" />}Log Activity
           </button>
         </>
       ),
@@ -422,7 +422,7 @@ export default function AccountDetailPage() {
           <button
             data-submit-contact
             disabled={createContact.isPending}
-            className="px-3.5 py-1.5 text-[12px] font-medium bg-brand text-[#09090b] rounded-md hover:brightness-110 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-[12px] font-medium bg-brand text-[#09090b] rounded-md hover:brightness-110 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             onClick={() => {
               if (!state.name.trim()) {
                 addToast({ type: 'error', message: 'Name is required' });
@@ -444,7 +444,7 @@ export default function AccountDetailPage() {
               );
             }}
           >
-            Add Contact
+            {createContact.isPending && <Spinner className="h-3 w-3" />}Add Contact
           </button>
         </>
       ),
@@ -542,7 +542,7 @@ export default function AccountDetailPage() {
           <button
             data-submit-edit-contact
             disabled={updateContact.isPending}
-            className="px-3.5 py-1.5 text-[12px] font-medium bg-brand text-[#09090b] rounded-md hover:brightness-110 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-[12px] font-medium bg-brand text-[#09090b] rounded-md hover:brightness-110 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             onClick={() => {
               if (!state.name.trim()) {
                 addToast({ type: 'error', message: 'Name is required' });
@@ -567,7 +567,7 @@ export default function AccountDetailPage() {
               );
             }}
           >
-            Save Changes
+            {updateContact.isPending && <Spinner className="h-3 w-3" />}Save Changes
           </button>
         </>
       ),
@@ -730,7 +730,7 @@ export default function AccountDetailPage() {
           <button
             data-submit-edit
             disabled={updateAccount.isPending}
-            className="px-3.5 py-1.5 text-[12px] font-medium bg-brand text-[#09090b] rounded-md hover:brightness-110 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-[12px] font-medium bg-brand text-[#09090b] rounded-md hover:brightness-110 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             onClick={() => {
               if (!state.name.trim()) {
                 addToast({ type: 'error', message: 'Name is required' });
@@ -755,7 +755,7 @@ export default function AccountDetailPage() {
               );
             }}
           >
-            Save Changes
+            {updateAccount.isPending && <Spinner className="h-3 w-3" />}Save Changes
           </button>
         </>
       ),
@@ -787,7 +787,7 @@ export default function AccountDetailPage() {
       footer: (
         <>
           <button className="px-3.5 py-1.5 text-[12px] text-[var(--sub)] bg-[var(--surface)] border border-[var(--border)] rounded-md hover:bg-[var(--hover)] transition-colors" onClick={closeDrawer}>Cancel</button>
-          <button disabled={createOpp.isPending} className="px-3.5 py-1.5 text-[12px] font-medium bg-brand text-[#09090b] rounded-md hover:brightness-110 transition-colors disabled:opacity-50 disabled:cursor-not-allowed" onClick={() => submitRef.current()}>Create Opportunity</button>
+          <button disabled={createOpp.isPending} className="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-[12px] font-medium bg-brand text-[#09090b] rounded-md hover:brightness-110 transition-colors disabled:opacity-50 disabled:cursor-not-allowed" onClick={() => submitRef.current()}>{createOpp.isPending && <Spinner className="h-3 w-3" />}Create Opportunity</button>
         </>
       ),
     });

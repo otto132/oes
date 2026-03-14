@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { useStore } from '@/lib/store';
 import { ApiError } from '@/lib/api-client';
 import { useSignalsQuery, useConvertSignal, useDismissSignal } from '@/lib/queries/signals';
-import { Badge, ConfBadge, AgentTag, EmptyState, Skeleton, SkeletonCard, SkeletonText, ErrorState } from '@/components/ui';
+import { Badge, ConfBadge, AgentTag, EmptyState, Skeleton, SkeletonCard, SkeletonText, ErrorState, Spinner } from '@/components/ui';
 import { signalLabel, signalColor, fR, cn } from '@/lib/utils';
 import { Zap, Check, RotateCw } from 'lucide-react';
 import type { Signal } from '@/lib/types';
@@ -104,7 +104,8 @@ export default function SignalsPage() {
             Cancel
           </button>
           <button
-            className="px-3.5 py-1.5 text-[12px] font-medium bg-[var(--brand)] text-[#09090b] rounded-md hover:brightness-110 transition-colors"
+            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-[12px] font-medium bg-[var(--brand)] text-[#09090b] rounded-md hover:brightness-110 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            disabled={convert.isPending}
             onClick={() => {
               if (!state.company.trim()) {
                 addToast({ type: 'error', message: 'Company name is required' });
@@ -132,7 +133,7 @@ export default function SignalsPage() {
               );
             }}
           >
-            Create Lead
+            {convert.isPending && <Spinner className="h-3 w-3" />}Create Lead
           </button>
         </>
       ),

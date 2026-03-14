@@ -7,7 +7,7 @@ import {
   FileText, TrendingUp,
 } from 'lucide-react';
 import { useMeetingDetail, useUpdateMeeting, useLogOutcome } from '@/lib/queries/meetings';
-import { Badge, FIUACBars, StageBadge, EmptyState, Skeleton, SkeletonText } from '@/components/ui';
+import { Badge, FIUACBars, StageBadge, EmptyState, Skeleton, SkeletonText, Spinner } from '@/components/ui';
 
 export default function MeetingDetailPage({
   params,
@@ -102,7 +102,7 @@ export default function MeetingDetailPage({
               </span>
               <span className="inline-flex items-center gap-1">
                 <Clock size={14} />
-                {meeting.startTime}{' \u00b7 '}{meeting.duration}
+                {meeting.startTime}{' \u00b7 '}{meeting.duration}{' \u00b7 '}{Intl.DateTimeFormat().resolvedOptions().timeZone.replace(/.*\//, '').replace('_', ' ')}
               </span>
               <span className="inline-flex items-center gap-1">
                 <Users size={14} />
@@ -308,11 +308,11 @@ export default function MeetingDetailPage({
 
                 <div className="flex gap-2 mt-4">
                   <button
-                    className="text-[12px] font-medium py-1.5 px-4 rounded-md bg-brand text-white hover:bg-brand/90 transition-colors disabled:opacity-50"
+                    className="inline-flex items-center gap-1.5 text-[12px] font-medium py-1.5 px-4 rounded-md bg-brand text-white hover:bg-brand/90 transition-colors disabled:opacity-50"
                     onClick={handleSubmitOutcome}
                     disabled={!outcomeForm.summary || logOutcome.isPending}
                   >
-                    {logOutcome.isPending ? 'Saving...' : 'Save Outcome'}
+                    {logOutcome.isPending && <Spinner className="h-3 w-3" />}{logOutcome.isPending ? 'Saving...' : 'Save Outcome'}
                   </button>
                   <button
                     className="text-[12px] font-medium py-1.5 px-4 rounded-md bg-[var(--surface)] border border-[var(--border)] text-sub hover:bg-[var(--hover)] transition-colors"

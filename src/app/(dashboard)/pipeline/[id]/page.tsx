@@ -2,7 +2,7 @@
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { useOpportunityDetail, useMoveStage, useCloseWon, useCloseLost, useUpdateOpportunity } from '@/lib/queries/opportunities';
-import { Badge, Avatar, HealthBar, StageBadge, AgentTag, Skeleton, SkeletonCard, ErrorState } from '@/components/ui';
+import { Badge, Avatar, HealthBar, StageBadge, AgentTag, Skeleton, SkeletonCard, ErrorState, Spinner } from '@/components/ui';
 import { fmt, fDate, fR, isOverdue, weightedValue, cn, displayLabel } from '@/lib/utils';
 import { STAGES, STAGE_COLOR, healthAvg } from '@/lib/types';
 import type { Activity, Contact } from '@/lib/types';
@@ -162,7 +162,7 @@ export default function OppDetailPage() {
           </button>
           <button
             disabled={closeWon.isPending}
-            className="px-3.5 py-1.5 text-[12px] font-medium bg-brand text-[#09090b] rounded-md hover:brightness-110 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-[12px] font-medium bg-brand text-[#09090b] rounded-md hover:brightness-110 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             onClick={() => {
               closeWon.mutate(
                 {
@@ -180,7 +180,7 @@ export default function OppDetailPage() {
               );
             }}
           >
-            Close as Won
+            {closeWon.isPending && <Spinner className="h-3 w-3" />}Close as Won
           </button>
         </>
       ),
@@ -247,7 +247,7 @@ export default function OppDetailPage() {
           </button>
           <button
             disabled={closeLost.isPending}
-            className="px-3.5 py-1.5 text-[12px] font-medium bg-red-500/[.15] text-red-400 border border-red-500/[.2] rounded-md hover:bg-red-500/[.25] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-[12px] font-medium bg-red-500/[.15] text-red-400 border border-red-500/[.2] rounded-md hover:bg-red-500/[.25] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             onClick={() => {
               if (!state.lossReason) {
                 addToast({ type: 'error', message: 'Please select a loss reason' });
@@ -270,7 +270,7 @@ export default function OppDetailPage() {
               );
             }}
           >
-            Close as Lost
+            {closeLost.isPending && <Spinner className="h-3 w-3" />}Close as Lost
           </button>
         </>
       ),
@@ -323,7 +323,7 @@ export default function OppDetailPage() {
           </button>
           <button
             disabled={updateOpp.isPending}
-            className="px-3.5 py-1.5 text-[12px] font-medium bg-brand text-[#09090b] rounded-md hover:brightness-110 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-[12px] font-medium bg-brand text-[#09090b] rounded-md hover:brightness-110 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             onClick={() => {
               const data: Record<string, unknown> = {};
               if (state.name !== o!.name) data.name = state.name;
@@ -347,7 +347,7 @@ export default function OppDetailPage() {
               );
             }}
           >
-            Save
+            {updateOpp.isPending && <Spinner className="h-3 w-3" />}Save
           </button>
         </>
       ),
