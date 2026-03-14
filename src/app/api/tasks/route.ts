@@ -127,21 +127,15 @@ export const POST = withHandler(taskActionSchema, async (req, ctx) => {
   }
 
   if (body.action === 'comment') {
-    const { id, text } = body;
+    const { id, text, mentionedUserIds } = body;
     const userId = session.user.id;
-    const mentions = (text.match(/@(\w+)/g) || []).map((m: string) => m.slice(1));
+    const mentions = mentionedUserIds || [];
     const comment = await db.taskComment.create({
       data: { text, taskId: id, authorId: userId, mentions },
       include: { author: true },
     });
-    // Notify mentioned users
     if (mentions.length > 0) {
-      const mentionedUsers = await db.user.findMany({
-        where: { name: { in: mentions, mode: 'insensitive' } },
-        select: { id: true },
-      });
-      const mentionedIds = mentionedUsers.map((u) => u.id);
-      await notifyUsers(db, mentionedIds, userId, {
+      await notifyUsers(db, mentions, userId, {
         type: 'MENTION',
         title: 'You were mentioned',
         message: text.slice(0, 100),

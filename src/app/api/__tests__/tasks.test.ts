@@ -12,6 +12,8 @@ const { mockDb, mockAuthFn } = vi.hoisted(() => {
       account: { update: fn() },
       opportunity: { findFirst: fn(), update: fn() },
       taskComment: { create: fn() },
+      user: { findMany: fn() },
+      notification: { findFirst: fn(), create: fn() },
     },
     mockAuthFn: fn(),
   };
@@ -228,5 +230,44 @@ describe('POST /api/tasks (complete action)', () => {
 
     expect(res.status).toBe(401);
     expect(json.error).toEqual({ code: 'UNAUTHORIZED', message: 'Unauthorized' });
+  });
+});
+
+describe('POST /api/tasks (comment action)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockAuth();
+  });
+
+  it('uses mentionedUserIds for notifications instead of regex parsing', async () => {
+    const comment = {
+      id: 'comment-1',
+      text: 'Hey @Nick check this',
+      mentions: ['user-2'],
+      createdAt: new Date(),
+      author: mockOwner,
+    };
+    mockDb.taskComment.create.mockResolvedValue(comment);
+    mockDb.notification.findFirst.mockResolvedValue(null);
+    mockDb.notification.create.mockResolvedValue({ id: 'notif-1' });
+
+    const res = await POST(
+      makeRequest({
+        action: 'comment',
+        id: 'task-1',
+        text: 'Hey @Nick check this',
+        mentionedUserIds: ['user-2'],
+      }),
+    );
+
+    expect(res.status).toBe(201);
+    expect(mockDb.user.findMany).not.toHaveBeenCalled();
+    expect(mockDb.taskComment.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          mentions: ['user-2'],
+        }),
+      }),
+    );
   });
 });
