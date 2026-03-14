@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { Prisma } from '@prisma/client';
-import { resolveTenantDb } from '@/lib/tenant';
+import { scopedDb } from '@/lib/scoped-db';
+import { db as rawDb } from '@/lib/db';
 import { auth } from '@/lib/auth';
 import { adaptAccount } from '@/lib/adapters';
 import { patchAccountSchema } from '@/lib/schemas/accounts';
@@ -17,7 +18,7 @@ export async function PATCH(
 ) {
   const session = await auth();
   if (!session?.user?.id) return unauthorized();
-  const db = resolveTenantDb(session as any);
+  const db = scopedDb(session.user.id, (session.user as any).role ?? 'MEMBER');
 
   const { id } = await params;
 
@@ -31,7 +32,7 @@ export async function PATCH(
   if (!existing) return notFound('Account not found');
 
   if (body.name && body.name.toLowerCase() !== existing.name.toLowerCase()) {
-    const dup = await db.account.findFirst({
+    const dup = await rawDb.account.findFirst({
       where: {
         name: { equals: body.name, mode: 'insensitive' },
         id: { not: id },

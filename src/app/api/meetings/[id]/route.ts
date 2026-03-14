@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { resolveTenantDb } from '@/lib/tenant';
+import { scopedDb } from '@/lib/scoped-db';
 import { auth } from '@/lib/auth';
 import { adaptMeeting, adaptAccount, adaptContact, adaptActivity, adaptOpportunity } from '@/lib/adapters';
 import { patchMeetingSchema } from '@/lib/schemas/meetings';
@@ -70,7 +71,7 @@ export async function PATCH(
 ) {
   const session = await auth();
   if (!session?.user?.id) return unauthorized();
-  const db = resolveTenantDb(session as any);
+  const db = scopedDb(session.user.id, (session.user as any).role ?? 'MEMBER');
 
   const { id } = await params;
 

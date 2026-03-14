@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { AccountType, AccountStatus } from '@prisma/client';
 import { auth } from '@/lib/auth';
-import { resolveTenantDb } from '@/lib/tenant';
+import { scopedDb } from '@/lib/scoped-db';
+import { db as rawDb } from '@/lib/db';
 import { unauthorized, badRequest } from '@/lib/api-errors';
 import { logger } from '@/lib/logger';
 import { csvRowSchema } from '@/lib/schemas/import';
@@ -56,7 +57,7 @@ export async function POST(req: NextRequest) {
   try {
     const session = await auth();
     if (!session?.user?.id) return unauthorized();
-    const db = resolveTenantDb(session as any);
+    const db = scopedDb(session.user.id, (session.user as any).role ?? 'MEMBER');
 
     const contentType = req.headers.get('content-type') || '';
 
@@ -128,7 +129,7 @@ export async function POST(req: NextRequest) {
       const { name, type, country, status, notes } = parsed.data;
 
       // Dedup check
-      const existing = await db.account.findFirst({
+      const existing = await rawDb.account.findFirst({
         where: { name: { equals: name, mode: 'insensitive' } },
       });
       if (existing) {
