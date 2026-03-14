@@ -35,8 +35,8 @@ model Tenant {
   name              String
   slug              String   @unique
   plan              String   @default("free")
-  settings          Json     @default("{}")
-  dbConnectionString String?
+  settings          Json     @default("{}")  // Shape: { features: {}, limits: {} } — schema TBD
+  dbConnectionString String?  // Encrypt before storage; use secrets manager in production
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
   users             User[]
@@ -48,16 +48,17 @@ model Tenant {
 
 #### Modified: User
 
-Add `tenantId String` + `tenant Tenant @relation(fields: [tenantId], references: [id])`.
+Add `tenantId String` + `tenant Tenant @relation(fields: [tenantId], references: [id])` + `@@index([tenantId])`.
 
 #### Modified: Invitation
 
-Add `tenantId String` + `tenant Tenant @relation(fields: [tenantId], references: [id])`.
+Add `tenantId String` + `tenant Tenant @relation(fields: [tenantId], references: [id])` + `@@index([tenantId])`.
 
 ### Session Changes
 
-- Add `tenantId` to the JWT session payload via NextAuth callbacks
-- `session.user.tenantId` available in all API routes
+- In `src/lib/auth.ts`, `jwt` callback: add `token.tenantId = dbUser.tenantId` after fetching the DB user
+- In `src/lib/auth.ts`, `session` callback: add `session.user.tenantId = token.tenantId as string`
+- Update `src/types/next-auth.d.ts` to include `tenantId: string` on `Session.user` and JWT token
 - Sign-in callback resolves tenant from user record (existing users) or invitation (new users)
 
 ### Tenant Resolution
@@ -74,7 +75,13 @@ export function resolveTenantDb(session: Session): PrismaClient
 export function requireTenantId(session: Session): string
 ```
 
-All API routes replace `import { db } from '@/lib/db'` with `const db = resolveTenantDb(session)`.
+All tenant-scoped API routes replace `import { db } from '@/lib/db'` with `const db = resolveTenantDb(session)`. Each such route must call `const session = await auth()` and handle the unauthenticated case before calling `resolveTenantDb()`.
+
+**Exempt routes** (continue using shared `db` directly):
+- `/api/health` — no auth required
+- `/api/sync` — cron-triggered, uses system context
+- `/api/auth/[...nextauth]` — auth infrastructure
+- Any future webhook receivers
 
 ### Migration Strategy
 
@@ -84,8 +91,10 @@ All API routes replace `import { db } from '@/lib/db'` with `const db = resolveT
 4. Backfill existing users and invitations with default tenant ID
 5. Make `tenantId` required
 6. Add `resolveTenantDb()` utility (returns shared client for now)
-7. Update API routes to use `resolveTenantDb(session)` instead of raw `db`
-8. Update sign-in callback to set tenantId in session
+7. Update all tenant-scoped API routes under `src/app/api/` to use `resolveTenantDb(session)` instead of raw `db` (exempt routes listed above keep using `db`)
+8. Ensure each converted route calls `await auth()` and handles unauthenticated case
+9. Update sign-in callback to set tenantId in session
+10. Add ESLint rule or grep-based CI check to flag direct `db` imports in API routes (warning, not blocking)
 
 ### What We Defer (External Launch)
 
@@ -134,7 +143,24 @@ Each follows the existing pattern:
 5. `onError`: restore previous data
 6. `onSettled`: invalidate to sync with server
 
-### 2. Pending State: Opacity + Pulse
+### 2. Mutation Key Convention
+
+Every `useMutation` must set an explicit `mutationKey` for the pending/error tracking hooks to work. Convention:
+
+| Domain | Key Pattern | Example |
+|--------|-------------|---------|
+| Queue | `['queue', action]` | `['queue', 'approve']`, `['queue', 'reject']` |
+| Tasks | `['tasks', action]` | `['tasks', 'complete']`, `['tasks', 'create']`, `['tasks', 'update']`, `['tasks', 'comment']` |
+| Leads | `['leads', action]` | `['leads', 'create']`, `['leads', 'advance']` |
+| Opportunities | `['opportunities', action]` | `['opportunities', 'move']`, `['opportunities', 'update']` |
+| Signals | `['signals', action]` | `['signals', 'dismiss']` |
+| Inbox | `['inbox', action]` | `['inbox', 'read']`, `['inbox', 'archive']` |
+| Accounts | `['accounts', action]` | `['accounts', 'update']`, `['accounts', 'createContact']` |
+| Settings | `['settings', action]` | `['settings', 'patchAgent']`, `['settings', 'updateUser']` |
+
+Page components use the domain prefix (e.g., `['queue']`) with `usePendingMutations` to match all mutations in that domain.
+
+### 3. Pending State: Opacity + Pulse
 
 #### Tracking Hook
 
@@ -160,19 +186,23 @@ Affected components (7 pages):
 - Inbox page — email rows
 - Accounts page — account cards (for update mutations)
 
-### 3. Inline Error State with Retry
+### 4. Inline Error State with Retry
 
 #### Tracking Hook
 
 ```typescript
-// Returns a Map of entity IDs to their error info and retry function
+// Returns a Map of entity IDs to their error info and original variables
 export function useFailedMutations(mutationKey: string[]): Map<string, {
   error: string
-  retry: () => void
+  variables: unknown  // Original mutation variables, for retry
 }>
 ```
 
-Uses `useMutationState()` to find mutations with status `'error'`. Stores the original `mutate()` arguments so retry can re-invoke with the same parameters.
+Uses `useMutationState()` to find mutations with status `'error'`. Extracts entity ID and variables from the mutation state.
+
+#### Retry Mechanism
+
+The hook does NOT hold a reference to the `mutate` function — that belongs to the component. Instead, the component already has the mutation hook (e.g., `const approve = useApproveQueueItem()`). When rendering a failed item, the component calls `approve.mutate(failedInfo.variables)` to retry. The hook provides the variables; the component provides the mutation function.
 
 #### Component Integration
 
@@ -181,7 +211,7 @@ Items with failed mutations render:
 - Small retry icon button (circular arrow) in the top-right corner
 - Tooltip or small text showing error message
 
-Failed state auto-clears after 30 seconds via `setTimeout` in the hook.
+Failed state auto-clears after 30 seconds via `setTimeout` in a `useEffect` with proper cleanup on unmount to prevent memory leaks.
 
 #### Error Flow
 
@@ -192,7 +222,9 @@ Failed state auto-clears after 30 seconds via `setTimeout` in the hook.
 5. Item appears with red border + retry button
 6. User clicks retry → mutation re-invoked → if success, normal flow; if fail, error state persists
 
-### 4. Temp ID Replacement
+### 5. Temp ID Replacement
+
+These mutations may already have optimistic `onMutate`/`onError`/`onSettled` patterns. The work here is specifically adding an `onSuccess` handler to replace temp IDs with server-returned IDs, not adding the full 3-phase pattern.
 
 For create mutations (`useCreateTask`, `useCreateLead`, `useCreateContact`, `useCreateAccountFromEmail`):
 
@@ -205,7 +237,7 @@ For create mutations (`useCreateTask`, `useCreateLead`, `useCreateContact`, `use
 - Add `onSuccess(serverResponse)`: find temp item in cache by temp ID, replace with server response data (real ID, server timestamps, computed fields)
 - `onSettled`: still invalidate, but the UI won't flash because cache already has correct data
 
-### 5. Files Changed
+### 6. Files Changed
 
 **New files:**
 - `src/hooks/use-mutation-state.ts` — `usePendingMutations()` and `useFailedMutations()` hooks
@@ -220,7 +252,7 @@ For create mutations (`useCreateTask`, `useCreateLead`, `useCreateContact`, `use
 **Modified query files for temp ID replacement (4):**
 - `src/lib/queries/tasks.ts` — `useCreateTask` add `onSuccess`
 - `src/lib/queries/leads.ts` — `useCreateLead` add `onSuccess`
-- `src/lib/queries/accounts.ts` — `useCreateContact` add `onSuccess`
+- `src/lib/queries/accounts.ts` — `useCreateContact` add `onSuccess` (note: must target account-specific query key `accountKeys.contacts(accountId)`, not a global contacts list)
 - `src/lib/queries/inbox.ts` — `useCreateAccountFromEmail` add `onSuccess`
 
 **Modified page files (7):**
