@@ -3,11 +3,13 @@ import { ZodSchema, ZodError } from 'zod';
 import { auth } from '@/lib/auth';
 import { unauthorized, internalError, zodError } from '@/lib/api-errors';
 import { logger } from '@/lib/logger';
+import { scopedDb, ScopedDb } from '@/lib/scoped-db';
 
 export interface HandlerContext<T> {
   body: T;
   session: { user: { id: string; name?: string; role?: string } };
   pagination: { cursor?: string; limit: number };
+  db: ScopedDb;
 }
 
 export function withHandler<T = unknown>(
@@ -18,6 +20,11 @@ export function withHandler<T = unknown>(
     try {
       const session = await auth();
       if (!session?.user?.id) return unauthorized();
+
+      const scopedClient = scopedDb(
+        session.user.id,
+        (session.user as { role?: string }).role ?? 'VIEWER',
+      );
 
       const url = req.nextUrl;
       const cursor = url.searchParams.get('cursor') ?? undefined;
@@ -40,6 +47,7 @@ export function withHandler<T = unknown>(
           },
         },
         pagination: { cursor, limit },
+        db: scopedClient,
       });
     } catch (err) {
       if (err instanceof ZodError) {
