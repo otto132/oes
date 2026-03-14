@@ -1,7 +1,7 @@
 'use client';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, Shield, TrendingUp, Inbox, Menu } from 'lucide-react';
+import { Home, Shield, TrendingUp, Inbox, CheckSquare } from 'lucide-react';
 import { useBadgeCounts } from '@/lib/queries/badge-counts';
 import { cn } from '@/lib/utils';
 
@@ -10,7 +10,7 @@ const tabs = [
   { href: '/queue', label: 'Queue', icon: Shield, badgeKey: 'queue' as const },
   { href: '/pipeline', label: 'Pipeline', icon: TrendingUp },
   { href: '/inbox', label: 'Inbox', icon: Inbox, badgeKey: 'inbox' as const },
-  { href: '/settings', label: 'More', icon: Menu },
+  { href: '/tasks', label: 'Tasks', icon: CheckSquare, badgeKey: 'tasks' as const },
 ];
 
 export default function BottomNav() {
@@ -19,6 +19,7 @@ export default function BottomNav() {
   const badges: Record<string, number> = {
     queue: bc?.queue ?? 0,
     inbox: bc?.inbox ?? 0,
+    tasks: bc?.tasks ?? 0,
   };
 
   return (
