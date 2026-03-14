@@ -8,11 +8,11 @@ export const metadata: Metadata = {
   description: 'AI-assisted Revenue OS for the GoO / renewable certificates market',
 };
 
-const themeScript = `(function(){try{var t=localStorage.getItem('eco-theme');if(t==='dark'||(!t&&window.matchMedia('(prefers-color-scheme:dark)').matches)){document.documentElement.classList.add('dark')}}catch(e){}})();`;
+const themeScript = `(function(){try{var t=localStorage.getItem('eco-theme');if(t==='light'){document.documentElement.classList.remove('dark')}else{document.documentElement.classList.add('dark')}}catch(e){document.documentElement.classList.add('dark')}})();`;
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="en" className="dark" suppressHydrationWarning>
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
       </head>

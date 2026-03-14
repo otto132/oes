@@ -37,7 +37,7 @@ export default function LoginPage({
             >
               <button
                 type="submit"
-                className="w-full flex items-center justify-center gap-3 bg-white text-gray-700 font-semibold py-2.5 px-4 rounded-lg hover:bg-gray-50 transition-all text-sm border border-gray-300"
+                className="w-full flex items-center justify-center gap-3 bg-[var(--surface)] text-[var(--text)] font-semibold py-2.5 px-4 rounded-lg hover:bg-[var(--hover)] transition-all text-sm border border-[var(--border)]"
               >
                 <GoogleIcon />
                 Sign in with Google
@@ -49,7 +49,7 @@ export default function LoginPage({
             <>
               <div className="flex items-center gap-2 my-1">
                 <div className="flex-1 h-px bg-[var(--border)]" />
-                <span className="text-[10px] uppercase tracking-wider text-[var(--muted)]">dev only</span>
+                <span className="text-2xs uppercase tracking-wider text-[var(--muted)]">dev only</span>
                 <div className="flex-1 h-px bg-[var(--border)]" />
               </div>
               <form

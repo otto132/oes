@@ -16,6 +16,7 @@ interface Store {
   drawerContent: { title: string; subtitle: string; body: React.ReactNode; footer: React.ReactNode } | null;
   paletteOpen: boolean;
   toasts: Toast[];
+  toggleTheme: () => void;
   openDrawer: (c: { title: string; subtitle: string; body: React.ReactNode; footer: React.ReactNode }) => void;
   closeDrawer: () => void;
   openPalette: () => void;
@@ -28,17 +29,22 @@ let _toastCounter = 0;
 
 export const useStore = create<Store>((set, get) => ({
   theme: (() => {
-    if (typeof window === 'undefined') return 'light' as const;
+    if (typeof window === 'undefined') return 'dark' as const;
     try {
       const stored = localStorage.getItem('eco-theme');
       if (stored === 'dark' || stored === 'light') return stored;
-      return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' as const : 'light' as const;
-    } catch { return 'light' as const; }
+      return 'dark' as const;
+    } catch { return 'dark' as const; }
   })(),
   drawerOpen: false,
   drawerContent: null,
   paletteOpen: false,
   toasts: [],
+  toggleTheme: () => {
+    const next = get().theme === 'dark' ? 'light' as const : 'dark' as const;
+    try { localStorage.setItem('eco-theme', next); } catch {}
+    set({ theme: next });
+  },
   openDrawer: (content) => set({ drawerOpen: true, drawerContent: content }),
   closeDrawer: () => set({ drawerOpen: false }),
   openPalette: () => set({ paletteOpen: true }),

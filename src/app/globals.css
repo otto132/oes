@@ -22,6 +22,17 @@
   --card-hover: #f1f3f5;
   --row-hover: rgba(0,0,0,0.02);
   --shadow-opacity: 0.08;
+  --brand-on: #09090b;
+  --bar-track: rgba(0,0,0,0.06);
+  --avatar-green-bg: rgba(5,150,105,0.12);
+  --avatar-green-text: #047857;
+  --avatar-green-border: rgba(5,150,105,0.15);
+  --avatar-blue-bg: rgba(37,99,235,0.12);
+  --avatar-blue-text: #1d4ed8;
+  --avatar-blue-border: rgba(37,99,235,0.15);
+  --avatar-purple-bg: rgba(147,51,234,0.12);
+  --avatar-purple-text: #7c3aed;
+  --avatar-purple-border: rgba(147,51,234,0.15);
 }
 
 /* ── Design tokens — dark ── */
@@ -42,6 +53,17 @@
   --card-hover: #1c1c20;
   --row-hover: rgba(255,255,255,0.02);
   --shadow-opacity: 0.3;
+  --brand-on: #09090b;
+  --bar-track: rgba(255,255,255,0.04);
+  --avatar-green-bg: rgba(6,78,59,0.4);
+  --avatar-green-text: #34d399;
+  --avatar-green-border: rgba(16,185,129,0.1);
+  --avatar-blue-bg: rgba(30,58,138,0.4);
+  --avatar-blue-text: #60a5fa;
+  --avatar-blue-border: rgba(59,130,246,0.1);
+  --avatar-purple-bg: rgba(88,28,135,0.4);
+  --avatar-purple-text: #a78bfa;
+  --avatar-purple-border: rgba(139,92,246,0.1);
 }
 
 /* ── Base ── */

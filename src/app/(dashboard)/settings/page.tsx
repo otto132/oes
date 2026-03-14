@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useSession } from 'next-auth/react';
 import { useStore } from '@/lib/store';
 import { Badge, Spinner } from '@/components/ui';
+import { Sun, Moon } from 'lucide-react';
 import {
   useTeamQuery,
   useInvitationsQuery,
@@ -18,7 +19,7 @@ import {
   useSyncMutation,
 } from '@/lib/queries/settings';
 
-const TABS = ['Team', 'Integrations', 'Agents', 'Profile'] as const;
+const TABS = ['Team', 'Integrations', 'Agents', 'Profile', 'Appearance'] as const;
 type Tab = (typeof TABS)[number];
 
 export default function SettingsPage() {
@@ -28,7 +29,7 @@ export default function SettingsPage() {
 
   return (
     <div className="max-w-[700px] page-enter">
-      <h1 className="text-[18px] font-semibold tracking-tight mb-3.5">Settings</h1>
+      <h1 className="text-2xl font-semibold tracking-tight mb-3.5">Settings</h1>
 
       {/* Tab Navigation */}
       <div className="flex gap-1 border-b border-[var(--border)] mb-4">
@@ -36,7 +37,7 @@ export default function SettingsPage() {
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
-            className={`px-3 py-1.5 text-[12px] font-medium transition-colors border-b-2 -mb-[1px] ${
+            className={`px-3 py-1.5 text-sm font-medium transition-colors border-b-2 -mb-[1px] ${
               activeTab === tab
                 ? 'border-brand text-[var(--text)]'
                 : 'border-transparent text-[var(--muted)] hover:text-[var(--sub)]'
@@ -52,6 +53,7 @@ export default function SettingsPage() {
       {activeTab === 'Integrations' && <IntegrationsTab />}
       {activeTab === 'Agents' && <AgentsTab />}
       {activeTab === 'Profile' && <ProfileTab />}
+      {activeTab === 'Appearance' && <AppearanceTab />}
     </div>
   );
 }
@@ -104,21 +106,21 @@ function TeamTab({ isAdmin }: { isAdmin: boolean }) {
       body: (
         <div className="flex flex-col gap-3">
           <label className="flex flex-col gap-1">
-            <span className="text-[10px] font-semibold uppercase tracking-wide text-[var(--muted)]">Email *</span>
+            <span className="text-2xs font-semibold uppercase tracking-wide text-[var(--muted)]">Email *</span>
             <input
               autoFocus
               type="email"
               onChange={(e) => { state.email = e.target.value; }}
               placeholder="colleague@company.com"
-              className="px-2.5 py-1.5 text-[12px] rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] placeholder:text-[var(--muted)] focus:outline-none focus:border-brand/40"
+              className="px-2.5 py-1.5 text-sm rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] placeholder:text-[var(--muted)] focus:outline-none focus:border-brand/40"
             />
           </label>
           <label className="flex flex-col gap-1">
-            <span className="text-[10px] font-semibold uppercase tracking-wide text-[var(--muted)]">Role</span>
+            <span className="text-2xs font-semibold uppercase tracking-wide text-[var(--muted)]">Role</span>
             <select
               defaultValue="MEMBER"
               onChange={(e) => { state.role = e.target.value; }}
-              className="px-2.5 py-1.5 text-[12px] rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] focus:outline-none focus:border-brand/40"
+              className="px-2.5 py-1.5 text-sm rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] focus:outline-none focus:border-brand/40"
             >
               <option value="MEMBER">Member</option>
               <option value="ADMIN">Admin</option>
@@ -129,12 +131,12 @@ function TeamTab({ isAdmin }: { isAdmin: boolean }) {
       ),
       footer: (
         <>
-          <button className="px-3.5 py-1.5 text-[12px] text-[var(--sub)] bg-[var(--surface)] border border-[var(--border)] rounded-md hover:bg-[var(--hover)] transition-colors" onClick={closeDrawer}>
+          <button className="px-3.5 py-1.5 text-sm text-[var(--sub)] bg-[var(--surface)] border border-[var(--border)] rounded-md hover:bg-[var(--hover)] transition-colors" onClick={closeDrawer}>
             Cancel
           </button>
           <button
             disabled={inviteUser.isPending}
-            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-[12px] font-medium bg-brand text-[#09090b] rounded-md hover:brightness-110 transition-colors disabled:opacity-50"
+            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-sm font-medium bg-brand text-brand-on rounded-md hover:brightness-110 transition-colors disabled:opacity-50"
             onClick={() => {
               if (!state.email.trim()) {
                 addToast({ type: 'error', message: 'Email is required' });
@@ -167,9 +169,9 @@ function TeamTab({ isAdmin }: { isAdmin: boolean }) {
     <div className="flex flex-col gap-4">
       {/* Team Header */}
       <div className="flex items-center justify-between">
-        <span className="text-[9px] font-semibold tracking-wide uppercase text-[var(--muted)]">Team Members ({team.length})</span>
+        <span className="text-3xs font-semibold tracking-wide uppercase text-[var(--muted)]">Team Members ({team.length})</span>
         {isAdmin && (
-          <button onClick={openInviteDrawer} className="px-3 py-1 text-[11px] font-medium bg-brand text-[#09090b] rounded-md hover:brightness-110 transition-colors">
+          <button onClick={openInviteDrawer} className="px-3 py-1 text-xs font-medium bg-brand text-brand-on rounded-md hover:brightness-110 transition-colors">
             Invite Member
           </button>
         )}
@@ -180,25 +182,25 @@ function TeamTab({ isAdmin }: { isAdmin: boolean }) {
         {team.map((user: any) => (
           <div key={user.id} className="flex items-center justify-between px-4 py-2.5">
             <div className="flex flex-col">
-              <span className="text-[12px] font-medium text-[var(--text)]">
+              <span className="text-sm font-medium text-[var(--text)]">
                 {user.name}
-                {user.id === session?.user?.id && <span className="text-[10px] text-[var(--muted)] ml-1">(you)</span>}
+                {user.id === session?.user?.id && <span className="text-2xs text-[var(--muted)] ml-1">(you)</span>}
               </span>
-              <span className="text-[10px] text-[var(--muted)]">{user.email}</span>
+              <span className="text-2xs text-[var(--muted)]">{user.email}</span>
               {user.lastLoginAt && (
-                <span className="text-[9px] text-[var(--muted)]">Last active: {new Date(user.lastLoginAt).toLocaleDateString()}</span>
+                <span className="text-3xs text-[var(--muted)]">Last active: {new Date(user.lastLoginAt).toLocaleDateString()}</span>
               )}
             </div>
             <div className="flex items-center gap-2">
               {!user.isActive && (
-                <span className="text-[10px] font-semibold px-1.5 py-[1px] rounded border border-red-500/30 text-red-400 bg-red-500/10">Inactive</span>
+                <span className="text-2xs font-semibold px-1.5 py-[1px] rounded border border-red-500/30 text-red-400 bg-red-500/10">Inactive</span>
               )}
               {isAdmin && user.id !== session?.user?.id ? (
                 <>
                   <select
                     value={user.role}
                     onChange={(e) => handleRoleChange(user.id, e.target.value)}
-                    className="px-2 py-1 text-[11px] rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)]"
+                    className="px-2 py-1 text-xs rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)]"
                   >
                     <option value="ADMIN">Admin</option>
                     <option value="MEMBER">Member</option>
@@ -206,7 +208,7 @@ function TeamTab({ isAdmin }: { isAdmin: boolean }) {
                   </select>
                   <button
                     onClick={() => handleToggleActive(user.id, user.isActive)}
-                    className={`px-2 py-1 text-[10px] font-medium rounded-md border transition-colors ${
+                    className={`px-2 py-1 text-2xs font-medium rounded-md border transition-colors ${
                       user.isActive
                         ? 'text-red-400 border-red-500/30 hover:bg-red-500/10'
                         : 'text-green-400 border-green-500/30 hover:bg-green-500/10'
@@ -216,7 +218,7 @@ function TeamTab({ isAdmin }: { isAdmin: boolean }) {
                   </button>
                 </>
               ) : (
-                <span className="text-[11px] text-[var(--sub)] px-2 py-1">{user.role}</span>
+                <span className="text-xs text-[var(--sub)] px-2 py-1">{user.role}</span>
               )}
             </div>
           </div>
@@ -227,7 +229,7 @@ function TeamTab({ isAdmin }: { isAdmin: boolean }) {
       {confirmAction && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-[var(--elevated)] border border-[var(--border)] rounded-lg p-4 max-w-sm mx-4">
-            <p className="text-[12px] text-[var(--text)] mb-3">
+            <p className="text-sm text-[var(--text)] mb-3">
               {confirmAction.field === 'role'
                 ? `Change this user's role to ${confirmAction.value}?`
                 : confirmAction.value
@@ -235,13 +237,13 @@ function TeamTab({ isAdmin }: { isAdmin: boolean }) {
                   : 'Deactivate this user? They will not be able to sign in.'}
             </p>
             <div className="flex justify-end gap-2">
-              <button onClick={() => setConfirmAction(null)} className="px-3 py-1.5 text-[12px] text-[var(--sub)] bg-[var(--surface)] border border-[var(--border)] rounded-md">
+              <button onClick={() => setConfirmAction(null)} className="px-3 py-1.5 text-sm text-[var(--sub)] bg-[var(--surface)] border border-[var(--border)] rounded-md">
                 Cancel
               </button>
               <button
                 onClick={executeConfirmedAction}
                 disabled={updateMember.isPending}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-[12px] font-medium bg-brand text-[#09090b] rounded-md hover:brightness-110 disabled:opacity-50"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium bg-brand text-brand-on rounded-md hover:brightness-110 disabled:opacity-50"
               >
                 {updateMember.isPending && <Spinner className="h-3 w-3" />}Confirm
               </button>
@@ -253,15 +255,15 @@ function TeamTab({ isAdmin }: { isAdmin: boolean }) {
       {/* Pending Invitations (Admin Only) */}
       {isAdmin && invitations.length > 0 && (
         <>
-          <span className="text-[9px] font-semibold tracking-wide uppercase text-[var(--muted)] mt-2">Pending Invitations ({invitations.length})</span>
+          <span className="text-3xs font-semibold tracking-wide uppercase text-[var(--muted)] mt-2">Pending Invitations ({invitations.length})</span>
           <div className="rounded-lg bg-[var(--elevated)] border border-[var(--border)] divide-y divide-[var(--border)]">
             {invitations.map((inv: any) => {
               const daysLeft = Math.ceil((new Date(inv.expiresAt).getTime() - Date.now()) / 86400000);
               return (
                 <div key={inv.id} className="flex items-center justify-between px-4 py-2.5">
                   <div className="flex flex-col">
-                    <span className="text-[12px] text-[var(--text)]">{inv.email}</span>
-                    <span className="text-[10px] text-[var(--muted)]">Role: {inv.role} &middot; Expires in {daysLeft} day{daysLeft !== 1 ? 's' : ''}</span>
+                    <span className="text-sm text-[var(--text)]">{inv.email}</span>
+                    <span className="text-2xs text-[var(--muted)]">Role: {inv.role} &middot; Expires in {daysLeft} day{daysLeft !== 1 ? 's' : ''}</span>
                   </div>
                   <button
                     onClick={() => revokeInvite.mutate(inv.id, {
@@ -269,7 +271,7 @@ function TeamTab({ isAdmin }: { isAdmin: boolean }) {
                       onError: (err: any) => addToast({ type: 'error', message: err.message }),
                     })}
                     disabled={revokeInvite.isPending}
-                    className="inline-flex items-center gap-1 px-2 py-1 text-[10px] font-medium text-red-400 border border-red-500/30 rounded-md hover:bg-red-500/10 transition-colors disabled:opacity-50"
+                    className="inline-flex items-center gap-1 px-2 py-1 text-2xs font-medium text-red-400 border border-red-500/30 rounded-md hover:bg-red-500/10 transition-colors disabled:opacity-50"
                   >
                     {revokeInvite.isPending && <Spinner className="h-3 w-3" />}Revoke
                   </button>
@@ -322,39 +324,39 @@ function ProfileTab() {
 
   return (
     <div className="flex flex-col gap-4 max-w-md">
-      <span className="text-[9px] font-semibold tracking-wide uppercase text-[var(--muted)]">Your Profile</span>
+      <span className="text-3xs font-semibold tracking-wide uppercase text-[var(--muted)]">Your Profile</span>
       <div className="rounded-lg bg-[var(--elevated)] border border-[var(--border)] p-4 flex flex-col gap-3">
         {/* Read-only fields */}
         <label className="flex flex-col gap-1">
-          <span className="text-[10px] font-semibold uppercase tracking-wide text-[var(--muted)]">Email</span>
-          <span className="px-2.5 py-1.5 text-[12px] text-[var(--sub)] bg-[var(--surface)] border border-[var(--border)] rounded-md">{profile?.email}</span>
+          <span className="text-2xs font-semibold uppercase tracking-wide text-[var(--muted)]">Email</span>
+          <span className="px-2.5 py-1.5 text-sm text-[var(--sub)] bg-[var(--surface)] border border-[var(--border)] rounded-md">{profile?.email}</span>
         </label>
         <label className="flex flex-col gap-1">
-          <span className="text-[10px] font-semibold uppercase tracking-wide text-[var(--muted)]">Role</span>
-          <span className="px-2.5 py-1.5 text-[12px] text-[var(--sub)] bg-[var(--surface)] border border-[var(--border)] rounded-md">{profile?.role}</span>
+          <span className="text-2xs font-semibold uppercase tracking-wide text-[var(--muted)]">Role</span>
+          <span className="px-2.5 py-1.5 text-sm text-[var(--sub)] bg-[var(--surface)] border border-[var(--border)] rounded-md">{profile?.role}</span>
         </label>
 
         {/* Editable fields */}
         <label className="flex flex-col gap-1">
-          <span className="text-[10px] font-semibold uppercase tracking-wide text-[var(--muted)]">Display Name</span>
+          <span className="text-2xs font-semibold uppercase tracking-wide text-[var(--muted)]">Display Name</span>
           <input
             value={formState.name}
             onChange={(e) => setFormState({ ...formState, name: e.target.value })}
-            className="px-2.5 py-1.5 text-[12px] rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] focus:outline-none focus:border-brand/40"
+            className="px-2.5 py-1.5 text-sm rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] focus:outline-none focus:border-brand/40"
           />
         </label>
         <label className="flex flex-col gap-1">
-          <span className="text-[10px] font-semibold uppercase tracking-wide text-[var(--muted)]">Initials (max 3)</span>
+          <span className="text-2xs font-semibold uppercase tracking-wide text-[var(--muted)]">Initials (max 3)</span>
           <input
             value={formState.initials}
             maxLength={3}
             onChange={(e) => setFormState({ ...formState, initials: e.target.value })}
-            className="px-2.5 py-1.5 text-[12px] rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] focus:outline-none focus:border-brand/40 w-20"
+            className="px-2.5 py-1.5 text-sm rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] focus:outline-none focus:border-brand/40 w-20"
           />
         </label>
 
         {/* Notification Preferences */}
-        <span className="text-[10px] font-semibold uppercase tracking-wide text-[var(--muted)] mt-2">Notification Preferences</span>
+        <span className="text-2xs font-semibold uppercase tracking-wide text-[var(--muted)] mt-2">Notification Preferences</span>
         <label className="flex items-center gap-2 cursor-pointer">
           <input
             type="checkbox"
@@ -362,7 +364,7 @@ function ProfileTab() {
             onChange={(e) => setFormState({ ...formState, emailAlerts: e.target.checked })}
             className="rounded"
           />
-          <span className="text-[12px] text-[var(--text)]">Email alerts for new queue items</span>
+          <span className="text-sm text-[var(--text)]">Email alerts for new queue items</span>
         </label>
         <label className="flex items-center gap-2 cursor-pointer">
           <input
@@ -371,13 +373,13 @@ function ProfileTab() {
             onChange={(e) => setFormState({ ...formState, queueAlerts: e.target.checked })}
             className="rounded"
           />
-          <span className="text-[12px] text-[var(--text)]">Queue alerts for items needing review</span>
+          <span className="text-sm text-[var(--text)]">Queue alerts for items needing review</span>
         </label>
 
         <button
           onClick={handleSave}
           disabled={updateProfile.isPending}
-          className="inline-flex items-center gap-1.5 mt-2 px-3.5 py-1.5 text-[12px] font-medium bg-brand text-[#09090b] rounded-md hover:brightness-110 transition-colors disabled:opacity-50 self-start"
+          className="inline-flex items-center gap-1.5 mt-2 px-3.5 py-1.5 text-sm font-medium bg-brand text-brand-on rounded-md hover:brightness-110 transition-colors disabled:opacity-50 self-start"
         >
           {updateProfile.isPending && <Spinner className="h-3 w-3" />}{updateProfile.isPending ? 'Saving...' : 'Save Changes'}
         </button>
@@ -402,12 +404,12 @@ function IntegrationsTab() {
   return (
     <div className="flex flex-col gap-4">
       <div className="flex items-center justify-between">
-        <span className="text-[9px] font-semibold tracking-wide uppercase text-[var(--muted)]">Integrations</span>
+        <span className="text-3xs font-semibold tracking-wide uppercase text-[var(--muted)]">Integrations</span>
         {isAdmin && (
           <button
             onClick={handleSync}
             disabled={syncMutation.isPending}
-            className="inline-flex items-center gap-1.5 px-3 py-1 text-[10px] font-medium bg-brand text-white rounded-md hover:bg-brand/90 transition-colors disabled:opacity-50"
+            className="inline-flex items-center gap-1.5 px-3 py-1 text-2xs font-medium bg-brand text-brand-on rounded-md hover:bg-brand/90 transition-colors disabled:opacity-50"
           >
             {syncMutation.isPending && <Spinner className="h-3 w-3" />}{syncMutation.isPending ? 'Syncing...' : 'Sync Now'}
           </button>
@@ -415,43 +417,43 @@ function IntegrationsTab() {
       </div>
 
       {syncMutation.isSuccess && (
-        <div className="text-[10px] text-brand bg-brand/10 px-3 py-1.5 rounded-md">
+        <div className="text-2xs text-brand bg-brand/10 px-3 py-1.5 rounded-md">
           Sync complete — {syncMutation.data?.synced ?? 0} items synced
           {(syncMutation.data?.errors?.length ?? 0) > 0 && `, ${syncMutation.data.errors.length} errors`}
         </div>
       )}
       {syncMutation.isError && (
-        <div className="text-[10px] text-red-400 bg-red-400/10 px-3 py-1.5 rounded-md">
+        <div className="text-2xs text-red-400 bg-red-400/10 px-3 py-1.5 rounded-md">
           Sync failed — {syncMutation.error instanceof Error ? syncMutation.error.message : 'Unknown error'}
         </div>
       )}
 
       <div className="rounded-lg bg-[var(--elevated)] border border-[var(--border)] p-4">
         {integrations.isLoading ? (
-          <div className="text-[11px] text-muted py-2">Loading integrations...</div>
+          <div className="text-xs text-muted py-2">Loading integrations...</div>
         ) : integrations.isError ? (
-          <div className="text-[11px] text-red-400 py-2">Failed to load integrations</div>
+          <div className="text-xs text-red-400 py-2">Failed to load integrations</div>
         ) : (
           integrations.data?.data?.map((i: any) => (
             <div key={i.provider || i.name} className="flex items-center justify-between py-2 border-b border-[var(--border)] last:border-b-0">
               <div className="flex flex-col gap-0.5">
-                <span className="text-[12.5px]">{i.name}</span>
-                <div className="flex items-center gap-2 text-[9px] text-muted">
+                <span className="text-sm">{i.name}</span>
+                <div className="flex items-center gap-2 text-3xs text-muted">
                   {i.lastSyncAt && <span>Last sync: {new Date(i.lastSyncAt).toLocaleString()}</span>}
                   {i.emailsSynced != null && <span>{i.emailsSynced} emails</span>}
                   {i.meetingsSynced != null && <span>{i.meetingsSynced} meetings</span>}
                 </div>
                 {i.lastError && (
-                  <span className="text-[9px] text-red-400">{i.lastError}</span>
+                  <span className="text-3xs text-red-400">{i.lastError}</span>
                 )}
               </div>
               <div className="flex items-center gap-1.5">
-                <span className={`text-[10px] ${i.active ? 'text-brand' : i.needsReconnect ? 'text-red-400' : 'text-muted'}`}>
+                <span className={`text-2xs ${i.active ? 'text-brand' : i.needsReconnect ? 'text-red-400' : 'text-muted'}`}>
                   {i.active ? 'Connected' : i.needsReconnect ? 'Reconnect' : i.status === 'manual' ? 'Manual' : 'Disconnected'}
                 </span>
                 {i.provider !== 'linkedin' && (
                   <button
-                    className="px-2 py-1 text-[11px] text-sub hover:bg-[var(--hover)] rounded-md transition-colors"
+                    className="px-2 py-1 text-xs text-sub hover:bg-[var(--hover)] rounded-md transition-colors"
                     onClick={() => {
                       if (i.active && !i.needsReconnect) {
                         addToast({ type: 'info', message: 'Disconnect is not yet supported. Contact an admin.' });
@@ -487,23 +489,23 @@ function AgentsTab() {
       body: (
         <div className="flex flex-col gap-3.5">
           <div className="ai-box">
-            <div className="text-[9px] font-semibold tracking-widest uppercase text-brand mb-1">{agent.displayName}</div>
-            <p className="text-[12.5px] text-sub">{agent.description}</p>
+            <div className="text-3xs font-semibold tracking-widest uppercase text-brand mb-1">{agent.displayName}</div>
+            <p className="text-sm text-sub">{agent.description}</p>
           </div>
           <div>
-            <div className="text-[9px] font-semibold tracking-wide uppercase text-muted mb-2">Parameters</div>
+            <div className="text-3xs font-semibold tracking-wide uppercase text-muted mb-2">Parameters</div>
             <div className="flex flex-col gap-1.5">
               {Object.entries(agent.parameters).map(([k, v]) => (
                 <div key={k} className="flex items-center justify-between py-1.5 px-2 border border-[var(--border)] rounded-md">
-                  <span className="text-[11px] text-sub">{k.replace(/_/g, ' ')}</span>
-                  <span className="text-[11px] font-medium text-[var(--text)]">{v}</span>
+                  <span className="text-xs text-sub">{k.replace(/_/g, ' ')}</span>
+                  <span className="text-xs font-medium text-[var(--text)]">{v}</span>
                 </div>
               ))}
             </div>
           </div>
           <div className="flex items-center gap-1.5">
             <Badge variant={isPaused ? 'neutral' : 'ok'}>{isPaused ? 'Paused' : 'Active'}</Badge>
-            <span className="text-[10px] text-muted">Last run: —</span>
+            <span className="text-2xs text-muted">Last run: —</span>
           </div>
         </div>
       ),
@@ -529,23 +531,23 @@ function AgentsTab() {
 
   return (
     <div className="flex flex-col gap-4">
-      <span className="text-[9px] font-semibold tracking-wide uppercase text-[var(--muted)]">AI Agents</span>
+      <span className="text-3xs font-semibold tracking-wide uppercase text-[var(--muted)]">AI Agents</span>
       <div className="rounded-lg bg-[var(--elevated)] border border-[var(--border)] divide-y divide-[var(--border)]">
         {agents.isLoading ? (
-          <div className="text-[11px] text-muted py-4 px-4">Loading agents...</div>
+          <div className="text-xs text-muted py-4 px-4">Loading agents...</div>
         ) : agents.isError ? (
-          <div className="text-[11px] text-red-400 py-4 px-4">Failed to load agents</div>
+          <div className="text-xs text-red-400 py-4 px-4">Failed to load agents</div>
         ) : (
           agents.data?.data?.map((a: any) => (
             <div key={a.name} className="flex items-center justify-between px-4 py-2.5">
               <div className="flex flex-col">
-                <span className="text-[12.5px] font-medium text-[var(--text)]">{a.displayName}</span>
-                <span className={`text-[10px] ${a.status === 'paused' ? 'text-muted' : 'text-brand'}`}>
+                <span className="text-sm font-medium text-[var(--text)]">{a.displayName}</span>
+                <span className={`text-2xs ${a.status === 'paused' ? 'text-muted' : 'text-brand'}`}>
                   {a.status === 'paused' ? 'Paused' : 'Active'}
                 </span>
               </div>
               <button
-                className="px-2 py-1 text-[11px] text-[var(--text)] bg-[var(--surface)] border border-[var(--border)] rounded-md hover:bg-[var(--hover)] transition-colors"
+                className="px-2 py-1 text-xs text-[var(--text)] bg-[var(--surface)] border border-[var(--border)] rounded-md hover:bg-[var(--hover)] transition-colors"
                 onClick={() => openAgentConfig(a)}
               >
                 Configure
@@ -553,6 +555,49 @@ function AgentsTab() {
             </div>
           ))
         )}
+      </div>
+    </div>
+  );
+}
+
+// ─── Appearance Tab ──────────────────────────────────────────
+
+function AppearanceTab() {
+  const theme = useStore(s => s.theme);
+  const toggleTheme = useStore(s => s.toggleTheme);
+
+  const options: { value: 'light' | 'dark'; label: string; icon: typeof Sun; description: string }[] = [
+    { value: 'light', label: 'Light', icon: Sun, description: 'Clean and bright interface' },
+    { value: 'dark', label: 'Dark', icon: Moon, description: 'Easier on the eyes in low light' },
+  ];
+
+  return (
+    <div className="flex flex-col gap-4 max-w-md">
+      <span className="text-3xs font-semibold tracking-wide uppercase text-[var(--muted)]">Theme</span>
+      <div className="rounded-lg bg-[var(--elevated)] border border-[var(--border)] p-4 flex flex-col gap-2">
+        {options.map(opt => {
+          const active = theme === opt.value;
+          return (
+            <button
+              key={opt.value}
+              onClick={() => { if (!active) toggleTheme(); }}
+              className={`flex items-center gap-3 px-3 py-2.5 rounded-md border transition-colors text-left ${
+                active
+                  ? 'border-brand bg-brand/[.06]'
+                  : 'border-[var(--border)] hover:bg-[var(--hover)]'
+              }`}
+            >
+              <opt.icon className={`w-5 h-5 flex-shrink-0 ${active ? 'text-brand' : 'text-[var(--muted)]'}`} />
+              <div className="flex flex-col">
+                <span className={`text-sm font-medium ${active ? 'text-[var(--text)]' : 'text-[var(--sub)]'}`}>{opt.label}</span>
+                <span className="text-2xs text-[var(--muted)]">{opt.description}</span>
+              </div>
+              {active && (
+                <span className="ml-auto text-2xs font-semibold text-brand">Active</span>
+              )}
+            </button>
+          );
+        })}
       </div>
     </div>
   );

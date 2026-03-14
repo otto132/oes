@@ -55,7 +55,7 @@ export function SearchInput({
       <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[var(--muted)]" />
       <input
         className={cn(
-          'w-full pl-8 py-1.5 text-[12.5px] rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] placeholder:text-[var(--muted)] focus:outline-none focus:border-brand/40 transition-colors',
+          'w-full pl-8 py-1.5 text-sm rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] placeholder:text-[var(--muted)] focus:outline-none focus:border-brand/40 transition-colors',
           value ? 'pr-7' : 'pr-2.5',
         )}
         placeholder={placeholder}

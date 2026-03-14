@@ -73,20 +73,20 @@ function OpportunityCreateForm({
       onKeyDown={e => { if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') handleSubmit(); }}
     >
       <label className="flex flex-col gap-1">
-        <span className="text-[10px] font-semibold uppercase tracking-wide text-[var(--muted)]">Opportunity Name *</span>
+        <span className="text-2xs font-semibold uppercase tracking-wide text-[var(--muted)]">Opportunity Name *</span>
         <input
           autoFocus
           value={name}
           onChange={e => setName(e.target.value)}
           placeholder="e.g. Ørsted PPA Deal 2026"
-          className="px-2.5 py-1.5 text-[12px] rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] placeholder:text-[var(--muted)] focus:outline-none focus:border-brand/40"
+          className="px-2.5 py-1.5 text-sm rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] placeholder:text-[var(--muted)] focus:outline-none focus:border-brand/40"
         />
       </label>
 
       <label className="flex flex-col gap-1 relative">
-        <span className="text-[10px] font-semibold uppercase tracking-wide text-[var(--muted)]">Account *</span>
+        <span className="text-2xs font-semibold uppercase tracking-wide text-[var(--muted)]">Account *</span>
         {prefilledAccountId ? (
-          <div className="px-2.5 py-1.5 text-[12px] rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)]">
+          <div className="px-2.5 py-1.5 text-sm rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)]">
             {prefilledAccountName}
           </div>
         ) : (
@@ -95,7 +95,7 @@ function OpportunityCreateForm({
               value={accountQuery}
               onChange={e => { setAccountQuery(e.target.value); setAccountId(''); setSelectedAccountName(''); }}
               placeholder="Search for an account..."
-              className="px-2.5 py-1.5 text-[12px] rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] placeholder:text-[var(--muted)] focus:outline-none focus:border-brand/40"
+              className="px-2.5 py-1.5 text-sm rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] placeholder:text-[var(--muted)] focus:outline-none focus:border-brand/40"
               onBlur={() => setTimeout(() => setShowDropdown(false), 200)}
             />
             {showDropdown && (
@@ -104,7 +104,7 @@ function OpportunityCreateForm({
                   <button
                     key={acc.id}
                     type="button"
-                    className="w-full text-left px-2.5 py-1.5 text-[12px] hover:bg-[var(--hover)] transition-colors flex items-center gap-1.5"
+                    className="w-full text-left px-2.5 py-1.5 text-sm hover:bg-[var(--hover)] transition-colors flex items-center gap-1.5"
                     onMouseDown={e => {
                       e.preventDefault();
                       setAccountId(acc.id);
@@ -114,13 +114,13 @@ function OpportunityCreateForm({
                     }}
                   >
                     <span className="text-[var(--text)]">{acc.name}</span>
-                    <span className="text-[9px] px-1.5 py-0.5 rounded bg-[var(--surface)] text-[var(--muted)]">{acc.type}</span>
+                    <span className="text-3xs px-1.5 py-0.5 rounded bg-[var(--surface)] text-[var(--muted)]">{acc.type}</span>
                   </button>
                 ))}
               </div>
             )}
             {accountQuery && !accountId && !showDropdown && accountQuery !== selectedAccountName && (
-              <span className="text-[10px] text-warn">No account selected — search and pick one</span>
+              <span className="text-2xs text-warn">No account selected — search and pick one</span>
             )}
           </>
         )}
@@ -128,35 +128,35 @@ function OpportunityCreateForm({
 
       <div className="flex gap-2">
         <label className="flex flex-col gap-1 flex-1">
-          <span className="text-[10px] font-semibold uppercase tracking-wide text-[var(--muted)]">Stage</span>
+          <span className="text-2xs font-semibold uppercase tracking-wide text-[var(--muted)]">Stage</span>
           <select
             value={stage}
             onChange={e => setStage(e.target.value)}
-            className="px-2.5 py-1.5 text-[12px] rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] focus:outline-none focus:border-brand/40"
+            className="px-2.5 py-1.5 text-sm rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] focus:outline-none focus:border-brand/40"
           >
             {KANBAN_STAGES.map(s => <option key={s} value={s}>{displayLabel(s)}</option>)}
           </select>
-          <span className="text-[10px] text-[var(--muted)]">Probability: {prob}%</span>
+          <span className="text-2xs text-[var(--muted)]">Probability: {prob}%</span>
         </label>
         <label className="flex flex-col gap-1 flex-1">
-          <span className="text-[10px] font-semibold uppercase tracking-wide text-[var(--muted)]">Amount</span>
+          <span className="text-2xs font-semibold uppercase tracking-wide text-[var(--muted)]">Amount</span>
           <input
             type="number"
             value={amount || ''}
             onChange={e => setAmount(Number(e.target.value) || 0)}
             placeholder="0"
-            className="px-2.5 py-1.5 text-[12px] rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] focus:outline-none focus:border-brand/40"
+            className="px-2.5 py-1.5 text-sm rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] focus:outline-none focus:border-brand/40"
           />
         </label>
       </div>
 
       <label className="flex flex-col gap-1">
-        <span className="text-[10px] font-semibold uppercase tracking-wide text-[var(--muted)]">Close Date</span>
+        <span className="text-2xs font-semibold uppercase tracking-wide text-[var(--muted)]">Close Date</span>
         <input
           type="date"
           value={closeDate}
           onChange={e => setCloseDate(e.target.value)}
-          className="px-2.5 py-1.5 text-[12px] rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] focus:outline-none focus:border-brand/40"
+          className="px-2.5 py-1.5 text-sm rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] focus:outline-none focus:border-brand/40"
         />
       </label>
     </div>
@@ -273,11 +273,11 @@ export default function AccountDetailPage() {
           onKeyDown={e => { if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') (document.querySelector('[data-submit-activity]') as HTMLButtonElement)?.click(); }}
         >
           <label className="flex flex-col gap-1">
-            <span className="text-[10px] font-semibold uppercase tracking-wide text-[var(--muted)]">Type</span>
+            <span className="text-2xs font-semibold uppercase tracking-wide text-[var(--muted)]">Type</span>
             <select
               defaultValue={state.type}
               onChange={e => { state.type = e.target.value; }}
-              className="px-2.5 py-1.5 text-[12px] rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] focus:outline-none focus:border-brand/40"
+              className="px-2.5 py-1.5 text-sm rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] focus:outline-none focus:border-brand/40"
             >
               <option value="Note">Note</option>
               <option value="Call">Call</option>
@@ -287,33 +287,33 @@ export default function AccountDetailPage() {
           </label>
 
           <label className="flex flex-col gap-1">
-            <span className="text-[10px] font-semibold uppercase tracking-wide text-[var(--muted)]">Summary *</span>
+            <span className="text-2xs font-semibold uppercase tracking-wide text-[var(--muted)]">Summary *</span>
             <input
               autoFocus
               onChange={e => { state.summary = e.target.value; }}
               placeholder="Brief summary of the activity"
-              className="px-2.5 py-1.5 text-[12px] rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] placeholder:text-[var(--muted)] focus:outline-none focus:border-brand/40"
+              className="px-2.5 py-1.5 text-sm rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] placeholder:text-[var(--muted)] focus:outline-none focus:border-brand/40"
             />
           </label>
 
           <label className="flex flex-col gap-1">
-            <span className="text-[10px] font-semibold uppercase tracking-wide text-[var(--muted)]">Detail</span>
+            <span className="text-2xs font-semibold uppercase tracking-wide text-[var(--muted)]">Detail</span>
             <textarea
               rows={4}
               onChange={e => { state.detail = e.target.value; }}
               placeholder="Additional details..."
-              className="px-2.5 py-1.5 text-[12px] rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] placeholder:text-[var(--muted)] focus:outline-none focus:border-brand/40 resize-none"
+              className="px-2.5 py-1.5 text-sm rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] placeholder:text-[var(--muted)] focus:outline-none focus:border-brand/40 resize-none"
             />
           </label>
         </div>
       ),
       footer: (
         <>
-          <button className="px-3.5 py-1.5 text-[12px] text-[var(--sub)] bg-[var(--surface)] border border-[var(--border)] rounded-md hover:bg-[var(--hover)] transition-colors" onClick={closeDrawer}>Cancel</button>
+          <button className="px-3.5 py-1.5 text-sm text-[var(--sub)] bg-[var(--surface)] border border-[var(--border)] rounded-md hover:bg-[var(--hover)] transition-colors" onClick={closeDrawer}>Cancel</button>
           <button
             data-submit-activity
             disabled={logActivity.isPending}
-            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-[12px] font-medium bg-brand text-[#09090b] rounded-md hover:brightness-110 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-sm font-medium bg-brand text-brand-on rounded-md hover:brightness-110 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             onClick={() => {
               if (!state.summary.trim()) {
                 addToast({ type: 'error', message: 'Summary is required' });
@@ -347,29 +347,29 @@ export default function AccountDetailPage() {
           onKeyDown={e => { if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') (document.querySelector('[data-submit-contact]') as HTMLButtonElement)?.click(); }}
         >
           <label className="flex flex-col gap-1">
-            <span className="text-[10px] font-semibold uppercase tracking-wide text-muted">Name *</span>
+            <span className="text-2xs font-semibold uppercase tracking-wide text-muted">Name *</span>
             <input
               autoFocus
               onChange={e => { state.name = e.target.value; }}
               placeholder="Full name"
-              className="px-2.5 py-1.5 text-[12px] rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] placeholder:text-muted focus:outline-none focus:border-brand/40"
+              className="px-2.5 py-1.5 text-sm rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] placeholder:text-muted focus:outline-none focus:border-brand/40"
             />
           </label>
           <label className="flex flex-col gap-1">
-            <span className="text-[10px] font-semibold uppercase tracking-wide text-muted">Job Title</span>
+            <span className="text-2xs font-semibold uppercase tracking-wide text-muted">Job Title</span>
             <input
               onChange={e => { state.title = e.target.value; }}
               placeholder="e.g. VP of Energy Trading"
-              className="px-2.5 py-1.5 text-[12px] rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] placeholder:text-muted focus:outline-none focus:border-brand/40"
+              className="px-2.5 py-1.5 text-sm rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] placeholder:text-muted focus:outline-none focus:border-brand/40"
             />
           </label>
           <div className="flex gap-2">
             <label className="flex flex-col gap-1 flex-1">
-              <span className="text-[10px] font-semibold uppercase tracking-wide text-muted">Role</span>
+              <span className="text-2xs font-semibold uppercase tracking-wide text-muted">Role</span>
               <select
                 defaultValue="Influencer"
                 onChange={e => { state.role = e.target.value; }}
-                className="px-2.5 py-1.5 text-[12px] rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] focus:outline-none focus:border-brand/40"
+                className="px-2.5 py-1.5 text-sm rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] focus:outline-none focus:border-brand/40"
               >
                 <option value="Champion">Champion</option>
                 <option value="EconomicBuyer">Economic Buyer</option>
@@ -379,11 +379,11 @@ export default function AccountDetailPage() {
               </select>
             </label>
             <label className="flex flex-col gap-1 flex-1">
-              <span className="text-[10px] font-semibold uppercase tracking-wide text-muted">Warmth</span>
+              <span className="text-2xs font-semibold uppercase tracking-wide text-muted">Warmth</span>
               <select
                 defaultValue="Cold"
                 onChange={e => { state.warmth = e.target.value; }}
-                className="px-2.5 py-1.5 text-[12px] rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] focus:outline-none focus:border-brand/40"
+                className="px-2.5 py-1.5 text-sm rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] focus:outline-none focus:border-brand/40"
               >
                 <option value="Strong">Strong</option>
                 <option value="Warm">Warm</option>
@@ -392,21 +392,21 @@ export default function AccountDetailPage() {
             </label>
           </div>
           <label className="flex flex-col gap-1">
-            <span className="text-[10px] font-semibold uppercase tracking-wide text-muted">Email</span>
+            <span className="text-2xs font-semibold uppercase tracking-wide text-muted">Email</span>
             <input
               type="email"
               onChange={e => { state.email = e.target.value; }}
               placeholder="email@company.com"
-              className="px-2.5 py-1.5 text-[12px] rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] placeholder:text-muted focus:outline-none focus:border-brand/40"
+              className="px-2.5 py-1.5 text-sm rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] placeholder:text-muted focus:outline-none focus:border-brand/40"
             />
           </label>
           <label className="flex flex-col gap-1">
-            <span className="text-[10px] font-semibold uppercase tracking-wide text-muted">Phone</span>
+            <span className="text-2xs font-semibold uppercase tracking-wide text-muted">Phone</span>
             <input
               type="tel"
               onChange={e => { state.phone = e.target.value; }}
               placeholder="+358 40 123 4567"
-              className="px-2.5 py-1.5 text-[12px] rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] placeholder:text-muted focus:outline-none focus:border-brand/40"
+              className="px-2.5 py-1.5 text-sm rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] placeholder:text-muted focus:outline-none focus:border-brand/40"
             />
           </label>
         </div>
@@ -414,7 +414,7 @@ export default function AccountDetailPage() {
       footer: (
         <>
           <button
-            className="px-3.5 py-1.5 text-[12px] text-sub bg-[var(--surface)] border border-[var(--border)] rounded-md hover:bg-[var(--hover)] transition-colors"
+            className="px-3.5 py-1.5 text-sm text-sub bg-[var(--surface)] border border-[var(--border)] rounded-md hover:bg-[var(--hover)] transition-colors"
             onClick={closeDrawer}
           >
             Cancel
@@ -422,7 +422,7 @@ export default function AccountDetailPage() {
           <button
             data-submit-contact
             disabled={createContact.isPending}
-            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-[12px] font-medium bg-brand text-[#09090b] rounded-md hover:brightness-110 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-sm font-medium bg-brand text-brand-on rounded-md hover:brightness-110 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             onClick={() => {
               if (!state.name.trim()) {
                 addToast({ type: 'error', message: 'Name is required' });
@@ -463,31 +463,31 @@ export default function AccountDetailPage() {
           onKeyDown={e => { if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') (document.querySelector('[data-submit-edit-contact]') as HTMLButtonElement)?.click(); }}
         >
           <label className="flex flex-col gap-1">
-            <span className="text-[10px] font-semibold uppercase tracking-wide text-muted">Name *</span>
+            <span className="text-2xs font-semibold uppercase tracking-wide text-muted">Name *</span>
             <input
               autoFocus
               defaultValue={state.name}
               onChange={e => { state.name = e.target.value; }}
               placeholder="Full name"
-              className="px-2.5 py-1.5 text-[12px] rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] placeholder:text-muted focus:outline-none focus:border-brand/40"
+              className="px-2.5 py-1.5 text-sm rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] placeholder:text-muted focus:outline-none focus:border-brand/40"
             />
           </label>
           <label className="flex flex-col gap-1">
-            <span className="text-[10px] font-semibold uppercase tracking-wide text-muted">Job Title</span>
+            <span className="text-2xs font-semibold uppercase tracking-wide text-muted">Job Title</span>
             <input
               defaultValue={state.title}
               onChange={e => { state.title = e.target.value; }}
               placeholder="e.g. VP of Energy Trading"
-              className="px-2.5 py-1.5 text-[12px] rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] placeholder:text-muted focus:outline-none focus:border-brand/40"
+              className="px-2.5 py-1.5 text-sm rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] placeholder:text-muted focus:outline-none focus:border-brand/40"
             />
           </label>
           <div className="flex gap-2">
             <label className="flex flex-col gap-1 flex-1">
-              <span className="text-[10px] font-semibold uppercase tracking-wide text-muted">Role</span>
+              <span className="text-2xs font-semibold uppercase tracking-wide text-muted">Role</span>
               <select
                 defaultValue={state.role}
                 onChange={e => { state.role = e.target.value; }}
-                className="px-2.5 py-1.5 text-[12px] rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] focus:outline-none focus:border-brand/40"
+                className="px-2.5 py-1.5 text-sm rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] focus:outline-none focus:border-brand/40"
               >
                 <option value="Champion">Champion</option>
                 <option value="EconomicBuyer">Economic Buyer</option>
@@ -497,11 +497,11 @@ export default function AccountDetailPage() {
               </select>
             </label>
             <label className="flex flex-col gap-1 flex-1">
-              <span className="text-[10px] font-semibold uppercase tracking-wide text-muted">Warmth</span>
+              <span className="text-2xs font-semibold uppercase tracking-wide text-muted">Warmth</span>
               <select
                 defaultValue={state.warmth}
                 onChange={e => { state.warmth = e.target.value; }}
-                className="px-2.5 py-1.5 text-[12px] rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] focus:outline-none focus:border-brand/40"
+                className="px-2.5 py-1.5 text-sm rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] focus:outline-none focus:border-brand/40"
               >
                 <option value="Strong">Strong</option>
                 <option value="Warm">Warm</option>
@@ -510,23 +510,23 @@ export default function AccountDetailPage() {
             </label>
           </div>
           <label className="flex flex-col gap-1">
-            <span className="text-[10px] font-semibold uppercase tracking-wide text-muted">Email</span>
+            <span className="text-2xs font-semibold uppercase tracking-wide text-muted">Email</span>
             <input
               type="email"
               defaultValue={state.email}
               onChange={e => { state.email = e.target.value; }}
               placeholder="email@company.com"
-              className="px-2.5 py-1.5 text-[12px] rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] placeholder:text-muted focus:outline-none focus:border-brand/40"
+              className="px-2.5 py-1.5 text-sm rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] placeholder:text-muted focus:outline-none focus:border-brand/40"
             />
           </label>
           <label className="flex flex-col gap-1">
-            <span className="text-[10px] font-semibold uppercase tracking-wide text-muted">Phone</span>
+            <span className="text-2xs font-semibold uppercase tracking-wide text-muted">Phone</span>
             <input
               type="tel"
               defaultValue={state.phone}
               onChange={e => { state.phone = e.target.value; }}
               placeholder="+358 40 123 4567"
-              className="px-2.5 py-1.5 text-[12px] rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] placeholder:text-muted focus:outline-none focus:border-brand/40"
+              className="px-2.5 py-1.5 text-sm rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] placeholder:text-muted focus:outline-none focus:border-brand/40"
             />
           </label>
         </div>
@@ -534,7 +534,7 @@ export default function AccountDetailPage() {
       footer: (
         <>
           <button
-            className="px-3.5 py-1.5 text-[12px] text-sub bg-[var(--surface)] border border-[var(--border)] rounded-md hover:bg-[var(--hover)] transition-colors"
+            className="px-3.5 py-1.5 text-sm text-sub bg-[var(--surface)] border border-[var(--border)] rounded-md hover:bg-[var(--hover)] transition-colors"
             onClick={closeDrawer}
           >
             Cancel
@@ -542,7 +542,7 @@ export default function AccountDetailPage() {
           <button
             data-submit-edit-contact
             disabled={updateContact.isPending}
-            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-[12px] font-medium bg-brand text-[#09090b] rounded-md hover:brightness-110 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-sm font-medium bg-brand text-brand-on rounded-md hover:brightness-110 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             onClick={() => {
               if (!state.name.trim()) {
                 addToast({ type: 'error', message: 'Name is required' });
@@ -580,23 +580,23 @@ export default function AccountDetailPage() {
       subtitle: a.name,
       body: (
         <div className="flex flex-col gap-3 py-2">
-          <p className="text-[13px] text-[var(--text)]">
+          <p className="text-base text-[var(--text)]">
             Are you sure you want to delete <span className="font-semibold">{c.name}</span>?
           </p>
-          <p className="text-[11.5px] text-[var(--sub)]">This action cannot be undone.</p>
+          <p className="text-xs text-[var(--sub)]">This action cannot be undone.</p>
         </div>
       ),
       footer: (
         <>
           <button
-            className="px-3.5 py-1.5 text-[12px] text-sub bg-[var(--surface)] border border-[var(--border)] rounded-md hover:bg-[var(--hover)] transition-colors"
+            className="px-3.5 py-1.5 text-sm text-sub bg-[var(--surface)] border border-[var(--border)] rounded-md hover:bg-[var(--hover)] transition-colors"
             onClick={closeDrawer}
           >
             Cancel
           </button>
           <button
             disabled={deleteContact.isPending}
-            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-[12px] font-medium bg-[#ef4444] text-white rounded-md hover:brightness-110 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-sm font-medium bg-danger text-white rounded-md hover:brightness-110 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             onClick={() => {
               deleteContact.mutate(c.id, {
                 onSuccess: () => { addToast({ type: 'success', message: `Contact deleted: ${c.name}` }); closeDrawer(); },
@@ -632,22 +632,22 @@ export default function AccountDetailPage() {
           onKeyDown={e => { if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') (document.querySelector('[data-submit-edit]') as HTMLButtonElement)?.click(); }}
         >
           <label className="flex flex-col gap-1">
-            <span className="text-[10px] font-semibold uppercase tracking-wide text-[var(--muted)]">Name *</span>
+            <span className="text-2xs font-semibold uppercase tracking-wide text-[var(--muted)]">Name *</span>
             <input
               autoFocus
               defaultValue={state.name}
               onChange={e => { state.name = e.target.value; }}
-              className="px-2.5 py-1.5 text-[12px] rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] placeholder:text-[var(--muted)] focus:outline-none focus:border-brand/40"
+              className="px-2.5 py-1.5 text-sm rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] placeholder:text-[var(--muted)] focus:outline-none focus:border-brand/40"
             />
           </label>
 
           <div className="flex gap-2">
             <label className="flex flex-col gap-1 flex-1">
-              <span className="text-[10px] font-semibold uppercase tracking-wide text-[var(--muted)]">Type</span>
+              <span className="text-2xs font-semibold uppercase tracking-wide text-[var(--muted)]">Type</span>
               <select
                 defaultValue={state.type}
                 onChange={e => { state.type = e.target.value; }}
-                className="px-2.5 py-1.5 text-[12px] rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] focus:outline-none focus:border-brand/40"
+                className="px-2.5 py-1.5 text-sm rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] focus:outline-none focus:border-brand/40"
               >
                 {['Unknown', 'PPA Buyer', 'Certificate Trader', 'Corporate Offtaker'].map(t => (
                   <option key={t} value={t}>{t}</option>
@@ -655,11 +655,11 @@ export default function AccountDetailPage() {
               </select>
             </label>
             <label className="flex flex-col gap-1 flex-1">
-              <span className="text-[10px] font-semibold uppercase tracking-wide text-[var(--muted)]">Country</span>
+              <span className="text-2xs font-semibold uppercase tracking-wide text-[var(--muted)]">Country</span>
               <select
                 defaultValue={state.country}
                 onChange={e => { state.country = e.target.value; }}
-                className="px-2.5 py-1.5 text-[12px] rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] focus:outline-none focus:border-brand/40"
+                className="px-2.5 py-1.5 text-sm rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] focus:outline-none focus:border-brand/40"
               >
                 {['Finland', 'Denmark', 'Sweden', 'Norway', 'Germany', 'Netherlands', 'UK', 'US', 'Other'].map(c => (
                   <option key={c} value={c}>{c}</option>
@@ -669,11 +669,11 @@ export default function AccountDetailPage() {
           </div>
 
           <label className="flex flex-col gap-1">
-            <span className="text-[10px] font-semibold uppercase tracking-wide text-[var(--muted)]">Status</span>
+            <span className="text-2xs font-semibold uppercase tracking-wide text-[var(--muted)]">Status</span>
             <select
               defaultValue={state.status}
               onChange={e => { state.status = e.target.value as AccountStatus; }}
-              className="px-2.5 py-1.5 text-[12px] rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] focus:outline-none focus:border-brand/40"
+              className="px-2.5 py-1.5 text-sm rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] focus:outline-none focus:border-brand/40"
             >
               {['Prospect', 'Active', 'Partner', 'Churned'].map(s => (
                 <option key={s} value={s}>{s}</option>
@@ -682,55 +682,55 @@ export default function AccountDetailPage() {
           </label>
 
           <label className="flex flex-col gap-1">
-            <span className="text-[10px] font-semibold uppercase tracking-wide text-[var(--muted)]">Pain Hypothesis</span>
+            <span className="text-2xs font-semibold uppercase tracking-wide text-[var(--muted)]">Pain Hypothesis</span>
             <textarea
               rows={3}
               defaultValue={state.pain}
               onChange={e => { state.pain = e.target.value; }}
               placeholder="What pain point does this account have?"
-              className="px-2.5 py-1.5 text-[12px] rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] placeholder:text-[var(--muted)] focus:outline-none focus:border-brand/40 resize-none"
+              className="px-2.5 py-1.5 text-sm rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] placeholder:text-[var(--muted)] focus:outline-none focus:border-brand/40 resize-none"
             />
           </label>
 
           <label className="flex flex-col gap-1">
-            <span className="text-[10px] font-semibold uppercase tracking-wide text-[var(--muted)]">Why Now</span>
+            <span className="text-2xs font-semibold uppercase tracking-wide text-[var(--muted)]">Why Now</span>
             <textarea
               rows={3}
               defaultValue={state.whyNow}
               onChange={e => { state.whyNow = e.target.value; }}
               placeholder="Why is now the right time?"
-              className="px-2.5 py-1.5 text-[12px] rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] placeholder:text-[var(--muted)] focus:outline-none focus:border-brand/40 resize-none"
+              className="px-2.5 py-1.5 text-sm rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] placeholder:text-[var(--muted)] focus:outline-none focus:border-brand/40 resize-none"
             />
           </label>
 
           <label className="flex flex-col gap-1">
-            <span className="text-[10px] font-semibold uppercase tracking-wide text-[var(--muted)]">Module Fit</span>
+            <span className="text-2xs font-semibold uppercase tracking-wide text-[var(--muted)]">Module Fit</span>
             <input
               defaultValue={state.moduleFit}
               onChange={e => { state.moduleFit = e.target.value; }}
               placeholder="e.g. PPA, GoO, Carbon (comma-separated)"
-              className="px-2.5 py-1.5 text-[12px] rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] placeholder:text-[var(--muted)] focus:outline-none focus:border-brand/40"
+              className="px-2.5 py-1.5 text-sm rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] placeholder:text-[var(--muted)] focus:outline-none focus:border-brand/40"
             />
           </label>
 
           <label className="flex flex-col gap-1">
-            <span className="text-[10px] font-semibold uppercase tracking-wide text-[var(--muted)]">Competitors</span>
+            <span className="text-2xs font-semibold uppercase tracking-wide text-[var(--muted)]">Competitors</span>
             <input
               defaultValue={state.competitors}
               onChange={e => { state.competitors = e.target.value; }}
               placeholder="e.g. Pexapark, Zeigo (comma-separated)"
-              className="px-2.5 py-1.5 text-[12px] rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] placeholder:text-[var(--muted)] focus:outline-none focus:border-brand/40"
+              className="px-2.5 py-1.5 text-sm rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] placeholder:text-[var(--muted)] focus:outline-none focus:border-brand/40"
             />
           </label>
         </div>
       ),
       footer: (
         <>
-          <button className="px-3.5 py-1.5 text-[12px] text-[var(--sub)] bg-[var(--surface)] border border-[var(--border)] rounded-md hover:bg-[var(--hover)] transition-colors" onClick={closeDrawer}>Cancel</button>
+          <button className="px-3.5 py-1.5 text-sm text-[var(--sub)] bg-[var(--surface)] border border-[var(--border)] rounded-md hover:bg-[var(--hover)] transition-colors" onClick={closeDrawer}>Cancel</button>
           <button
             data-submit-edit
             disabled={updateAccount.isPending}
-            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-[12px] font-medium bg-brand text-[#09090b] rounded-md hover:brightness-110 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-sm font-medium bg-brand text-brand-on rounded-md hover:brightness-110 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             onClick={() => {
               if (!state.name.trim()) {
                 addToast({ type: 'error', message: 'Name is required' });
@@ -786,8 +786,8 @@ export default function AccountDetailPage() {
       ),
       footer: (
         <>
-          <button className="px-3.5 py-1.5 text-[12px] text-[var(--sub)] bg-[var(--surface)] border border-[var(--border)] rounded-md hover:bg-[var(--hover)] transition-colors" onClick={closeDrawer}>Cancel</button>
-          <button disabled={createOpp.isPending} className="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-[12px] font-medium bg-brand text-[#09090b] rounded-md hover:brightness-110 transition-colors disabled:opacity-50 disabled:cursor-not-allowed" onClick={() => submitRef.current()}>{createOpp.isPending && <Spinner className="h-3 w-3" />}Create Opportunity</button>
+          <button className="px-3.5 py-1.5 text-sm text-[var(--sub)] bg-[var(--surface)] border border-[var(--border)] rounded-md hover:bg-[var(--hover)] transition-colors" onClick={closeDrawer}>Cancel</button>
+          <button disabled={createOpp.isPending} className="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-sm font-medium bg-brand text-brand-on rounded-md hover:brightness-110 transition-colors disabled:opacity-50 disabled:cursor-not-allowed" onClick={() => submitRef.current()}>{createOpp.isPending && <Spinner className="h-3 w-3" />}Create Opportunity</button>
         </>
       ),
     });
@@ -811,10 +811,10 @@ export default function AccountDetailPage() {
           </div>
           <div className="flex-1">
             <div className="flex items-center gap-2">
-              <h1 className="text-[18px] font-semibold tracking-tight">{a.name}</h1>
+              <h1 className="text-2xl font-semibold tracking-tight">{a.name}</h1>
               <button
                 onClick={openEditDrawer}
-                className="px-2.5 py-1 text-[11px] font-medium rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--sub)] hover:bg-[var(--hover)] transition-colors"
+                className="px-2.5 py-1 text-xs font-medium rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--sub)] hover:bg-[var(--hover)] transition-colors"
               >
                 Edit
               </button>
@@ -822,16 +822,16 @@ export default function AccountDetailPage() {
             <div className="flex items-center gap-1 mt-1 flex-wrap">
               <Badge variant={a.status === 'Active' ? 'ok' : a.status === 'Partner' ? 'purple' : 'info'}>{a.status}</Badge>
               <Badge variant="neutral">{a.type} · {a.country}</Badge>
-              {a.schemes.map(s => <Badge key={s} variant="neutral" className="!text-[9px]">{s}</Badge>)}
+              {a.schemes.map(s => <Badge key={s} variant="neutral" className="!text-3xs">{s}</Badge>)}
             </div>
           </div>
           <div className="text-right flex-shrink-0">
             <div className="flex items-center gap-1 justify-end">
               <ScorePill scores={a.scores} />
-              <span className="text-[10px] text-muted">FIUAC</span>
+              <span className="text-2xs text-muted">FIUAC</span>
             </div>
             <div className="mt-1"><FIUACBars scores={a.scores} /></div>
-            <div className={cn('text-[10.5px] mt-1', stale ? 'text-warn' : 'text-muted')}>
+            <div className={cn('text-2xs mt-1', stale ? 'text-warn' : 'text-muted')}>
               {stale && '\u26A0 '}Last: {fRelative(a.lastActivityAt)}
             </div>
           </div>
@@ -847,14 +847,14 @@ export default function AccountDetailPage() {
             { l: 'Owner', v: a.owner?.name ?? 'Unassigned' },
           ].map(s => (
             <div key={s.l} className="flex-1 min-w-[80px] p-2 rounded-md bg-[var(--surface)] border border-[var(--border)]">
-              <div className="text-[9px] font-semibold tracking-[0.1em] uppercase text-muted mb-0.5">{s.l}</div>
-              <div className="text-[14px] font-semibold font-mono">{s.v}</div>
+              <div className="text-3xs font-semibold tracking-[0.1em] uppercase text-muted mb-0.5">{s.l}</div>
+              <div className="text-md font-semibold font-mono">{s.v}</div>
             </div>
           ))}
         </div>
         {session?.user?.role === 'ADMIN' && (
           <div className="flex items-center gap-2 mt-2 pt-2 border-t border-[var(--border)]">
-            <span className="text-[10px] font-semibold uppercase tracking-wide text-[var(--muted)]">Reassign Owner</span>
+            <span className="text-2xs font-semibold uppercase tracking-wide text-[var(--muted)]">Reassign Owner</span>
             <select
               value={a.ownerId}
               onChange={(e) => {
@@ -866,7 +866,7 @@ export default function AccountDetailPage() {
                   },
                 );
               }}
-              className="px-2 py-1 text-[11px] rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)]"
+              className="px-2 py-1 text-xs rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)]"
             >
               {teamMembers.map((u: User & { isActive: boolean }) => (
                 <option key={u.id} value={u.id}>{u.name}</option>
@@ -883,7 +883,7 @@ export default function AccountDetailPage() {
             key={t.key}
             onClick={() => setTab(t.key)}
             className={cn(
-              'px-3.5 py-2 text-[12.5px] border-b-2 -mb-px whitespace-nowrap transition-colors',
+              'px-3.5 py-2 text-sm border-b-2 -mb-px whitespace-nowrap transition-colors',
               tab === t.key
                 ? 'text-[var(--text)] border-brand font-medium'
                 : 'text-sub border-transparent hover:text-[var(--text)]'
@@ -891,7 +891,7 @@ export default function AccountDetailPage() {
           >
             {t.label}
             {t.count !== undefined && (
-              <span className="ml-1 text-[10px] font-semibold font-mono px-[5px] py-px rounded-full bg-[var(--surface)] text-muted">
+              <span className="ml-1 text-2xs font-semibold font-mono px-[5px] py-px rounded-full bg-[var(--surface)] text-muted">
                 {t.count}
               </span>
             )}
@@ -904,34 +904,34 @@ export default function AccountDetailPage() {
         <div className="grid grid-cols-1 md:grid-cols-[2fr_1fr] gap-3">
           {/* AI brief */}
           <div className="ai-box">
-            <div className="text-[9px] font-semibold tracking-widest uppercase text-brand mb-1.5">AI Account Brief</div>
+            <div className="text-3xs font-semibold tracking-widest uppercase text-brand mb-1.5">AI Account Brief</div>
             <div className="flex flex-col gap-2.5">
               <div>
                 <SectionTitle>Pain Hypothesis</SectionTitle>
-                <p className="text-[12.5px] leading-relaxed">{a.pain || 'Not yet assessed'}</p>
+                <p className="text-sm leading-relaxed">{a.pain || 'Not yet assessed'}</p>
               </div>
               <div>
                 <SectionTitle>Why Now</SectionTitle>
-                <p className="text-[12.5px] leading-relaxed">{a.whyNow || 'No why-now signal yet'}</p>
+                <p className="text-sm leading-relaxed">{a.whyNow || 'No why-now signal yet'}</p>
               </div>
               <div>
                 <SectionTitle>Module Fit</SectionTitle>
                 <div className="flex flex-wrap gap-1">
                   {(a.moduleFit || []).map(m => <Badge key={m} variant="ok">{m}</Badge>)}
-                  {!a.moduleFit?.length && <span className="text-[12px] text-muted">{'\u2014'}</span>}
+                  {!a.moduleFit?.length && <span className="text-sm text-muted">{'\u2014'}</span>}
                 </div>
               </div>
               {a.competitors && (
                 <div>
                   <SectionTitle>Competitive Landscape</SectionTitle>
-                  <p className="text-[12.5px] leading-relaxed text-warn">{a.competitors}</p>
+                  <p className="text-sm leading-relaxed text-warn">{a.competitors}</p>
                 </div>
               )}
             </div>
             <div className="mt-2 flex items-center gap-1.5">
               <AgentTag name="Account Enricher" />
               <ConfBadge value={conf} />
-              <span className="text-[10px] text-muted">Last updated {fRelative(a.lastActivityAt)}</span>
+              <span className="text-2xs text-muted">Last updated {fRelative(a.lastActivityAt)}</span>
             </div>
           </div>
 
@@ -940,17 +940,17 @@ export default function AccountDetailPage() {
             <div className="rounded-lg bg-[var(--elevated)] border border-[var(--border)] p-3.5">
               <div className="flex items-center justify-between mb-2">
                 <SectionTitle>Buying Committee</SectionTitle>
-                <Badge variant="ai" className="!text-[8px]">AI Mapped</Badge>
+                <Badge variant="ai" className="!text-3xs">AI Mapped</Badge>
               </div>
               {a.contacts.length === 0 ? (
-                <div className="text-[12px] text-muted text-center py-3">No contacts</div>
+                <div className="text-sm text-muted text-center py-3">No contacts</div>
               ) : (
                 a.contacts.map(c => (
                   <div key={c.id} className="group flex items-center gap-2 py-1.5 border-b border-[var(--border)] last:border-b-0">
                     <Avatar initials={c.name.split(' ').map(w => w[0]).join('')} size="sm" />
                     <div className="flex-1 min-w-0">
-                      <div className="text-[11.5px] font-medium truncate">{c.name}</div>
-                      <div className="text-[9.5px] text-muted truncate">{c.title}</div>
+                      <div className="text-xs font-medium truncate">{c.name}</div>
+                      <div className="text-2xs text-muted truncate">{c.title}</div>
                     </div>
                     <div className="flex items-center gap-1">
                       <div className="flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -958,8 +958,8 @@ export default function AccountDetailPage() {
                         <button onClick={() => openDeleteContactDrawer(c)} className="p-0.5 rounded hover:bg-[var(--hover)] text-[var(--muted)] hover:text-danger transition-colors" title="Delete contact"><Trash2 size={12} /></button>
                       </div>
                       <div className="flex flex-col items-end gap-0.5">
-                        <Badge variant={c.role === 'Champion' ? 'ok' : c.role === 'EconomicBuyer' ? 'info' : 'neutral'} className="!text-[8.5px]">{displayLabel(c.role)}</Badge>
-                        <span className={cn('text-[9px]', c.warmth === 'Strong' ? 'text-brand' : c.warmth === 'Warm' ? 'text-warn' : 'text-info')}>{c.warmth}</span>
+                        <Badge variant={c.role === 'Champion' ? 'ok' : c.role === 'EconomicBuyer' ? 'info' : 'neutral'} className="!text-3xs">{displayLabel(c.role)}</Badge>
+                        <span className={cn('text-3xs', c.warmth === 'Strong' ? 'text-brand' : c.warmth === 'Warm' ? 'text-warn' : 'text-info')}>{c.warmth}</span>
                       </div>
                     </div>
                   </div>
@@ -976,7 +976,7 @@ export default function AccountDetailPage() {
         <div className="flex justify-end mb-2">
           <button
             onClick={openAddContactDrawer}
-            className="px-3 py-1.5 text-[12px] font-medium bg-brand text-[#09090b] rounded-md hover:brightness-110 transition-colors"
+            className="px-3 py-1.5 text-sm font-medium bg-brand text-brand-on rounded-md hover:brightness-110 transition-colors"
           >
             + Add Contact
           </button>
@@ -989,9 +989,9 @@ export default function AccountDetailPage() {
               <div key={c.id} className="group flex items-center gap-3 py-2.5 border-b border-[var(--border)] last:border-b-0">
                 <Avatar initials={c.name.split(' ').map(w => w[0]).join('')} size="lg" color="green" />
                 <div className="flex-1 min-w-0">
-                  <div className="text-[12.5px] font-medium">{c.name}</div>
-                  <div className="text-[10.5px] text-sub">{c.title}</div>
-                  {c.email && <div className="text-[10.5px] text-info mt-0.5">{c.email}</div>}
+                  <div className="text-sm font-medium">{c.name}</div>
+                  <div className="text-2xs text-sub">{c.title}</div>
+                  {c.email && <div className="text-2xs text-info mt-0.5">{c.email}</div>}
                 </div>
                 <div className="flex items-center gap-1.5">
                   <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -1014,7 +1014,7 @@ export default function AccountDetailPage() {
           <div className="flex justify-end mb-2">
             <button
               onClick={openNewOppDrawer}
-              className="px-3 py-1.5 text-[12px] font-medium bg-brand text-[#09090b] rounded-md hover:brightness-110 transition-colors"
+              className="px-3 py-1.5 text-sm font-medium bg-brand text-brand-on rounded-md hover:brightness-110 transition-colors"
             >
               + New Opportunity
             </button>
@@ -1027,17 +1027,17 @@ export default function AccountDetailPage() {
               <Link key={o.id} href={`/pipeline/${o.id}`}>
                 <div className="rounded-lg bg-[var(--elevated)] border border-[var(--border)] p-3.5 cursor-pointer hover:border-[var(--border-strong)] transition-colors">
                   <div className="flex items-center justify-between mb-1">
-                    <span className="text-[13px] font-semibold">{o.name}</span>
+                    <span className="text-base font-semibold">{o.name}</span>
                     <StageBadge stage={o.stage} />
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="font-mono font-semibold">{fmt(o.amount)}</span>
                     <div className="flex items-center gap-2">
                       <HealthBar health={o.health} />
-                      <span className="text-[10.5px] text-sub">Close: {fDate(o.closeDate)}</span>
+                      <span className="text-2xs text-sub">Close: {fDate(o.closeDate)}</span>
                     </div>
                   </div>
-                  {o.nextAction && <div className="text-[10.5px] text-muted mt-1">{'\u2192'} {o.nextAction}</div>}
+                  {o.nextAction && <div className="text-2xs text-muted mt-1">{'\u2192'} {o.nextAction}</div>}
                 </div>
               </Link>
             ))}
@@ -1052,7 +1052,7 @@ export default function AccountDetailPage() {
           <div className="flex items-center gap-2 mb-3">
             <button
               onClick={() => openLogActivityDrawer()}
-              className="px-3 py-1.5 text-[12px] font-medium bg-brand text-[#09090b] rounded-md hover:brightness-110 transition-colors"
+              className="px-3 py-1.5 text-sm font-medium bg-brand text-brand-on rounded-md hover:brightness-110 transition-colors"
             >
               + Log Note
             </button>
@@ -1065,7 +1065,7 @@ export default function AccountDetailPage() {
                 <button
                   key={type}
                   onClick={() => openLogActivityDrawer(type)}
-                  className="px-2 py-1 text-[11px] rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--sub)] hover:bg-[var(--hover)] transition-colors"
+                  className="px-2 py-1 text-xs rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--sub)] hover:bg-[var(--hover)] transition-colors"
                 >
                   {icon} {type}
                 </button>
@@ -1085,15 +1085,15 @@ export default function AccountDetailPage() {
                       style={{ background: ACT_COLOR[x.type] || '#4f576b' }}
                     />
                     <div
-                      className="text-[9px] font-semibold uppercase tracking-wide mb-0.5 flex items-center gap-1.5"
+                      className="text-3xs font-semibold uppercase tracking-wide mb-0.5 flex items-center gap-1.5"
                       style={{ color: ACT_COLOR[x.type] || '#4f576b' }}
                     >
                       {x.type}
-                      <Badge variant="neutral" className="!text-[8.5px]">{x.source}</Badge>
+                      <Badge variant="neutral" className="!text-3xs">{x.source}</Badge>
                     </div>
-                    <div className="text-[12.5px] font-medium mb-0.5">{x.summary}</div>
-                    <div className="text-[11.5px] text-sub leading-relaxed">{x.detail}</div>
-                    <div className="text-[10px] text-muted mt-0.5">{x.author.name} · {fRelative(x.createdAt)}</div>
+                    <div className="text-sm font-medium mb-0.5">{x.summary}</div>
+                    <div className="text-xs text-sub leading-relaxed">{x.detail}</div>
+                    <div className="text-2xs text-muted mt-0.5">{x.author.name} · {fRelative(x.createdAt)}</div>
                   </div>
                 ))}
               </div>
@@ -1114,10 +1114,10 @@ export default function AccountDetailPage() {
                 <div key={t.id} className="flex items-center gap-2.5 px-3.5 py-2.5 rounded-lg bg-[var(--elevated)] border border-[var(--border)] hover:border-[var(--border-strong)] transition-colors">
                   <div className={cn('w-3.5 h-3.5 rounded border-[1.5px] flex-shrink-0', od ? 'border-danger' : 'border-[var(--border-strong)]')} />
                   <div className="flex-1 min-w-0">
-                    <div className="text-[12.5px] font-medium truncate">{t.title}</div>
+                    <div className="text-sm font-medium truncate">{t.title}</div>
                   </div>
-                  <Badge variant={t.priority === 'High' ? 'err' : 'neutral'} className="!text-[9px]">{t.priority}</Badge>
-                  <span className={cn('font-mono text-[10.5px] flex-shrink-0', od ? 'text-danger' : 'text-sub')}>{fDate(t.dueDate)}</span>
+                  <Badge variant={t.priority === 'High' ? 'err' : 'neutral'} className="!text-3xs">{t.priority}</Badge>
+                  <span className={cn('font-mono text-2xs flex-shrink-0', od ? 'text-danger' : 'text-sub')}>{fDate(t.dueDate)}</span>
                 </div>
               );
             })

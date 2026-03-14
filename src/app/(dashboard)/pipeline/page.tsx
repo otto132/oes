@@ -1,9 +1,9 @@
 'use client';
-import { useState, useEffect, useRef } from 'react';
+import { Suspense, useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useOpportunitiesQuery, useCreateOpportunity, useMoveStage } from '@/lib/queries/opportunities';
-import { Avatar, HealthBar, StageBadge, EmptyState, Skeleton, SkeletonCard, ErrorState, Spinner } from '@/components/ui';
+import { Avatar, HealthBar, StageBadge, EmptyState, Skeleton, SkeletonCard, ErrorState, Spinner, HelpTip } from '@/components/ui';
 import { fmt, fDate, isOverdue, cn, displayLabel } from '@/lib/utils';
 import { KANBAN_STAGES, STAGE_COLOR, STAGE_PROB, healthAvg } from '@/lib/types';
 import { useStore } from '@/lib/store';
@@ -100,21 +100,21 @@ function OpportunityCreateForm({
       onKeyDown={e => { if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') handleSubmit(); }}
     >
       <label className="flex flex-col gap-1">
-        <span className="text-[10px] font-semibold uppercase tracking-wide text-[var(--muted)]">Opportunity Name *</span>
+        <span className="text-2xs font-semibold uppercase tracking-wide text-[var(--muted)]">Opportunity Name *</span>
         <input
           autoFocus
           value={name}
           onChange={e => setName(e.target.value)}
           placeholder="e.g. Ørsted PPA Deal 2026"
-          className="px-2.5 py-1.5 text-[12px] rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] placeholder:text-[var(--muted)] focus:outline-none focus:border-brand/40"
+          className="px-2.5 py-1.5 text-sm rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] placeholder:text-[var(--muted)] focus:outline-none focus:border-brand/40"
         />
       </label>
 
       {/* Account typeahead */}
       <label className="flex flex-col gap-1 relative">
-        <span className="text-[10px] font-semibold uppercase tracking-wide text-[var(--muted)]">Account *</span>
+        <span className="text-2xs font-semibold uppercase tracking-wide text-[var(--muted)]">Account *</span>
         {prefilledAccountId ? (
-          <div className="px-2.5 py-1.5 text-[12px] rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)]">
+          <div className="px-2.5 py-1.5 text-sm rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)]">
             {prefilledAccountName}
           </div>
         ) : (
@@ -123,7 +123,7 @@ function OpportunityCreateForm({
               value={accountQuery}
               onChange={e => { setAccountQuery(e.target.value); setAccountId(''); setSelectedAccountName(''); }}
               placeholder="Search for an account..."
-              className="px-2.5 py-1.5 text-[12px] rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] placeholder:text-[var(--muted)] focus:outline-none focus:border-brand/40"
+              className="px-2.5 py-1.5 text-sm rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] placeholder:text-[var(--muted)] focus:outline-none focus:border-brand/40"
               onBlur={() => setTimeout(() => setShowDropdown(false), 200)}
             />
             {showDropdown && (
@@ -132,7 +132,7 @@ function OpportunityCreateForm({
                   <button
                     key={acc.id}
                     type="button"
-                    className="w-full text-left px-2.5 py-1.5 text-[12px] hover:bg-[var(--hover)] transition-colors flex items-center gap-1.5"
+                    className="w-full text-left px-2.5 py-1.5 text-sm hover:bg-[var(--hover)] transition-colors flex items-center gap-1.5"
                     onMouseDown={e => {
                       e.preventDefault();
                       setAccountId(acc.id);
@@ -142,13 +142,13 @@ function OpportunityCreateForm({
                     }}
                   >
                     <span className="text-[var(--text)]">{acc.name}</span>
-                    <span className="text-[9px] px-1.5 py-0.5 rounded bg-[var(--surface)] text-[var(--muted)]">{acc.type}</span>
+                    <span className="text-3xs px-1.5 py-0.5 rounded bg-[var(--surface)] text-[var(--muted)]">{acc.type}</span>
                   </button>
                 ))}
               </div>
             )}
             {accountQuery && !accountId && !showDropdown && accountQuery !== selectedAccountName && (
-              <span className="text-[10px] text-warn">No account selected — search and pick one</span>
+              <span className="text-2xs text-warn">No account selected — search and pick one</span>
             )}
           </>
         )}
@@ -156,35 +156,35 @@ function OpportunityCreateForm({
 
       <div className="flex gap-2">
         <label className="flex flex-col gap-1 flex-1">
-          <span className="text-[10px] font-semibold uppercase tracking-wide text-[var(--muted)]">Stage</span>
+          <span className="text-2xs font-semibold uppercase tracking-wide text-[var(--muted)]">Stage</span>
           <select
             value={stage}
             onChange={e => setStage(e.target.value)}
-            className="px-2.5 py-1.5 text-[12px] rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] focus:outline-none focus:border-brand/40"
+            className="px-2.5 py-1.5 text-sm rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] focus:outline-none focus:border-brand/40"
           >
             {KANBAN_STAGES.map(s => <option key={s} value={s}>{displayLabel(s)}</option>)}
           </select>
-          <span className="text-[10px] text-[var(--muted)]">Probability: {prob}%</span>
+          <span className="text-2xs text-[var(--muted)]">Probability: {prob}%</span>
         </label>
         <label className="flex flex-col gap-1 flex-1">
-          <span className="text-[10px] font-semibold uppercase tracking-wide text-[var(--muted)]">Amount</span>
+          <span className="text-2xs font-semibold uppercase tracking-wide text-[var(--muted)]">Amount</span>
           <input
             type="number"
             value={amount || ''}
             onChange={e => setAmount(Number(e.target.value) || 0)}
             placeholder="0"
-            className="px-2.5 py-1.5 text-[12px] rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] focus:outline-none focus:border-brand/40"
+            className="px-2.5 py-1.5 text-sm rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] focus:outline-none focus:border-brand/40"
           />
         </label>
       </div>
 
       <label className="flex flex-col gap-1">
-        <span className="text-[10px] font-semibold uppercase tracking-wide text-[var(--muted)]">Close Date</span>
+        <span className="text-2xs font-semibold uppercase tracking-wide text-[var(--muted)]">Close Date</span>
         <input
           type="date"
           value={closeDate}
           onChange={e => setCloseDate(e.target.value)}
-          className="px-2.5 py-1.5 text-[12px] rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] focus:outline-none focus:border-brand/40"
+          className="px-2.5 py-1.5 text-sm rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] focus:outline-none focus:border-brand/40"
         />
       </label>
     </div>
@@ -192,12 +192,25 @@ function OpportunityCreateForm({
 }
 
 export default function PipelinePage() {
+  return <Suspense><PipelinePageInner /></Suspense>;
+}
+
+function PipelinePageInner() {
+  const searchParams = useSearchParams();
+  const router = useRouter();
   const { data, isLoading, error, refetch } = useOpportunitiesQuery();
   const createOpp = useCreateOpportunity();
   const moveStage = useMoveStage();
-  const router = useRouter();
   const { openDrawer, closeDrawer, addToast } = useStore();
-  const [view, setView] = useState<'kanban' | 'table'>('kanban');
+  const [view, setView] = useState<'kanban' | 'table'>((searchParams.get('view') as 'kanban' | 'table') || 'kanban');
+
+  function updateParam(key: string, value: string, defaultValue: string) {
+    const params = new URLSearchParams(searchParams.toString());
+    if (value === defaultValue) params.delete(key);
+    else params.set(key, value);
+    const qs = params.toString();
+    router.replace(qs ? `?${qs}` : window.location.pathname, { scroll: false });
+  }
   const [dragId, setDragId] = useState<string | null>(null);
   const [dropStage, setDropStage] = useState<string | null>(null);
   const dragCounter = useRef<Record<string, number>>({});
@@ -230,10 +243,10 @@ export default function PipelinePage() {
       ),
       footer: (
         <>
-          <button className="px-3.5 py-1.5 text-[12px] text-[var(--sub)] bg-[var(--surface)] border border-[var(--border)] rounded-md hover:bg-[var(--hover)] transition-colors" onClick={closeDrawer}>Cancel</button>
+          <button className="px-3.5 py-1.5 text-sm text-[var(--sub)] bg-[var(--surface)] border border-[var(--border)] rounded-md hover:bg-[var(--hover)] transition-colors" onClick={closeDrawer}>Cancel</button>
           <button
             disabled={createOpp.isPending}
-            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-[12px] font-medium bg-brand text-[#09090b] rounded-md hover:brightness-110 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-sm font-medium bg-brand text-brand-on rounded-md hover:brightness-110 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             onClick={() => submitRef.current()}
           >
             {createOpp.isPending && <Spinner className="h-3 w-3" />}Create Opportunity
@@ -261,23 +274,23 @@ export default function PipelinePage() {
     <div className="max-w-[1400px] page-enter">
       <div className="flex items-center justify-between mb-3.5">
         <div>
-          <h1 className="text-[18px] font-semibold tracking-tight text-[var(--text)]">Pipeline</h1>
-          <p className="text-[12.5px] text-[var(--sub)] mt-0.5">
+          <div className="flex items-center gap-1.5"><h1 className="text-2xl font-semibold tracking-tight text-[var(--text)]">Pipeline</h1><HelpTip label="Deals progress through stages from Contacted to Closed. Each stage has an associated win probability used for weighted pipeline value." title="Pipeline" /></div>
+          <p className="text-sm text-[var(--sub)] mt-0.5">
             {open.length} open · <span className="font-mono font-semibold">{fmt(totalPipe)}</span> total · <span className="font-mono text-[var(--sub)]">{fmt(totalWeighted)}</span> weighted
           </p>
         </div>
         <div className="flex items-center gap-2">
           <div className="hidden md:flex border border-[var(--border)] rounded-md overflow-hidden">
             {(['kanban', 'table'] as const).map(v => (
-              <button key={v} onClick={() => setView(v)} className={cn(
-                'px-2.5 py-1 text-[11px] capitalize transition-colors',
+              <button key={v} onClick={() => { setView(v); updateParam('view', v, 'kanban'); }} className={cn(
+                'px-2.5 py-1 text-xs capitalize transition-colors',
                 view === v ? 'bg-[var(--surface)] text-[var(--text)]' : 'bg-transparent text-[var(--sub)] hover:bg-[var(--hover)]'
               )}>{v === 'kanban' ? 'Board' : 'Table'}</button>
             ))}
           </div>
           <button
             onClick={() => openNewOppDrawer()}
-            className="px-3 py-1.5 text-[12px] font-medium bg-brand text-[#09090b] rounded-md hover:brightness-110 transition-colors"
+            className="px-3 py-1.5 text-sm font-medium bg-brand text-brand-on rounded-md hover:brightness-110 transition-colors"
           >
             + New Opportunity
           </button>
@@ -328,16 +341,16 @@ export default function PipelinePage() {
                 }}
               >
                 <div className="flex items-center justify-between mb-1.5 px-1">
-                  <StageBadge stage={stage} />
+                  <div className="flex items-center gap-1"><StageBadge stage={stage} /><HelpTip label="Deal health combines activity recency, stage progression speed, and engagement signals. Below 50% indicates a deal needing attention." /></div>
                   <div className="flex items-center gap-1.5">
-                    <span className="text-[9px] text-[var(--muted)] font-mono">{cards.length}</span>
-                    <span className="font-mono text-[9px] uppercase text-[var(--muted)]">{fmt(stageAmt)}</span>
+                    <span className="text-3xs text-[var(--muted)] font-mono">{cards.length}</span>
+                    <span className="font-mono text-3xs uppercase text-[var(--muted)]">{fmt(stageAmt)}</span>
                   </div>
                 </div>
                 <div className="min-h-[50px]">
                   {cards.length === 0 ? (
                     <div className={cn(
-                      'h-[50px] rounded-lg border border-dashed flex items-center justify-center text-[10px] text-[var(--muted)] transition-colors',
+                      'h-[50px] rounded-lg border border-dashed flex items-center justify-center text-2xs text-[var(--muted)] transition-colors',
                       isOver ? 'border-brand/40 bg-brand/5' : 'border-[var(--border)]'
                     )}>
                       {isOver ? 'Drop here' : 'No items'}
@@ -384,17 +397,17 @@ export default function PipelinePage() {
                           <div className="h-full rounded-r-full transition-all" style={{ width: `${progress}%`, background: stageColor }} />
                         </div>
                         <div className="p-3">
-                          <div className="text-[10px] text-[var(--muted)] mb-0.5">{o.accountName}</div>
-                          <div className="text-[11.5px] font-medium leading-tight mb-2 text-[var(--text)]">{o.name}</div>
+                          <div className="text-2xs text-[var(--muted)] mb-0.5">{o.accountName}</div>
+                          <div className="text-xs font-medium leading-tight mb-2 text-[var(--text)]">{o.name}</div>
                           <div className="flex items-center justify-between mb-1">
-                            <span className="font-mono font-semibold text-[11px] text-[var(--text)]">{fmt(o.amount)}</span>
+                            <span className="font-mono font-semibold text-xs text-[var(--text)]">{fmt(o.amount)}</span>
                             <HealthBar health={o.health} />
                           </div>
                           <div className="flex items-center justify-between">
                             <Avatar initials={o.owner.initials} color={o.owner.color} size="xs" />
-                            <span className="text-[9px] text-[var(--muted)] bg-[var(--surface)] px-1.5 py-0.5 rounded">{STAGE_PROB[o.stage]}%</span>
+                            <span className="text-3xs text-[var(--muted)] bg-[var(--surface)] px-1.5 py-0.5 rounded">{STAGE_PROB[o.stage]}%</span>
                           </div>
-                          {o.nextAction && <div className="text-[9.5px] text-[var(--muted)] mt-1.5 leading-tight line-clamp-2">→ {o.nextAction}</div>}
+                          {o.nextAction && <div className="text-2xs text-[var(--muted)] mt-1.5 leading-tight line-clamp-2">→ {o.nextAction}</div>}
                         </div>
                       </div>
                     </Link>
@@ -412,17 +425,17 @@ export default function PipelinePage() {
           <table className="w-full border-collapse">
             <thead>
               <tr>{['Opportunity', 'Stage', 'Amount', 'Health', 'Close', 'Owner'].map(h => (
-                <th key={h} className="text-[9px] font-semibold uppercase tracking-wide text-[var(--muted)] text-left px-3.5 py-2 bg-[var(--surface)] border-b border-[var(--border)] whitespace-nowrap">{h}</th>
+                <th key={h} className="text-3xs font-semibold uppercase tracking-wide text-[var(--muted)] text-left px-3.5 py-2 bg-[var(--surface)] border-b border-[var(--border)] whitespace-nowrap">{h}</th>
               ))}</tr>
             </thead>
             <tbody>
               {open.map(o => (
                 <tr key={o.id} className="hover:bg-[var(--hover)] cursor-pointer transition-colors" onClick={() => router.push(`/pipeline/${o.id}`)}>
-                  <td className="px-3.5 py-2.5 border-b border-[var(--border)]"><div className="font-medium text-[12.5px] text-[var(--text)]">{o.name}</div><div className="text-[10px] text-[var(--muted)]">{o.accountName}</div></td>
+                  <td className="px-3.5 py-2.5 border-b border-[var(--border)]"><div className="font-medium text-sm text-[var(--text)]">{o.name}</div><div className="text-2xs text-[var(--muted)]">{o.accountName}</div></td>
                   <td className="px-3.5 py-2.5 border-b border-[var(--border)]"><StageBadge stage={o.stage} /></td>
-                  <td className="px-3.5 py-2.5 border-b border-[var(--border)] font-mono font-semibold text-[12px] text-[var(--text)]">{fmt(o.amount)}</td>
-                  <td className="px-3.5 py-2.5 border-b border-[var(--border)]"><div className="flex items-center gap-1.5"><HealthBar health={o.health} /><span className="text-[10px]" style={{ color: riskHex(o.health) }}>{healthAvg(o.health)}</span></div></td>
-                  <td className="px-3.5 py-2.5 border-b border-[var(--border)]"><span className={`font-mono text-[11px] ${isOverdue(o.closeDate) ? 'text-danger' : 'text-[var(--sub)]'}`}>{fDate(o.closeDate)}</span></td>
+                  <td className="px-3.5 py-2.5 border-b border-[var(--border)] font-mono font-semibold text-sm text-[var(--text)]">{fmt(o.amount)}</td>
+                  <td className="px-3.5 py-2.5 border-b border-[var(--border)]"><div className="flex items-center gap-1.5"><HealthBar health={o.health} /><span className="text-2xs" style={{ color: riskHex(o.health) }}>{healthAvg(o.health)}</span></div></td>
+                  <td className="px-3.5 py-2.5 border-b border-[var(--border)]"><span className={`font-mono text-xs ${isOverdue(o.closeDate) ? 'text-danger' : 'text-[var(--sub)]'}`}>{fDate(o.closeDate)}</span></td>
                   <td className="px-3.5 py-2.5 border-b border-[var(--border)]"><Avatar initials={o.owner.initials} color={o.owner.color} size="xs" /></td>
                 </tr>
               ))}
@@ -439,15 +452,15 @@ export default function PipelinePage() {
           <Link key={o.id} href={`/pipeline/${o.id}`}>
             <div className="rounded-lg p-3 bg-[var(--elevated)] border border-[var(--border)] cursor-pointer hover:bg-[var(--hover)] transition-colors" style={{ borderLeft: `3px solid ${riskHex(o.health)}` }}>
               <div className="flex items-center justify-between mb-1">
-                <span className="text-[12.5px] font-medium text-[var(--text)]">{o.name}</span>
-                <span className="font-mono font-semibold text-[11px] text-[var(--text)]">{fmt(o.amount)}</span>
+                <span className="text-sm font-medium text-[var(--text)]">{o.name}</span>
+                <span className="font-mono font-semibold text-xs text-[var(--text)]">{fmt(o.amount)}</span>
               </div>
               <div className="flex items-center gap-1.5">
                 <StageBadge stage={o.stage} />
                 <HealthBar health={o.health} />
-                <span className="text-[10px] text-[var(--muted)]">{o.accountName}</span>
+                <span className="text-2xs text-[var(--muted)]">{o.accountName}</span>
               </div>
-              {o.nextAction && <div className="text-[10px] text-[var(--muted)] mt-1">→ {o.nextAction}</div>}
+              {o.nextAction && <div className="text-2xs text-[var(--muted)] mt-1">→ {o.nextAction}</div>}
             </div>
           </Link>
         ))}

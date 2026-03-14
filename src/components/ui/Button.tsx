@@ -3,15 +3,15 @@ import { Spinner } from '@/components/ui';
 import type { ButtonHTMLAttributes } from 'react';
 
 const variants = {
-  primary: 'bg-brand text-[#09090b] hover:brightness-110',
+  primary: 'bg-brand text-brand-on hover:brightness-110',
   secondary: 'bg-[var(--surface)] text-[var(--sub)] border border-[var(--border)] hover:bg-[var(--hover)]',
   danger: 'text-danger bg-danger/[.06] border border-danger/[.10] hover:bg-danger/[.12]',
   ghost: 'text-[var(--sub)] hover:bg-[var(--hover)] hover:text-[var(--text)]',
 } as const;
 
 const sizes = {
-  sm: 'px-2 py-1 text-[11px]',
-  md: 'px-3.5 py-1.5 text-[12px]',
+  sm: 'px-2 py-1 text-xs',
+  md: 'px-3.5 py-1.5 text-sm',
 } as const;
 
 interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {

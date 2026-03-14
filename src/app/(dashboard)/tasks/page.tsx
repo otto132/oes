@@ -38,12 +38,12 @@ function CommentInput({ taskId }: { taskId: string }) {
         }}
         rows={2}
         placeholder="Add a comment... (Cmd+Enter to send)"
-        className="flex-1 px-2.5 py-1.5 text-[12px] rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] placeholder:text-[var(--muted)] focus:outline-none focus:border-brand/40 resize-none"
+        className="flex-1 px-2.5 py-1.5 text-sm rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] placeholder:text-[var(--muted)] focus:outline-none focus:border-brand/40 resize-none"
       />
       <button
         onClick={submit}
         disabled={!text.trim() || comment.isPending}
-        className="self-end px-2.5 py-1.5 text-[12px] font-medium rounded-md bg-brand text-[#09090b] hover:brightness-110 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+        className="self-end px-2.5 py-1.5 text-sm font-medium rounded-md bg-brand text-brand-on hover:brightness-110 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
       >
         {comment.isPending ? '...' : 'Send'}
       </button>
@@ -165,21 +165,21 @@ function TasksPageInner() {
       body: (
         <div className="flex flex-col gap-3">
           <label className="flex flex-col gap-1">
-            <span className="text-[10px] font-semibold uppercase tracking-wide text-muted">Title</span>
+            <span className="text-2xs font-semibold uppercase tracking-wide text-muted">Title</span>
             <input
               autoFocus
               onChange={e => { state.title = e.target.value; }}
               placeholder="e.g. Follow up with Ørsted on PPA terms"
-              className="px-2.5 py-1.5 text-[12px] rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] placeholder:text-muted focus:outline-none focus:border-brand/40"
+              className="px-2.5 py-1.5 text-sm rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] placeholder:text-muted focus:outline-none focus:border-brand/40"
             />
           </label>
           <div className="flex gap-2">
             <label className="flex flex-col gap-1 flex-1">
-              <span className="text-[10px] font-semibold uppercase tracking-wide text-muted">Priority</span>
+              <span className="text-2xs font-semibold uppercase tracking-wide text-muted">Priority</span>
               <select
                 defaultValue="Medium"
                 onChange={e => { state.priority = e.target.value as TaskPriority; }}
-                className="px-2.5 py-1.5 text-[12px] rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] focus:outline-none focus:border-brand/40"
+                className="px-2.5 py-1.5 text-sm rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] focus:outline-none focus:border-brand/40"
               >
                 <option value="High">High</option>
                 <option value="Medium">Medium</option>
@@ -187,30 +187,30 @@ function TasksPageInner() {
               </select>
             </label>
             <label className="flex flex-col gap-1 flex-1">
-              <span className="text-[10px] font-semibold uppercase tracking-wide text-muted">Due Date</span>
+              <span className="text-2xs font-semibold uppercase tracking-wide text-muted">Due Date</span>
               <input
                 type="date"
                 defaultValue={defaultDue}
                 onChange={e => { state.dueDate = e.target.value; }}
-                className="px-2.5 py-1.5 text-[12px] rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] focus:outline-none focus:border-brand/40"
+                className="px-2.5 py-1.5 text-sm rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] focus:outline-none focus:border-brand/40"
               />
             </label>
           </div>
           <label className="flex flex-col gap-1">
-            <span className="text-[10px] font-semibold uppercase tracking-wide text-muted">Account (optional)</span>
+            <span className="text-2xs font-semibold uppercase tracking-wide text-muted">Account (optional)</span>
             <input
               onChange={e => { state.accountName = e.target.value; }}
               placeholder="e.g. Ørsted, Vattenfall"
-              className="px-2.5 py-1.5 text-[12px] rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] placeholder:text-muted focus:outline-none focus:border-brand/40"
+              className="px-2.5 py-1.5 text-sm rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] placeholder:text-muted focus:outline-none focus:border-brand/40"
             />
           </label>
           {goals.length > 0 && (
             <label className="flex flex-col gap-1">
-              <span className="text-[10px] font-semibold uppercase tracking-wide text-muted">Goal (optional)</span>
+              <span className="text-2xs font-semibold uppercase tracking-wide text-muted">Goal (optional)</span>
               <select
                 defaultValue=""
                 onChange={e => { state.goalId = e.target.value; }}
-                className="px-2.5 py-1.5 text-[12px] rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] focus:outline-none focus:border-brand/40"
+                className="px-2.5 py-1.5 text-sm rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] focus:outline-none focus:border-brand/40"
               >
                 <option value="">No goal</option>
                 {goals.map(g => (
@@ -224,14 +224,14 @@ function TasksPageInner() {
       footer: (
         <>
           <button
-            className="px-3.5 py-1.5 text-[12px] text-sub bg-[var(--surface)] border border-[var(--border)] rounded-md hover:bg-[var(--hover)] transition-colors"
+            className="px-3.5 py-1.5 text-sm text-sub bg-[var(--surface)] border border-[var(--border)] rounded-md hover:bg-[var(--hover)] transition-colors"
             onClick={closeDrawer}
           >
             Cancel
           </button>
           <button
             disabled={createTask.isPending}
-            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-[12px] font-medium bg-brand text-[#09090b] rounded-md hover:brightness-110 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-sm font-medium bg-brand text-brand-on rounded-md hover:brightness-110 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             onClick={() => {
               if (!state.title.trim()) {
                 addToast({ type: 'error', message: 'Title is required' });
@@ -274,11 +274,11 @@ function TasksPageInner() {
             onKeyDown={e => { if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') (document.querySelector('[data-submit-complete]') as HTMLButtonElement)?.click(); }}
           >
             <label className="flex flex-col gap-1">
-              <span className="text-[10px] font-semibold uppercase tracking-wide text-muted">Outcome</span>
+              <span className="text-2xs font-semibold uppercase tracking-wide text-muted">Outcome</span>
               <select
                 defaultValue={state.outcome}
                 onChange={e => { state.outcome = e.target.value; }}
-                className="px-2.5 py-1.5 text-[12px] rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] focus:outline-none focus:border-brand/40"
+                className="px-2.5 py-1.5 text-sm rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] focus:outline-none focus:border-brand/40"
               >
                 <option value="Completed">Completed</option>
                 <option value="Deferred">Deferred</option>
@@ -286,22 +286,22 @@ function TasksPageInner() {
               </select>
             </label>
             <label className="flex flex-col gap-1">
-              <span className="text-[10px] font-semibold uppercase tracking-wide text-muted">Notes</span>
+              <span className="text-2xs font-semibold uppercase tracking-wide text-muted">Notes</span>
               <textarea
                 rows={3}
                 defaultValue={state.notes}
                 onChange={e => { state.notes = e.target.value; }}
                 placeholder="Any notes on the outcome…"
-                className="px-2.5 py-1.5 text-[12px] rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] placeholder:text-muted focus:outline-none focus:border-brand/40 resize-none"
+                className="px-2.5 py-1.5 text-sm rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] placeholder:text-muted focus:outline-none focus:border-brand/40 resize-none"
               />
             </label>
             <div>
-              <span className="text-[10px] font-semibold uppercase tracking-wide text-muted">Follow-up Tasks</span>
+              <span className="text-2xs font-semibold uppercase tracking-wide text-muted">Follow-up Tasks</span>
               <div className="flex gap-1.5 mt-1">
                 <input
                   id="followup-input"
                   placeholder="Follow-up title…"
-                  className="flex-1 px-2.5 py-1.5 text-[12px] rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] placeholder:text-muted focus:outline-none focus:border-brand/40"
+                  className="flex-1 px-2.5 py-1.5 text-sm rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] placeholder:text-muted focus:outline-none focus:border-brand/40"
                   onKeyDown={e => {
                     if (e.key === 'Enter') {
                       e.preventDefault();
@@ -316,7 +316,7 @@ function TasksPageInner() {
                 />
                 <button
                   type="button"
-                  className="px-2.5 py-1.5 text-[11px] font-medium bg-[var(--surface)] border border-[var(--border)] rounded-md hover:bg-[var(--hover)] transition-colors"
+                  className="px-2.5 py-1.5 text-xs font-medium bg-[var(--surface)] border border-[var(--border)] rounded-md hover:bg-[var(--hover)] transition-colors"
                   onClick={() => {
                     const input = document.getElementById('followup-input') as HTMLInputElement;
                     if (input?.value.trim()) {
@@ -333,9 +333,9 @@ function TasksPageInner() {
                 <div className="flex flex-col gap-1 mt-1.5">
                   {state.followUps.map((fu, i) => (
                     <div key={i} className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-[var(--surface)] border border-[var(--border)]">
-                      <span className="text-[11px] flex-1">{fu}</span>
+                      <span className="text-xs flex-1">{fu}</span>
                       <button
-                        className="text-[10px] text-danger hover:text-danger/80"
+                        className="text-2xs text-danger hover:text-danger/80"
                         onClick={() => { state.followUps.splice(i, 1); render(); }}
                       >
                         ✕
@@ -350,7 +350,7 @@ function TasksPageInner() {
         footer: (
           <>
             <button
-              className="px-3.5 py-1.5 text-[12px] text-sub bg-[var(--surface)] border border-[var(--border)] rounded-md hover:bg-[var(--hover)] transition-colors"
+              className="px-3.5 py-1.5 text-sm text-sub bg-[var(--surface)] border border-[var(--border)] rounded-md hover:bg-[var(--hover)] transition-colors"
               onClick={closeDrawer}
             >
               Cancel
@@ -358,7 +358,7 @@ function TasksPageInner() {
             <button
               data-submit-complete
               disabled={completeTask.isPending}
-              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-[12px] font-medium bg-brand text-[#09090b] rounded-md hover:brightness-110 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-sm font-medium bg-brand text-brand-on rounded-md hover:brightness-110 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               onClick={() => {
                 completeTask.mutate(
                   {
@@ -405,21 +405,21 @@ function TasksPageInner() {
       body: (
         <div className="flex flex-col gap-3">
           <label className="flex flex-col gap-1">
-            <span className="text-[10px] font-semibold uppercase tracking-wide text-muted">Title</span>
+            <span className="text-2xs font-semibold uppercase tracking-wide text-muted">Title</span>
             <input
               autoFocus
               defaultValue={state.title}
               onChange={e => { state.title = e.target.value; }}
-              className="px-2.5 py-1.5 text-[12px] rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] placeholder:text-muted focus:outline-none focus:border-brand/40"
+              className="px-2.5 py-1.5 text-sm rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] placeholder:text-muted focus:outline-none focus:border-brand/40"
             />
           </label>
           <div className="flex gap-2">
             <label className="flex flex-col gap-1 flex-1">
-              <span className="text-[10px] font-semibold uppercase tracking-wide text-muted">Priority</span>
+              <span className="text-2xs font-semibold uppercase tracking-wide text-muted">Priority</span>
               <select
                 defaultValue={state.priority}
                 onChange={e => { state.priority = e.target.value as TaskPriority; }}
-                className="px-2.5 py-1.5 text-[12px] rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] focus:outline-none focus:border-brand/40"
+                className="px-2.5 py-1.5 text-sm rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] focus:outline-none focus:border-brand/40"
               >
                 <option value="High">High</option>
                 <option value="Medium">Medium</option>
@@ -427,30 +427,30 @@ function TasksPageInner() {
               </select>
             </label>
             <label className="flex flex-col gap-1 flex-1">
-              <span className="text-[10px] font-semibold uppercase tracking-wide text-muted">Due Date</span>
+              <span className="text-2xs font-semibold uppercase tracking-wide text-muted">Due Date</span>
               <input
                 type="date"
                 defaultValue={state.dueDate}
                 onChange={e => { state.dueDate = e.target.value; }}
-                className="px-2.5 py-1.5 text-[12px] rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] focus:outline-none focus:border-brand/40"
+                className="px-2.5 py-1.5 text-sm rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] focus:outline-none focus:border-brand/40"
               />
             </label>
           </div>
           <label className="flex flex-col gap-1">
-            <span className="text-[10px] font-semibold uppercase tracking-wide text-muted">Notes</span>
+            <span className="text-2xs font-semibold uppercase tracking-wide text-muted">Notes</span>
             <textarea
               defaultValue={state.notes}
               onChange={e => { state.notes = e.target.value; }}
               rows={3}
               placeholder="Add context or details..."
-              className="px-2.5 py-1.5 text-[12px] rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] placeholder:text-[var(--muted)] focus:outline-none focus:border-brand/40 resize-y"
+              className="px-2.5 py-1.5 text-sm rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] placeholder:text-[var(--muted)] focus:outline-none focus:border-brand/40 resize-y"
             />
           </label>
           <label className="flex flex-col gap-1">
-            <span className="text-[10px] font-semibold uppercase tracking-wide text-muted">Assignees</span>
+            <span className="text-2xs font-semibold uppercase tracking-wide text-muted">Assignees</span>
             <div className="flex flex-col gap-1 max-h-[120px] overflow-y-auto">
               {teamMembers.map((m: any) => (
-                <label key={m.id} className="flex items-center gap-2 px-2 py-1 rounded hover:bg-[var(--hover)] cursor-pointer text-[12px]">
+                <label key={m.id} className="flex items-center gap-2 px-2 py-1 rounded hover:bg-[var(--hover)] cursor-pointer text-sm">
                   <input
                     type="checkbox"
                     defaultChecked={state.assigneeIds.includes(m.id)}
@@ -465,11 +465,11 @@ function TasksPageInner() {
             </div>
           </label>
           <label className="flex flex-col gap-1">
-            <span className="text-[10px] font-semibold uppercase tracking-wide text-muted">Reviewer</span>
+            <span className="text-2xs font-semibold uppercase tracking-wide text-muted">Reviewer</span>
             <select
               defaultValue={state.reviewerId ?? ''}
               onChange={e => { state.reviewerId = e.target.value || null; }}
-              className="px-2.5 py-1.5 text-[12px] rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] focus:outline-none focus:border-brand/40"
+              className="px-2.5 py-1.5 text-sm rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] focus:outline-none focus:border-brand/40"
             >
               <option value="">None</option>
               {teamMembers.map((m: any) => (
@@ -482,14 +482,14 @@ function TasksPageInner() {
       footer: (
         <>
           <button
-            className="px-3.5 py-1.5 text-[12px] text-sub bg-[var(--surface)] border border-[var(--border)] rounded-md hover:bg-[var(--hover)] transition-colors"
+            className="px-3.5 py-1.5 text-sm text-sub bg-[var(--surface)] border border-[var(--border)] rounded-md hover:bg-[var(--hover)] transition-colors"
             onClick={closeDrawer}
           >
             Cancel
           </button>
           <button
             disabled={updateTask.isPending}
-            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-[12px] font-medium bg-brand text-[#09090b] rounded-md hover:brightness-110 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-sm font-medium bg-brand text-brand-on rounded-md hover:brightness-110 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             onClick={() => {
               if (!state.title.trim()) {
                 addToast({ type: 'error', message: 'Title is required' });
@@ -536,29 +536,29 @@ function TasksPageInner() {
             <Badge variant={t.priority === 'High' ? 'err' : t.priority === 'Low' ? 'neutral' : 'warn'}>{t.priority}</Badge>
             <Badge variant={t.status === 'Done' ? 'ok' : t.status === 'InReview' ? 'purple' : t.status === 'InProgress' ? 'info' : 'neutral'}>{displayLabel(t.status)}</Badge>
             {t.source !== 'Manual' && <AgentTag name={t.source} />}
-            {t.dueDate && <span className={cn('text-[11px]', t.status !== 'Done' && isOverdue(t.dueDate) ? 'text-danger' : 'text-muted')}>Due {fDate(t.dueDate)}</span>}
+            {t.dueDate && <span className={cn('text-xs', t.status !== 'Done' && isOverdue(t.dueDate) ? 'text-danger' : 'text-muted')}>Due {fDate(t.dueDate)}</span>}
           </div>
           <div>
-            <div className="text-[9px] font-semibold tracking-wide uppercase text-muted mb-1.5">Assigned To</div>
+            <div className="text-3xs font-semibold tracking-wide uppercase text-muted mb-1.5">Assigned To</div>
             <div className="flex items-center gap-1.5 flex-wrap">
               {(t.assignees || [t.owner]).map(u => (
-                <div key={u.id} className="flex items-center gap-1"><Avatar initials={u.initials} color={u.color} size="xs" /><span className="text-[11px]">{u.name}</span></div>
+                <div key={u.id} className="flex items-center gap-1"><Avatar initials={u.initials} color={u.color} size="xs" /><span className="text-xs">{u.name}</span></div>
               ))}
             </div>
           </div>
           {t.reviewer && (
             <div>
-              <div className="text-[9px] font-semibold tracking-wide uppercase text-muted mb-1.5">Reviewer</div>
-              <div className="flex items-center gap-1"><Avatar initials={t.reviewer.initials} color={t.reviewer.color} size="xs" /><span className="text-[11px]">{t.reviewer.name}</span></div>
+              <div className="text-3xs font-semibold tracking-wide uppercase text-muted mb-1.5">Reviewer</div>
+              <div className="flex items-center gap-1"><Avatar initials={t.reviewer.initials} color={t.reviewer.color} size="xs" /><span className="text-xs">{t.reviewer.name}</span></div>
             </div>
           )}
           {goal && (
             <div>
-              <div className="text-[9px] font-semibold tracking-wide uppercase text-muted mb-1.5">Goal</div>
-              <div className="flex items-center gap-1.5"><span className="text-[10px]">🎯</span><span className="text-[12px] font-medium">{goal.title}</span></div>
+              <div className="text-3xs font-semibold tracking-wide uppercase text-muted mb-1.5">Goal</div>
+              <div className="flex items-center gap-1.5"><span className="text-2xs">🎯</span><span className="text-sm font-medium">{goal.title}</span></div>
               {siblings.length > 0 && (
                 <div className="mt-1.5">{siblings.map(st => (
-                  <div key={st.id} className="flex items-center gap-1.5 py-0.5 text-[11px] text-sub">
+                  <div key={st.id} className="flex items-center gap-1.5 py-0.5 text-xs text-sub">
                     <span className={st.status === 'Done' ? 'text-brand' : 'text-muted'}>{st.status === 'Done' ? '✓' : '○'}</span>{st.title}
                   </div>
                 ))}</div>
@@ -566,12 +566,12 @@ function TasksPageInner() {
             </div>
           )}
           <div>
-            <div className="text-[9px] font-semibold tracking-wide uppercase text-muted mb-1.5">Comments</div>
+            <div className="text-3xs font-semibold tracking-wide uppercase text-muted mb-1.5">Comments</div>
             {(t.comments || []).length === 0 ? (
-              <div className="text-[11px] text-muted py-2">No comments yet</div>
+              <div className="text-xs text-muted py-2">No comments yet</div>
             ) : (t.comments || []).map((c, i) => (
-              <div key={i} className="py-2 border-b border-[var(--border)] last:border-b-0 text-[11.5px]">
-                <div className="flex items-center gap-1 mb-0.5"><Avatar initials={c.author.initials} color={c.author.color} size="xs" /><span className="text-[10.5px] font-medium">{c.author.name}</span><span className="text-[9px] text-muted">{fR(c.createdAt)}</span></div>
+              <div key={i} className="py-2 border-b border-[var(--border)] last:border-b-0 text-xs">
+                <div className="flex items-center gap-1 mb-0.5"><Avatar initials={c.author.initials} color={c.author.color} size="xs" /><span className="text-2xs font-medium">{c.author.name}</span><span className="text-3xs text-muted">{fR(c.createdAt)}</span></div>
                 <div className="text-sub">{c.text}</div>
               </div>
             ))}
@@ -581,10 +581,10 @@ function TasksPageInner() {
       ),
       footer: (
         <>
-          <button className="px-3.5 py-1.5 text-[12.5px] text-sub bg-[var(--surface)] border border-[var(--border)] rounded-md hover:bg-[var(--hover)] transition-colors" onClick={closeDrawer}>Close</button>
+          <button className="px-3.5 py-1.5 text-sm text-sub bg-[var(--surface)] border border-[var(--border)] rounded-md hover:bg-[var(--hover)] transition-colors" onClick={closeDrawer}>Close</button>
           {t.status !== 'Done' && (
             <button
-              className="px-3.5 py-1.5 text-[12px] font-medium bg-brand text-[#09090b] rounded-md hover:brightness-110 transition-colors"
+              className="px-3.5 py-1.5 text-sm font-medium bg-brand text-brand-on rounded-md hover:brightness-110 transition-colors"
               onClick={() => openEditTaskDrawer(t)}
             >
               Edit
@@ -612,20 +612,20 @@ function TasksPageInner() {
           </button>
         )}
         <div
-          className={cn('w-5 h-5 sm:w-4 sm:h-4 rounded border-[1.5px] flex-shrink-0 flex items-center justify-center cursor-pointer touch-manipulation', done ? 'border-brand bg-brand-dim text-brand text-[9px]' : od ? 'border-danger' : 'border-[var(--border-strong)]')}
+          className={cn('w-5 h-5 sm:w-4 sm:h-4 rounded border-[1.5px] flex-shrink-0 flex items-center justify-center cursor-pointer touch-manipulation', done ? 'border-brand bg-brand-dim text-brand text-3xs' : od ? 'border-danger' : 'border-[var(--border-strong)]')}
           onClick={e => { e.stopPropagation(); if (!done) openCompleteDrawer(t); }}
         >{done ? '✓' : ''}</div>
         <div className="flex-1 min-w-0 cursor-pointer" onClick={() => openTaskDetail(t)}>
-          <div className={cn('text-[12.5px] font-medium', done && 'line-through text-muted')}>{t.title}</div>
+          <div className={cn('text-sm font-medium', done && 'line-through text-muted')}>{t.title}</div>
           <div className="flex items-center gap-1 mt-0.5 flex-wrap">
-            {t.accountName && <span className="text-[10px] text-muted">{t.accountName}</span>}
-            {t.source !== 'Manual' && <AgentTag name={t.source} className="!text-[8px]" />}
-            {t.status === 'InReview' && <Badge variant="purple" className="!text-[8px]">In Review · {t.reviewer?.initials || '?'}</Badge>}
-            {(t.comments || []).length > 0 && <span className="text-[9px] text-muted">💬 {t.comments!.length}</span>}
+            {t.accountName && <span className="text-2xs text-muted">{t.accountName}</span>}
+            {t.source !== 'Manual' && <AgentTag name={t.source} className="!text-3xs" />}
+            {t.status === 'InReview' && <Badge variant="purple" className="!text-3xs">In Review · {t.reviewer?.initials || '?'}</Badge>}
+            {(t.comments || []).length > 0 && <span className="text-3xs text-muted">💬 {t.comments!.length}</span>}
           </div>
         </div>
-        <Badge variant={t.priority === 'High' ? 'err' : t.priority === 'Low' ? 'neutral' : 'warn'} className="!text-[9px]">{t.priority}</Badge>
-        {!done && <span className={cn('font-mono text-[10.5px] flex-shrink-0', od ? 'text-danger' : 'text-sub')}>{od ? '⚠ ' : ''}{fDate(t.dueDate)}</span>}
+        <Badge variant={t.priority === 'High' ? 'err' : t.priority === 'Low' ? 'neutral' : 'warn'} className="!text-3xs">{t.priority}</Badge>
+        {!done && <span className={cn('font-mono text-2xs flex-shrink-0', od ? 'text-danger' : 'text-sub')}>{od ? '⚠ ' : ''}{fDate(t.dueDate)}</span>}
         <Avatar initials={(t.assignees?.[0] || t.owner).initials} color={(t.assignees?.[0] || t.owner).color} size="xs" />
       </div>
     );
@@ -635,15 +635,15 @@ function TasksPageInner() {
     <div className="max-w-[900px] page-enter">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3.5">
         <div>
-          <h1 className="text-[18px] font-semibold tracking-tight">Tasks</h1>
-          <p className="text-[12.5px] text-sub mt-0.5">
+          <h1 className="text-2xl font-semibold tracking-tight">Tasks</h1>
+          <p className="text-sm text-sub mt-0.5">
             {mine.filter(t => t.status !== 'Done').length} mine · {all.filter(t => t.status !== 'Done').length} total
             {overdue.length > 0 && <span className="text-danger"> · {overdue.length} overdue</span>}
           </p>
         </div>
         <button
           onClick={openNewTaskDrawer}
-          className="px-3 py-1.5 text-[12px] font-medium rounded-md bg-brand text-[#09090b] hover:brightness-110 transition-colors flex items-center gap-1 self-start sm:self-auto"
+          className="px-3 py-1.5 text-sm font-medium rounded-md bg-brand text-brand-on hover:brightness-110 transition-colors flex items-center gap-1 self-start sm:self-auto"
         >
           + New Task
         </button>
@@ -657,11 +657,11 @@ function TasksPageInner() {
           { k: 'all' as const, l: 'All', ct: all.filter(t => t.status !== 'Done').length },
         ]).map(t => (
           <button key={t.k} onClick={() => setTab(t.k)} className={cn(
-            'px-3 sm:px-3.5 py-2.5 sm:py-2 text-[12.5px] border-b-2 -mb-px transition-colors whitespace-nowrap',
+            'px-3 sm:px-3.5 py-2.5 sm:py-2 text-sm border-b-2 -mb-px transition-colors whitespace-nowrap',
             tab === t.k ? 'text-[var(--text)] border-brand font-medium' : 'text-sub border-transparent hover:text-[var(--text)]'
           )}>
             {t.l}
-            {t.ct > 0 && <span className={cn('ml-1 text-[10px] font-semibold px-[5px] py-[1px] rounded-full', t.k === 'review' ? 'bg-purple/[.15] text-purple' : 'bg-[var(--surface)] text-muted')}>{t.ct}</span>}
+            {t.ct > 0 && <span className={cn('ml-1 text-2xs font-semibold px-[5px] py-[1px] rounded-full', t.k === 'review' ? 'bg-purple/[.15] text-purple' : 'bg-[var(--surface)] text-muted')}>{t.ct}</span>}
           </button>
         ))}
       </div>
@@ -669,7 +669,7 @@ function TasksPageInner() {
       {/* Search + completed toggle */}
       <div className="flex flex-col sm:flex-row sm:items-center gap-2 mb-2.5">
         <SearchInput value={search} onChange={setSearch} onDebouncedChange={setDebouncedSearch} placeholder="Search tasks..." className="w-full sm:max-w-[240px]" />
-        <label className="flex items-center gap-1.5 text-[11px] text-sub cursor-pointer min-h-[44px] sm:min-h-0">
+        <label className="flex items-center gap-1.5 text-xs text-sub cursor-pointer min-h-[44px] sm:min-h-0">
           <input type="checkbox" className="w-4 h-4 sm:w-3.5 sm:h-3.5" checked={showCompleted} onChange={e => setShowCompleted(e.target.checked)} /> Show completed
         </label>
       </div>
@@ -688,11 +688,11 @@ function TasksPageInner() {
             return (
               <div key={gId} className="rounded-lg bg-[var(--elevated)] border border-[var(--border)] overflow-hidden">
                 <div className="flex items-center gap-2 px-3.5 py-2.5 bg-[var(--surface)] border-b border-[var(--border)]">
-                  <span className="text-[10px]">🎯</span>
-                  <span className="text-[12px] font-semibold flex-1">{g.title}</span>
+                  <span className="text-2xs">🎯</span>
+                  <span className="text-sm font-semibold flex-1">{g.title}</span>
                   <div className="w-14 sm:w-20 h-[3px] rounded-full bg-[var(--surface)] overflow-hidden"><div className="h-full rounded-full bg-brand transition-all" style={{ width: `${pct}%` }} /></div>
-                  <span className="text-[10px] text-muted">{done}/{total}</span>
-                  {g.accountName && <Badge variant="neutral" className="!text-[8px]">{g.accountName}</Badge>}
+                  <span className="text-2xs text-muted">{done}/{total}</span>
+                  {g.accountName && <Badge variant="neutral" className="!text-3xs">{g.accountName}</Badge>}
                 </div>
                 <div className="p-1 flex flex-col gap-1">{sorted(gTasks).map(t => <TaskRow key={t.id} t={t} />)}</div>
               </div>

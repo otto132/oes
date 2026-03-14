@@ -53,8 +53,8 @@ export function WelcomeBanner({ name, stats }: { name: string; stats?: Onboardin
       <button onClick={() => { setDismissed(true); localStorage.setItem(DISMISSED_KEY, 'true'); }} aria-label="Dismiss welcome banner" className="absolute top-3 right-3 p-1 rounded-md hover:bg-[var(--hover)] text-[var(--muted)] transition-colors">
         <X className="w-4 h-4" />
       </button>
-      <h2 className="text-[16px] font-semibold mb-1">Welcome to Eco-Insight, <span className="text-brand">{name}</span></h2>
-      <p className="text-[12px] text-[var(--muted)] mb-4">
+      <h2 className="text-xl font-semibold mb-1">Welcome to Eco-Insight, <span className="text-brand">{name}</span></h2>
+      <p className="text-sm text-[var(--muted)] mb-4">
         Get started by completing these steps to set up your CRM.
         {completedCount > 0 && <span className="text-brand ml-1 font-medium">{completedCount}/{steps.length} done</span>}
       </p>
@@ -67,8 +67,8 @@ export function WelcomeBanner({ name, stats }: { name: string; stats?: Onboardin
                 <s.icon className={`w-5 h-5 ${done ? 'text-brand' : s.color}`} />
                 {done && <Check className="w-3.5 h-3.5 text-brand" />}
               </div>
-              <div className={`text-[12px] font-medium transition-colors ${done ? 'text-brand' : 'group-hover:text-brand'}`}>{s.title}</div>
-              <div className="text-[10px] text-[var(--muted)] mt-0.5">{done ? 'Complete' : s.description}</div>
+              <div className={`text-sm font-medium transition-colors ${done ? 'text-brand' : 'group-hover:text-brand'}`}>{s.title}</div>
+              <div className="text-2xs text-[var(--muted)] mt-0.5">{done ? 'Complete' : s.description}</div>
             </Link>
           );
         })}

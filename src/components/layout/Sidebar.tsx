@@ -1,7 +1,7 @@
 'use client';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, Shield, Signal, Target, Building2, TrendingUp, Inbox, CheckSquare, Settings, Search, LogOut } from 'lucide-react';
+import { Home, Shield, Signal, Target, Building2, TrendingUp, Inbox, CheckSquare, Settings, Search, LogOut, Sun, Moon } from 'lucide-react';
 import { useSession, signOut } from 'next-auth/react';
 import { useStore } from '@/lib/store';
 import { cn } from '@/lib/utils';
@@ -58,6 +58,9 @@ export default function Sidebar() {
 
   const isActive = (href: string) => href === '/' ? pathname === '/' : pathname.startsWith(href);
 
+  const theme = useStore(s => s.theme);
+  const toggleTheme = useStore(s => s.toggleTheme);
+
   return (
     <aside className="fixed left-0 top-0 bottom-0 w-[220px] bg-elevated border-r border-border hidden md:flex flex-col z-30">
       {/* Brand */}
@@ -65,7 +68,7 @@ export default function Sidebar() {
         <div className="w-6 h-6 rounded-md bg-brand flex items-center justify-center flex-shrink-0">
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" /></svg>
         </div>
-        <div className="text-[13px] font-semibold text-text tracking-tight">Eco-Insight</div>
+        <div className="text-base font-semibold text-text tracking-tight">Eco-Insight</div>
       </div>
 
       {/* Search */}
@@ -75,8 +78,8 @@ export default function Sidebar() {
           className="flex items-center gap-2 w-full px-2.5 py-[6px] rounded-md bg-surface border border-border text-muted hover:border-border-strong transition-colors cursor-pointer"
         >
           <Search className="w-3.5 h-3.5" />
-          <span className="flex-1 text-[12px] text-left">Search…</span>
-          <kbd className="text-[10px]">⌘K</kbd>
+          <span className="flex-1 text-sm text-left">Search…</span>
+          <kbd className="text-2xs">⌘K</kbd>
         </button>
       </div>
 
@@ -92,13 +95,13 @@ export default function Sidebar() {
               const badge = item.badgeKey ? badgeCounts[item.badgeKey] : 0;
               return (
                 <Link key={item.href} href={item.href} className={cn(
-                  'flex items-center gap-2.5 px-2.5 py-[6px] rounded-md text-[12.5px] transition-colors',
+                  'flex items-center gap-2.5 px-2.5 py-[6px] rounded-md text-sm transition-colors',
                   active ? 'bg-surface text-text font-medium' : 'text-sub hover:bg-hover hover:text-text'
                 )}>
                   <item.icon className={cn('w-[15px] h-[15px] flex-shrink-0', active ? 'text-brand' : 'text-muted')} />
                   {item.label}
                   {badge > 0 && (
-                    <span className="ml-auto text-[10px] font-semibold text-muted bg-surface border border-border px-1 min-w-[18px] h-[18px] rounded flex items-center justify-center">
+                    <span className="ml-auto text-2xs font-semibold text-muted bg-surface border border-border px-1 min-w-[18px] h-[18px] rounded flex items-center justify-center">
                       {badge}
                     </span>
                   )}
@@ -111,16 +114,19 @@ export default function Sidebar() {
 
       {/* Footer */}
       <div className="p-3 border-t border-border flex flex-col gap-2">
-        <button onClick={() => signOut({ callbackUrl: '/login' })} className="flex items-center gap-1.5 w-full px-2.5 py-[5px] rounded-md text-[11px] text-muted hover:text-sub hover:bg-hover transition-colors">
+        <button onClick={() => signOut({ callbackUrl: '/login' })} className="flex items-center gap-1.5 w-full px-2.5 py-[5px] rounded-md text-xs text-muted hover:text-sub hover:bg-hover transition-colors">
           <LogOut className="w-3 h-3" />
           Sign out
         </button>
         <div className="flex items-center gap-2 px-1">
-          <div className="w-7 h-7 rounded-md bg-surface border border-border text-sub flex items-center justify-center text-[10px] font-semibold">{me.initials}</div>
+          <div className="w-7 h-7 rounded-md bg-surface border border-border text-sub flex items-center justify-center text-2xs font-semibold">{me.initials}</div>
           <div className="flex-1 min-w-0">
-            <div className="text-[11.5px] font-medium text-text truncate">{me.name}</div>
-            <div className="text-[10px] text-muted truncate">{me.role}</div>
+            <div className="text-xs font-medium text-text truncate">{me.name}</div>
+            <div className="text-2xs text-muted truncate">{me.role}</div>
           </div>
+          <button onClick={toggleTheme} className="p-1.5 rounded-md hover:bg-hover transition-colors text-muted" aria-label="Toggle theme">
+            {theme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+          </button>
         </div>
       </div>
     </aside>

@@ -1,10 +1,10 @@
 'use client';
 import { Suspense, useState, useEffect, useRef } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useSearchParams, useRouter } from 'next/navigation';
 import { useStore } from '@/lib/store';
 import { ApiError } from '@/lib/api-client';
 import { useSignalsQuery, useConvertSignal, useDismissSignal } from '@/lib/queries/signals';
-import { Badge, ConfBadge, AgentTag, EmptyState, Skeleton, SkeletonCard, SkeletonText, ErrorState, Spinner } from '@/components/ui';
+import { Badge, ConfBadge, AgentTag, EmptyState, Skeleton, SkeletonCard, SkeletonText, ErrorState, Spinner, HelpTip } from '@/components/ui';
 import { signalLabel, signalColor, fR, cn } from '@/lib/utils';
 import { Zap, Check, RotateCw } from 'lucide-react';
 import type { Signal } from '@/lib/types';
@@ -47,7 +47,16 @@ export default function SignalsPage() {
 function SignalsPageInner() {
   const { openDrawer, closeDrawer } = useStore();
   const searchParams = useSearchParams();
-  const [filter, setFilter] = useState('all');
+  const router = useRouter();
+  const [filter, setFilter] = useState(searchParams.get('type') || 'all');
+
+  function updateParam(key: string, value: string, defaultValue: string) {
+    const params = new URLSearchParams(searchParams.toString());
+    if (value === defaultValue) params.delete(key);
+    else params.set(key, value);
+    const qs = params.toString();
+    router.replace(qs ? `?${qs}` : window.location.pathname, { scroll: false });
+  }
   const { data: resp, isLoading, isError, refetch } = useSignalsQuery(filter !== 'all' ? filter : undefined);
   const signals: Signal[] = resp?.data ?? [];
   const convert = useConvertSignal();
@@ -82,19 +91,19 @@ function SignalsPageInner() {
       body: (
         <div className="flex flex-col gap-3">
           <label className="flex flex-col gap-1">
-            <span className="text-[10px] font-semibold uppercase tracking-wide text-[var(--muted)]">Company Name</span>
+            <span className="text-2xs font-semibold uppercase tracking-wide text-[var(--muted)]">Company Name</span>
             <input
               defaultValue={state.company}
               onChange={e => { state.company = e.target.value; }}
-              className="px-2.5 py-1.5 text-[12px] rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] focus:outline-none focus:border-brand/40"
+              className="px-2.5 py-1.5 text-sm rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] focus:outline-none focus:border-brand/40"
             />
           </label>
           <label className="flex flex-col gap-1">
-            <span className="text-[10px] font-semibold uppercase tracking-wide text-[var(--muted)]">Type</span>
+            <span className="text-2xs font-semibold uppercase tracking-wide text-[var(--muted)]">Type</span>
             <select
               defaultValue={state.type}
               onChange={e => { state.type = e.target.value; }}
-              className="px-2.5 py-1.5 text-[12px] rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] focus:outline-none focus:border-brand/40"
+              className="px-2.5 py-1.5 text-sm rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] focus:outline-none focus:border-brand/40"
             >
               <option value="Unknown">Unknown</option>
               <option value="PPA Buyer">PPA Buyer</option>
@@ -103,11 +112,11 @@ function SignalsPageInner() {
             </select>
           </label>
           <label className="flex flex-col gap-1">
-            <span className="text-[10px] font-semibold uppercase tracking-wide text-[var(--muted)]">Country (optional)</span>
+            <span className="text-2xs font-semibold uppercase tracking-wide text-[var(--muted)]">Country (optional)</span>
             <input
               defaultValue={state.country}
               onChange={e => { state.country = e.target.value; }}
-              className="px-2.5 py-1.5 text-[12px] rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] focus:outline-none focus:border-brand/40"
+              className="px-2.5 py-1.5 text-sm rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] focus:outline-none focus:border-brand/40"
             />
           </label>
         </div>
@@ -115,13 +124,13 @@ function SignalsPageInner() {
       footer: (
         <>
           <button
-            className="px-3.5 py-1.5 text-[12px] text-[var(--sub)] bg-[var(--surface)] border border-[var(--border)] rounded-md hover:bg-[var(--hover)] transition-colors"
+            className="px-3.5 py-1.5 text-sm text-[var(--sub)] bg-[var(--surface)] border border-[var(--border)] rounded-md hover:bg-[var(--hover)] transition-colors"
             onClick={closeDrawer}
           >
             Cancel
           </button>
           <button
-            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-[12px] font-medium bg-brand text-[#09090b] rounded-md hover:brightness-110 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-sm font-medium bg-brand text-brand-on rounded-md hover:brightness-110 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             disabled={convert.isPending}
             onClick={() => {
               if (!state.company.trim()) {
@@ -165,16 +174,16 @@ function SignalsPageInner() {
       subtitle: `${signalLabel[s.type] || s.type} · ${s.source}`,
       body: (
         <div className="flex flex-col gap-3.5">
-          <div className="text-[15px] font-semibold leading-snug">{s.title}</div>
+          <div className="text-lg font-semibold leading-snug">{s.title}</div>
           <div className="flex items-center gap-2 flex-wrap">
             <Badge variant="neutral">{signalLabel[s.type]}</Badge>
-            <span className="text-[11px] text-[var(--muted)]">Relevance: <span className={`font-mono font-semibold ${s.relevance > 80 ? 'text-[var(--brand)]' : 'text-[#eab308]'}`}>{s.relevance}/100</span></span>
+            <span className="text-xs text-[var(--muted)]">Relevance: <span className={`font-mono font-semibold ${s.relevance > 80 ? 'text-[var(--brand)]' : 'text-[#eab308]'}`}>{s.relevance}/100</span></span>
             <ConfBadge value={s.confidence} />
             <AgentTag name={s.agent} />
           </div>
-          <div className="ai-box"><div className="text-[9px] font-semibold tracking-widest uppercase text-[var(--brand)] mb-1">AI Analysis</div><p className="text-[12.5px] text-[var(--sub)] leading-relaxed">{s.summary}</p></div>
-          <div className="ai-box"><div className="text-[9px] font-semibold tracking-widest uppercase text-[var(--brand)] mb-1">AI Reasoning</div><p className="text-[12.5px] text-[var(--sub)] leading-relaxed">{s.reasoning}</p></div>
-          <div className="text-[10px] text-[var(--muted)] border-t border-[var(--border)] pt-2">
+          <div className="ai-box"><div className="text-3xs font-semibold tracking-widest uppercase text-[var(--brand)] mb-1">AI Analysis</div><p className="text-sm text-[var(--sub)] leading-relaxed">{s.summary}</p></div>
+          <div className="ai-box"><div className="text-3xs font-semibold tracking-widest uppercase text-[var(--brand)] mb-1">AI Reasoning</div><p className="text-sm text-[var(--sub)] leading-relaxed">{s.reasoning}</p></div>
+          <div className="text-2xs text-[var(--muted)] border-t border-[var(--border)] pt-2">
             <strong>Source:</strong>{' '}
             {s.sourceUrl ? <a href={s.sourceUrl} target="_blank" rel="noreferrer" className="text-[var(--brand)] underline decoration-dotted">{s.source}</a> : s.source}
             {' · Retrieved '}{fR(s.detectedAt)}
@@ -183,8 +192,8 @@ function SignalsPageInner() {
       ),
       footer: (
         <>
-          <button className="px-3.5 py-1.5 text-[12.5px] text-[var(--sub)] bg-[var(--surface)] border border-[var(--border)] rounded-md hover:bg-[var(--hover)] transition-colors" onClick={closeDrawer}>Close</button>
-          <button className="px-3.5 py-1.5 text-[12.5px] font-medium bg-brand text-[#09090b] rounded-md hover:brightness-110 transition-colors" onClick={() => { closeDrawer(); openConvertDrawer(s); }}>Convert to Lead</button>
+          <button className="px-3.5 py-1.5 text-sm text-[var(--sub)] bg-[var(--surface)] border border-[var(--border)] rounded-md hover:bg-[var(--hover)] transition-colors" onClick={closeDrawer}>Close</button>
+          <button className="px-3.5 py-1.5 text-sm font-medium bg-brand text-brand-on rounded-md hover:brightness-110 transition-colors" onClick={() => { closeDrawer(); openConvertDrawer(s); }}>Convert to Lead</button>
         </>
       ),
     });
@@ -194,8 +203,8 @@ function SignalsPageInner() {
     <div className="max-w-[900px] page-enter">
       <div className="flex items-center justify-between mb-4">
         <div>
-          <h1 className="text-[18px] font-semibold text-[var(--text)]">Signals</h1>
-          <p className="text-[12.5px] text-[var(--sub)] mt-0.5">{filtered.length} active · AI market monitoring</p>
+          <div className="flex items-center gap-1.5"><h1 className="text-2xl font-semibold text-[var(--text)]">Signals</h1><HelpTip label="External events (funding rounds, job posts, news) that indicate buying intent" title="Signals" /></div>
+          <p className="text-sm text-[var(--sub)] mt-0.5">{filtered.length} active · AI market monitoring</p>
         </div>
         <Badge variant="ai">Signal Hunter Agent</Badge>
       </div>
@@ -203,8 +212,8 @@ function SignalsPageInner() {
       <div className="rounded-lg bg-[var(--elevated)] border border-[var(--border)] overflow-hidden">
         <div className="px-3.5 py-2.5 border-b border-[var(--border)] flex gap-1.5 overflow-x-auto">
           {FILTERS.map(f => (
-            <button key={f.k} onClick={() => setFilter(f.k)} className={cn(
-              'px-2.5 py-1 text-[11px] rounded-md font-medium whitespace-nowrap transition-colors',
+            <button key={f.k} onClick={() => { setFilter(f.k); updateParam('type', f.k, 'all'); }} className={cn(
+              'px-2.5 py-1 text-xs rounded-md font-medium whitespace-nowrap transition-colors',
               filter === f.k ? 'bg-[var(--surface)] text-[var(--text)] border border-[var(--border-strong)]' : 'text-[var(--sub)] hover:bg-[var(--hover)] border border-transparent'
             )}>{f.l}</button>
           ))}
@@ -231,26 +240,26 @@ function SignalsPageInner() {
                 {converted ? <Check className="w-[15px] h-[15px] text-[var(--brand)]" /> : <Zap className={`w-[15px] h-[15px] ${signalColor[s.type] || 'text-[var(--muted)]'}`} />}
               </div>
               <div className="flex-1 min-w-0">
-                <div className="text-[13px] font-medium leading-tight text-[var(--text)]">{s.title}</div>
-                <div className="text-[12.5px] text-[var(--sub)] mt-0.5 line-clamp-2">{s.summary}</div>
+                <div className="text-base font-medium leading-tight text-[var(--text)]">{s.title}</div>
+                <div className="text-sm text-[var(--sub)] mt-0.5 line-clamp-2">{s.summary}</div>
                 <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
-                  <Badge variant="neutral" className="!text-[9px]">{signalLabel[s.type]}</Badge>
-                  <span className="text-[10px] text-[var(--muted)]">Rel: <span className={`font-mono font-semibold ${s.relevance > 80 ? 'text-[var(--brand)]' : 'text-[#eab308]'}`}>{s.relevance}</span></span>
+                  <Badge variant="neutral" className="!text-3xs">{signalLabel[s.type]}</Badge>
+                  <span className="text-2xs text-[var(--muted)]">Rel: <span className={`font-mono font-semibold ${s.relevance > 80 ? 'text-[var(--brand)]' : 'text-[#eab308]'}`}>{s.relevance}</span></span>
                   <ConfBadge value={s.confidence} />
                   <AgentTag name={s.agent} />
-                  <span className="text-[10px] text-[var(--muted)]">{s.source} · {fR(s.detectedAt)}</span>
+                  <span className="text-2xs text-[var(--muted)]">{s.source} · {fR(s.detectedAt)}</span>
                 </div>
               </div>
               {!converted && (
                 <div className="flex gap-1 flex-shrink-0 self-start mt-0.5">
                   <button
-                    className="px-2 py-1 text-[11px] font-medium rounded-md bg-brand text-[#09090b] hover:brightness-110 transition-colors"
+                    className="px-2 py-1 text-xs font-medium rounded-md bg-brand text-brand-on hover:brightness-110 transition-colors"
                     onClick={e => { e.stopPropagation(); openConvertDrawer(s); }}
                   >
                     → Lead
                   </button>
                   <button
-                    className="px-1.5 py-1 text-[11px] text-[var(--sub)] hover:bg-[var(--hover)] rounded-md transition-colors"
+                    className="px-1.5 py-1 text-xs text-[var(--sub)] hover:bg-[var(--hover)] rounded-md transition-colors"
                     onClick={e => {
                       e.stopPropagation();
                       setConfirmDismiss(s.id);

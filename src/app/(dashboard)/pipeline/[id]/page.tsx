@@ -134,37 +134,37 @@ export default function OppDetailPage() {
       body: (
         <div className="flex flex-col gap-3">
           <label className="flex flex-col gap-1">
-            <span className="text-[10px] font-semibold uppercase tracking-wide text-[var(--muted)]">What made us win this deal?</span>
+            <span className="text-2xs font-semibold uppercase tracking-wide text-[var(--muted)]">What made us win this deal?</span>
             <textarea
               onChange={e => { state.winNotes = e.target.value; }}
               rows={3}
               placeholder="Key factors, differentiators, timing..."
-              className="px-2.5 py-1.5 text-[12px] rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] placeholder:text-[var(--muted)] focus:outline-none focus:border-brand/40 resize-y"
+              className="px-2.5 py-1.5 text-sm rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] placeholder:text-[var(--muted)] focus:outline-none focus:border-brand/40 resize-y"
             />
           </label>
           <label className="flex flex-col gap-1">
-            <span className="text-[10px] font-semibold uppercase tracking-wide text-[var(--muted)]">Competitor Beaten (optional)</span>
+            <span className="text-2xs font-semibold uppercase tracking-wide text-[var(--muted)]">Competitor Beaten (optional)</span>
             <input
               onChange={e => { state.competitorBeaten = e.target.value; }}
               placeholder="e.g. Salesforce, HubSpot"
-              className="px-2.5 py-1.5 text-[12px] rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] placeholder:text-[var(--muted)] focus:outline-none focus:border-brand/40"
+              className="px-2.5 py-1.5 text-sm rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] placeholder:text-[var(--muted)] focus:outline-none focus:border-brand/40"
             />
           </label>
           <label className="flex flex-col gap-1">
-            <span className="text-[10px] font-semibold uppercase tracking-wide text-[var(--muted)]">Key Stakeholders (optional)</span>
+            <span className="text-2xs font-semibold uppercase tracking-wide text-[var(--muted)]">Key Stakeholders (optional)</span>
             <input
               onChange={e => { state.keyStakeholders = e.target.value; }}
               placeholder="e.g. CTO Jane Doe, VP Sales John Smith"
-              className="px-2.5 py-1.5 text-[12px] rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] placeholder:text-[var(--muted)] focus:outline-none focus:border-brand/40"
+              className="px-2.5 py-1.5 text-sm rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] placeholder:text-[var(--muted)] focus:outline-none focus:border-brand/40"
             />
           </label>
           <label className="flex flex-col gap-1">
-            <span className="text-[10px] font-semibold uppercase tracking-wide text-[var(--muted)]">Lessons Learned (optional)</span>
+            <span className="text-2xs font-semibold uppercase tracking-wide text-[var(--muted)]">Lessons Learned (optional)</span>
             <textarea
               onChange={e => { state.lessonsLearned = e.target.value; }}
               rows={2}
               placeholder="What should we replicate in future deals?"
-              className="px-2.5 py-1.5 text-[12px] rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] placeholder:text-[var(--muted)] focus:outline-none focus:border-brand/40 resize-y"
+              className="px-2.5 py-1.5 text-sm rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] placeholder:text-[var(--muted)] focus:outline-none focus:border-brand/40 resize-y"
             />
           </label>
         </div>
@@ -172,14 +172,14 @@ export default function OppDetailPage() {
       footer: (
         <>
           <button
-            className="px-3.5 py-1.5 text-[12px] text-[var(--sub)] bg-[var(--surface)] border border-[var(--border)] rounded-md hover:bg-[var(--hover)] transition-colors"
+            className="px-3.5 py-1.5 text-sm text-[var(--sub)] bg-[var(--surface)] border border-[var(--border)] rounded-md hover:bg-[var(--hover)] transition-colors"
             onClick={closeDrawer}
           >
             Cancel
           </button>
           <button
             disabled={closeWon.isPending}
-            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-[12px] font-medium bg-brand text-[#09090b] rounded-md hover:brightness-110 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-sm font-medium bg-brand text-brand-on rounded-md hover:brightness-110 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             onClick={() => {
               closeWon.mutate(
                 {
@@ -216,14 +216,14 @@ export default function OppDetailPage() {
       body: (
         <div className="flex flex-col gap-3">
           <label className="flex flex-col gap-1">
-            <span className="text-[10px] font-semibold uppercase tracking-wide text-[var(--muted)]">Loss Reason</span>
+            <span className="text-2xs font-semibold uppercase tracking-wide text-[var(--muted)]">Loss Reason</span>
             <select
               defaultValue=""
               onChange={e => {
                 state.lossReason = e.target.value;
                 if (competitorEl) competitorEl.style.display = e.target.value === 'Competitor' ? 'flex' : 'none';
               }}
-              className="px-2.5 py-1.5 text-[12px] rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] focus:outline-none focus:border-brand/40"
+              className="px-2.5 py-1.5 text-sm rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] focus:outline-none focus:border-brand/40"
             >
               <option value="" disabled>Select a reason…</option>
               <option value="Price">Price</option>
@@ -237,30 +237,30 @@ export default function OppDetailPage() {
           </label>
           <div ref={el => { competitorEl = el; }} className="flex flex-col gap-1" style={{ display: 'none' }}>
             <label className="flex flex-col gap-1">
-              <span className="text-[10px] font-semibold uppercase tracking-wide text-[var(--muted)]">Who did we lose to?</span>
+              <span className="text-2xs font-semibold uppercase tracking-wide text-[var(--muted)]">Who did we lose to?</span>
               <input
                 onChange={e => { state.lossCompetitor = e.target.value; }}
                 placeholder="e.g. Competitor name"
-                className="px-2.5 py-1.5 text-[12px] rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] placeholder:text-[var(--muted)] focus:outline-none focus:border-brand/40"
+                className="px-2.5 py-1.5 text-sm rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] placeholder:text-[var(--muted)] focus:outline-none focus:border-brand/40"
               />
             </label>
           </div>
           <label className="flex flex-col gap-1">
-            <span className="text-[10px] font-semibold uppercase tracking-wide text-[var(--muted)]">What could we have done differently? (optional)</span>
+            <span className="text-2xs font-semibold uppercase tracking-wide text-[var(--muted)]">What could we have done differently? (optional)</span>
             <textarea
               onChange={e => { state.lossNotes = e.target.value; }}
               rows={3}
               placeholder="Lessons learned, what to improve..."
-              className="px-2.5 py-1.5 text-[12px] rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] placeholder:text-[var(--muted)] focus:outline-none focus:border-brand/40 resize-y"
+              className="px-2.5 py-1.5 text-sm rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] placeholder:text-[var(--muted)] focus:outline-none focus:border-brand/40 resize-y"
             />
           </label>
           <label className="flex flex-col gap-1">
-            <span className="text-[10px] font-semibold uppercase tracking-wide text-[var(--muted)]">Lessons Learned (optional)</span>
+            <span className="text-2xs font-semibold uppercase tracking-wide text-[var(--muted)]">Lessons Learned (optional)</span>
             <textarea
               onChange={e => { state.lessonsLearned = e.target.value; }}
               rows={2}
               placeholder="Broader takeaways for the team..."
-              className="px-2.5 py-1.5 text-[12px] rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] placeholder:text-[var(--muted)] focus:outline-none focus:border-brand/40 resize-y"
+              className="px-2.5 py-1.5 text-sm rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] placeholder:text-[var(--muted)] focus:outline-none focus:border-brand/40 resize-y"
             />
           </label>
         </div>
@@ -268,14 +268,14 @@ export default function OppDetailPage() {
       footer: (
         <>
           <button
-            className="px-3.5 py-1.5 text-[12px] text-[var(--sub)] bg-[var(--surface)] border border-[var(--border)] rounded-md hover:bg-[var(--hover)] transition-colors"
+            className="px-3.5 py-1.5 text-sm text-[var(--sub)] bg-[var(--surface)] border border-[var(--border)] rounded-md hover:bg-[var(--hover)] transition-colors"
             onClick={closeDrawer}
           >
             Cancel
           </button>
           <button
             disabled={closeLost.isPending}
-            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-[12px] font-medium bg-red-500/[.15] text-red-400 border border-red-500/[.2] rounded-md hover:bg-red-500/[.25] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-sm font-medium bg-red-500/[.15] text-red-400 border border-red-500/[.2] rounded-md hover:bg-red-500/[.25] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             onClick={() => {
               if (!state.lossReason) {
                 addToast({ type: 'error', message: 'Please select a loss reason' });
@@ -314,30 +314,30 @@ export default function OppDetailPage() {
       body: (
         <div className="flex flex-col gap-3">
           <label className="flex flex-col gap-1">
-            <span className="text-[10px] font-semibold uppercase tracking-wide text-[var(--muted)]">Name</span>
+            <span className="text-2xs font-semibold uppercase tracking-wide text-[var(--muted)]">Name</span>
             <input
               defaultValue={state.name}
               onChange={e => { state.name = e.target.value; }}
-              className="px-2.5 py-1.5 text-[12px] rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] placeholder:text-[var(--muted)] focus:outline-none focus:border-brand/40"
+              className="px-2.5 py-1.5 text-sm rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] placeholder:text-[var(--muted)] focus:outline-none focus:border-brand/40"
             />
           </label>
           <label className="flex flex-col gap-1">
-            <span className="text-[10px] font-semibold uppercase tracking-wide text-[var(--muted)]">Amount</span>
+            <span className="text-2xs font-semibold uppercase tracking-wide text-[var(--muted)]">Amount</span>
             <input
               type="number"
               min={0}
               defaultValue={state.amount}
               onChange={e => { state.amount = Number(e.target.value) || 0; }}
-              className="px-2.5 py-1.5 text-[12px] rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] placeholder:text-[var(--muted)] focus:outline-none focus:border-brand/40"
+              className="px-2.5 py-1.5 text-sm rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] placeholder:text-[var(--muted)] focus:outline-none focus:border-brand/40"
             />
           </label>
           <label className="flex flex-col gap-1">
-            <span className="text-[10px] font-semibold uppercase tracking-wide text-[var(--muted)]">Close Date</span>
+            <span className="text-2xs font-semibold uppercase tracking-wide text-[var(--muted)]">Close Date</span>
             <input
               type="date"
               defaultValue={state.closeDate}
               onChange={e => { state.closeDate = e.target.value; }}
-              className="px-2.5 py-1.5 text-[12px] rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] focus:outline-none focus:border-brand/40"
+              className="px-2.5 py-1.5 text-sm rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] focus:outline-none focus:border-brand/40"
             />
           </label>
         </div>
@@ -345,14 +345,14 @@ export default function OppDetailPage() {
       footer: (
         <>
           <button
-            className="px-3.5 py-1.5 text-[12px] text-[var(--sub)] bg-[var(--surface)] border border-[var(--border)] rounded-md hover:bg-[var(--hover)] transition-colors"
+            className="px-3.5 py-1.5 text-sm text-[var(--sub)] bg-[var(--surface)] border border-[var(--border)] rounded-md hover:bg-[var(--hover)] transition-colors"
             onClick={closeDrawer}
           >
             Cancel
           </button>
           <button
             disabled={updateOpp.isPending}
-            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-[12px] font-medium bg-brand text-[#09090b] rounded-md hover:brightness-110 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-sm font-medium bg-brand text-brand-on rounded-md hover:brightness-110 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             onClick={() => {
               const data: Record<string, unknown> = {};
               if (state.name !== o!.name) data.name = state.name;
@@ -394,13 +394,13 @@ export default function OppDetailPage() {
       <div className="rounded-lg bg-[var(--elevated)] border border-[var(--border)] p-[18px] mb-3">
         <div className="flex items-start justify-between flex-col md:flex-row gap-3 mb-3">
           <div>
-            <Link href={`/accounts/${o.accountId}`} className="text-[12px] text-brand hover:underline mb-0.5 block">{o.accountName} →</Link>
+            <Link href={`/accounts/${o.accountId}`} className="text-sm text-brand hover:underline mb-0.5 block">{o.accountName} →</Link>
             <div className="flex items-center gap-2">
-              <h1 className="text-[18px] font-semibold tracking-tight text-[var(--text)]">{o.name}</h1>
+              <h1 className="text-2xl font-semibold tracking-tight text-[var(--text)]">{o.name}</h1>
               <button
                 onClick={openEditDrawer}
                 disabled={isMutating}
-                className="px-2 py-0.5 text-[10px] font-medium text-[var(--sub)] bg-[var(--surface)] border border-[var(--border)] rounded-md hover:bg-[var(--hover)] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="px-2 py-0.5 text-2xs font-medium text-[var(--sub)] bg-[var(--surface)] border border-[var(--border)] rounded-md hover:bg-[var(--hover)] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Edit
               </button>
@@ -409,18 +409,18 @@ export default function OppDetailPage() {
               <StageBadge stage={o.stage} />
               <Badge variant="neutral">{o.probability}%</Badge>
               <HealthBar health={o.health} />
-              <span className="text-[10px]" style={{ color: riskHex(o.health) }}>Health: {hAvg}</span>
+              <span className="text-2xs" style={{ color: riskHex(o.health) }}>Health: {hAvg}</span>
             </div>
           </div>
           <div className="text-right flex-shrink-0">
-            <div className="font-mono font-semibold text-[26px] text-[var(--text)]">{fmt(o.amount)}</div>
-            <div className="text-[11px] text-[var(--sub)] mt-0.5">Close: {fDate(o.closeDate)}</div>
-            <div className="text-[10.5px] text-[var(--muted)]">{fmt(weightedValue(o.amount, o.stage))} weighted</div>
+            <div className="font-mono font-semibold text-5xl text-[var(--text)]">{fmt(o.amount)}</div>
+            <div className="text-xs text-[var(--sub)] mt-0.5">Close: {fDate(o.closeDate)}</div>
+            <div className="text-2xs text-[var(--muted)]">{fmt(weightedValue(o.amount, o.stage))} weighted</div>
           </div>
         </div>
 
         {/* Stage progress */}
-        <div className="text-[10px] text-[var(--muted)] mb-1">Stage Progress</div>
+        <div className="text-2xs text-[var(--muted)] mb-1">Stage Progress</div>
         <div className="flex gap-0.5">
           {STAGES.slice(0, -2).map((s, i) => (
             <div key={s} className="flex-1 h-1 rounded-sm" style={{ background: i <= sIdx ? (STAGE_COLOR[s] || '#33a882') : 'var(--surface)' }} />
@@ -431,11 +431,11 @@ export default function OppDetailPage() {
         {o.nextAction && (
           <div className="ai-box mt-3 flex items-center gap-2.5">
             <div className="flex-1">
-              <div className="text-[9px] font-semibold tracking-widest uppercase text-brand mb-0.5">Next Action</div>
-              <div className="text-[12.5px] font-medium text-[var(--text)]">{o.nextAction}</div>
+              <div className="text-3xs font-semibold tracking-widest uppercase text-brand mb-0.5">Next Action</div>
+              <div className="text-sm font-medium text-[var(--text)]">{o.nextAction}</div>
             </div>
-            {o.nextActionDate && <span className={cn('text-[10.5px]', isOverdue(o.nextActionDate) ? 'text-danger' : 'text-[var(--muted)]')}>{fDate(o.nextActionDate)}</span>}
-            <AgentTag name="Pipeline Hygiene" className="!text-[8px]" />
+            {o.nextActionDate && <span className={cn('text-2xs', isOverdue(o.nextActionDate) ? 'text-danger' : 'text-[var(--muted)]')}>{fDate(o.nextActionDate)}</span>}
+            <AgentTag name="Pipeline Hygiene" className="!text-3xs" />
           </div>
         )}
 
@@ -445,9 +445,9 @@ export default function OppDetailPage() {
             const c = d.v >= 60 ? '#33a882' : d.v >= 40 ? '#e8a838' : '#e05c5c';
             return (
               <div key={d.l} className="p-2 rounded-md border border-[var(--border)]">
-                <div className="text-[9px] uppercase tracking-wide text-[var(--muted)] mb-0.5">{d.l}</div>
+                <div className="text-3xs uppercase tracking-wide text-[var(--muted)] mb-0.5">{d.l}</div>
                 <div className="flex items-center gap-1">
-                  <span className="font-mono font-semibold text-[13px]" style={{ color: c }}>{d.v}</span>
+                  <span className="font-mono font-semibold text-base" style={{ color: c }}>{d.v}</span>
                   <div className="flex-1 h-[3px] rounded-full bg-[var(--surface)]">
                     <div className="h-full rounded-full" style={{ width: `${d.v}%`, background: c }} />
                   </div>
@@ -462,17 +462,17 @@ export default function OppDetailPage() {
       <div className="grid grid-cols-1 md:grid-cols-[2fr_1fr] gap-3">
         {/* Activity */}
         <div className="rounded-lg bg-[var(--elevated)] border border-[var(--border)] overflow-hidden">
-          <div className="px-3.5 py-2.5 border-b border-[var(--border)] bg-[var(--surface)]"><span className="text-[12.5px] font-semibold text-[var(--text)]">Activity</span></div>
+          <div className="px-3.5 py-2.5 border-b border-[var(--border)] bg-[var(--surface)]"><span className="text-sm font-semibold text-[var(--text)]">Activity</span></div>
           {acts.length === 0 ? (
-            <div className="p-5 text-center text-[var(--muted)] text-[12px]">No activity</div>
+            <div className="p-5 text-center text-[var(--muted)] text-sm">No activity</div>
           ) : acts.slice(0, 6).map((x: Activity) => (
             <div key={x.id} className="px-3.5 py-2.5 border-b border-[var(--border)] hover:bg-[var(--hover)] transition-colors">
               <div className="flex items-center justify-between mb-0.5">
-                <span className="text-[9px] font-semibold uppercase tracking-wide" style={{ color: ACT_COLOR[x.type] || '#4f576b' }}>{x.type}</span>
-                <span className="text-[10px] text-[var(--muted)]">{fR(x.createdAt)}</span>
+                <span className="text-3xs font-semibold uppercase tracking-wide" style={{ color: ACT_COLOR[x.type] || '#4f576b' }}>{x.type}</span>
+                <span className="text-2xs text-[var(--muted)]">{fR(x.createdAt)}</span>
               </div>
-              <div className="text-[12px] font-medium text-[var(--text)]">{x.summary}</div>
-              <div className="text-[11px] text-[var(--sub)] mt-px">{x.detail}</div>
+              <div className="text-sm font-medium text-[var(--text)]">{x.summary}</div>
+              <div className="text-xs text-[var(--sub)] mt-px">{x.detail}</div>
             </div>
           ))}
         </div>
@@ -481,31 +481,31 @@ export default function OppDetailPage() {
         <div className="flex flex-col gap-3">
           {/* Details */}
           <div className="rounded-lg bg-[var(--elevated)] border border-[var(--border)] p-3.5">
-            <div className="text-[9px] font-semibold tracking-widest uppercase text-[var(--muted)] mb-2">Details</div>
+            <div className="text-3xs font-semibold tracking-widest uppercase text-[var(--muted)] mb-2">Details</div>
             <div className="flex items-center justify-between py-1.5 border-b border-[var(--border)]">
-              <span className="text-[10.5px] text-[var(--muted)]">Owner</span>
-              <div className="flex items-center gap-1"><Avatar initials={o.owner.initials} color={o.owner.color} size="xs" /><span className="text-[11px] text-[var(--text)]">{o.owner.name.split(' ')[0]}</span></div>
+              <span className="text-2xs text-[var(--muted)]">Owner</span>
+              <div className="flex items-center gap-1"><Avatar initials={o.owner.initials} color={o.owner.color} size="xs" /><span className="text-xs text-[var(--text)]">{o.owner.name.split(' ')[0]}</span></div>
             </div>
             <div className="flex items-center justify-between py-1.5">
-              <span className="text-[10.5px] text-[var(--muted)]">Close</span>
-              <span className={cn('font-mono text-[11px]', isOverdue(o.closeDate) ? 'text-danger' : 'text-[var(--sub)]')}>{fDate(o.closeDate)}</span>
+              <span className="text-2xs text-[var(--muted)]">Close</span>
+              <span className={cn('font-mono text-xs', isOverdue(o.closeDate) ? 'text-danger' : 'text-[var(--sub)]')}>{fDate(o.closeDate)}</span>
             </div>
           </div>
 
           {/* Contacts */}
           {contacts.length > 0 && (
             <div className="rounded-lg bg-[var(--elevated)] border border-[var(--border)] p-3.5">
-              <div className="text-[9px] font-semibold tracking-widest uppercase text-[var(--muted)] mb-2">Key Contacts</div>
+              <div className="text-3xs font-semibold tracking-widest uppercase text-[var(--muted)] mb-2">Key Contacts</div>
               {contacts.map((c: Contact) => (
                 <div key={c.id} className="flex items-center gap-2 py-1.5 border-b border-[var(--border)] last:border-b-0">
-                  <div className="w-6 h-6 rounded-full bg-[var(--surface)] border border-[var(--border)] text-[var(--sub)] flex items-center justify-center text-[8px] font-semibold flex-shrink-0">
+                  <div className="w-6 h-6 rounded-full bg-[var(--surface)] border border-[var(--border)] text-[var(--sub)] flex items-center justify-center text-3xs font-semibold flex-shrink-0">
                     {c.name.split(' ').map((w: string) => w[0]).join('')}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <div className="text-[11px] font-medium text-[var(--text)]">{c.name}</div>
-                    <div className="text-[9px] text-[var(--muted)]">{c.title}</div>
+                    <div className="text-xs font-medium text-[var(--text)]">{c.name}</div>
+                    <div className="text-3xs text-[var(--muted)]">{c.title}</div>
                   </div>
-                  <Badge variant={c.role === 'Champion' ? 'ok' : c.role === 'EconomicBuyer' ? 'info' : 'neutral'} className="!text-[8px]">{displayLabel(c.role)}</Badge>
+                  <Badge variant={c.role === 'Champion' ? 'ok' : c.role === 'EconomicBuyer' ? 'info' : 'neutral'} className="!text-3xs">{displayLabel(c.role)}</Badge>
                 </div>
               ))}
             </div>
@@ -513,7 +513,7 @@ export default function OppDetailPage() {
 
           {/* Move Stage */}
           <div className="rounded-lg bg-[var(--elevated)] border border-[var(--border)] p-3.5">
-            <div className="text-[9px] font-semibold tracking-widest uppercase text-[var(--muted)] mb-2">Move Stage</div>
+            <div className="text-3xs font-semibold tracking-widest uppercase text-[var(--muted)] mb-2">Move Stage</div>
             <div className="flex flex-col gap-0.5">
               {STAGES.filter(s => !['ClosedWon', 'ClosedLost'].includes(s)).map(s => {
                 const active = o.stage === s;
@@ -529,7 +529,7 @@ export default function OppDetailPage() {
                       }
                     )}
                     className={cn(
-                      'text-left px-2 py-1.5 rounded-md text-[11.5px] transition-colors border disabled:opacity-50',
+                      'text-left px-2 py-1.5 rounded-md text-xs transition-colors border disabled:opacity-50',
                       active ? 'border-brand/30 bg-brand/[.08] text-brand' : 'border-transparent text-[var(--sub)] hover:bg-[var(--hover)]'
                     )}
                   >
@@ -541,14 +541,14 @@ export default function OppDetailPage() {
               <button
                 disabled={isMutating}
                 onClick={openCloseWonDrawer}
-                className="text-left px-2 py-1.5 rounded-md text-[11.5px] text-brand font-medium hover:bg-[var(--hover)] transition-colors disabled:opacity-50"
+                className="text-left px-2 py-1.5 rounded-md text-xs text-brand font-medium hover:bg-[var(--hover)] transition-colors disabled:opacity-50"
               >
                 {displayLabel('ClosedWon')}
               </button>
               <button
                 disabled={isMutating}
                 onClick={openCloseLostDrawer}
-                className="text-left px-2 py-1.5 rounded-md text-[11.5px] text-danger hover:bg-[var(--hover)] transition-colors disabled:opacity-50"
+                className="text-left px-2 py-1.5 rounded-md text-xs text-danger hover:bg-[var(--hover)] transition-colors disabled:opacity-50"
               >
                 {displayLabel('ClosedLost')}
               </button>

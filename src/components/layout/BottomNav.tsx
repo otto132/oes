@@ -30,9 +30,9 @@ export default function BottomNav() {
           <Link key={tab.href} href={tab.href} className={cn('flex flex-col items-center gap-0.5 py-1.5 px-2.5 rounded-md flex-1 min-w-0', active ? 'text-brand' : 'text-muted')}>
             <div className="relative">
               <tab.icon className="w-5 h-5" />
-              {badge > 0 && <span className="absolute -top-0.5 -right-1.5 min-w-[14px] h-[14px] rounded-full text-[8px] font-bold flex items-center justify-center px-[3px] bg-brand text-[#09090b]">{badge}</span>}
+              {badge > 0 && <span className="absolute -top-0.5 -right-1.5 min-w-[14px] h-[14px] rounded-full text-3xs font-bold flex items-center justify-center px-[3px] bg-brand text-brand-on">{badge}</span>}
             </div>
-            <span className="text-[9px] font-medium">{tab.label}</span>
+            <span className="text-3xs font-medium">{tab.label}</span>
           </Link>
         );
       })}

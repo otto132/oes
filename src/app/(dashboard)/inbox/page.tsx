@@ -67,33 +67,33 @@ export default function InboxPage() {
       body: (
         <div className="flex flex-col gap-3.5">
           <div className="flex items-center gap-1.5 flex-wrap">
-            <span className={cn('text-[8px] font-semibold tracking-wide uppercase px-[5px] py-[1px] rounded-sm', CLS_STYLE[e.classification] || CLS_STYLE.auto_reply)}>{clsLabel[e.classification] || e.classification}</span>
+            <span className={cn('text-3xs font-semibold tracking-wide uppercase px-[5px] py-[1px] rounded-sm', CLS_STYLE[e.classification] || CLS_STYLE.auto_reply)}>{clsLabel[e.classification] || e.classification}</span>
             <ConfBadge value={e.classificationConf} />
             <AgentTag name={e.classifierAgent} />
-            {e.isLinked && e.accountName && <Badge variant="ok" className="!text-[9px]">{e.accountName}</Badge>}
+            {e.isLinked && e.accountName && <Badge variant="ok" className="!text-3xs">{e.accountName}</Badge>}
           </div>
           <div className="rounded-lg bg-[var(--elevated)] border border-[var(--border)] p-3">
-            <div className="text-[10.5px] text-muted mb-1.5"><strong>From:</strong> {e.fromEmail}</div>
-            <div className="text-[12px] text-sub leading-relaxed">{e.preview}</div>
+            <div className="text-2xs text-muted mb-1.5"><strong>From:</strong> {e.fromEmail}</div>
+            <div className="text-sm text-sub leading-relaxed">{e.preview}</div>
           </div>
           {e.classification === 'positive_reply' && (
             <div className="ai-box">
-              <div className="text-[9px] font-semibold tracking-widest uppercase text-brand mb-1">Deal Signal Detected</div>
-              <p className="text-[12px] text-sub">Positive reply detected. Consider advancing the deal stage or creating a follow-up task.</p>
+              <div className="text-3xs font-semibold tracking-widest uppercase text-brand mb-1">Deal Signal Detected</div>
+              <p className="text-sm text-sub">Positive reply detected. Consider advancing the deal stage or creating a follow-up task.</p>
             </div>
           )}
           {e.classification === 'question' && (
             <div className="ai-box">
-              <div className="text-[9px] font-semibold tracking-widest uppercase text-brand mb-1">Follow-up Needed</div>
-              <p className="text-[12px] text-sub">Technical question detected. Consider creating a task to respond with documentation.</p>
+              <div className="text-3xs font-semibold tracking-widest uppercase text-brand mb-1">Follow-up Needed</div>
+              <p className="text-sm text-sub">Technical question detected. Consider creating a task to respond with documentation.</p>
             </div>
           )}
           {e.classification === 'new_domain' && e.domain && (
             <div className="ai-box">
-              <div className="text-[9px] font-semibold tracking-widest uppercase text-brand mb-1">New Domain Detected</div>
-              <p className="text-[12px] text-sub">{e.domain} does not match any existing account.</p>
+              <div className="text-3xs font-semibold tracking-widest uppercase text-brand mb-1">New Domain Detected</div>
+              <p className="text-sm text-sub">{e.domain} does not match any existing account.</p>
               <button
-                className="inline-flex items-center gap-1.5 mt-2 px-2.5 py-1.5 text-[11px] font-medium bg-brand text-[#09090b] rounded-md hover:brightness-110 transition-colors disabled:opacity-50"
+                className="inline-flex items-center gap-1.5 mt-2 px-2.5 py-1.5 text-xs font-medium bg-brand text-brand-on rounded-md hover:brightness-110 transition-colors disabled:opacity-50"
                 disabled={createAccountFromEmail.isPending}
                 onClick={(ev) => {
                   ev.stopPropagation();
@@ -110,10 +110,10 @@ export default function InboxPage() {
               </button>
             </div>
           )}
-          <div className="text-[9px] font-semibold tracking-widest uppercase text-muted mt-1">Quick Actions</div>
+          <div className="text-3xs font-semibold tracking-widest uppercase text-muted mt-1">Quick Actions</div>
           <div className="grid grid-cols-2 gap-1.5">
             <button
-              className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-[11.5px] font-medium bg-[var(--surface)] text-[var(--text)] border border-[var(--border)] rounded-md hover:bg-[var(--hover)] transition-colors disabled:opacity-50"
+              className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium bg-[var(--surface)] text-[var(--text)] border border-[var(--border)] rounded-md hover:bg-[var(--hover)] transition-colors disabled:opacity-50"
               disabled={createTaskFromEmail.isPending}
               onClick={(ev) => {
                 ev.stopPropagation();
@@ -127,7 +127,7 @@ export default function InboxPage() {
               }}
             >{createTaskFromEmail.isPending && <Spinner className="h-3 w-3" />}Create Task</button>
             <button
-              className="inline-flex items-center gap-1 px-2.5 py-1.5 text-[11.5px] text-sub bg-[var(--surface)] border border-[var(--border)] rounded-md hover:bg-[var(--hover)] transition-colors disabled:opacity-50"
+              className="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs text-sub bg-[var(--surface)] border border-[var(--border)] rounded-md hover:bg-[var(--hover)] transition-colors disabled:opacity-50"
               disabled={archiveEmail.isPending}
               onClick={(ev) => {
                 ev.stopPropagation();
@@ -140,7 +140,7 @@ export default function InboxPage() {
                 });
               }}
             >{archiveEmail.isPending && <Spinner className="h-3 w-3" />}Archive</button>
-            {e.accountId && <button className="px-2.5 py-1.5 text-[11.5px] text-sub bg-[var(--surface)] border border-[var(--border)] rounded-md hover:bg-[var(--hover)] transition-colors col-span-2" onClick={() => { closeDrawer(); router.push(`/accounts/${e.accountId}`); }}>View Account</button>}
+            {e.accountId && <button className="px-2.5 py-1.5 text-xs text-sub bg-[var(--surface)] border border-[var(--border)] rounded-md hover:bg-[var(--hover)] transition-colors col-span-2" onClick={() => { closeDrawer(); router.push(`/accounts/${e.accountId}`); }}>View Account</button>}
           </div>
         </div>
       ),
@@ -156,8 +156,8 @@ export default function InboxPage() {
     <div className="max-w-[900px] page-enter">
       <div className="flex items-center justify-between mb-3.5">
         <div>
-          <h1 className="text-[18px] font-semibold tracking-tight">Inbox</h1>
-          <p className="text-[12.5px] text-sub mt-0.5">{unread} unread · {active.length} total · AI-classified</p>
+          <h1 className="text-2xl font-semibold tracking-tight">Inbox</h1>
+          <p className="text-sm text-sub mt-0.5">{unread} unread · {active.length} total · AI-classified</p>
         </div>
         <Badge variant="ok">Outlook Connected</Badge>
       </div>
@@ -183,17 +183,17 @@ export default function InboxPage() {
             <div className={cn('w-[5px] h-[5px] rounded-full flex-shrink-0 mt-[7px]', e.isUnread ? 'bg-info' : 'bg-transparent')} {...(e.isUnread ? { role: 'status', 'aria-label': 'Unread' } : {})} />
             <div className="flex-1 min-w-0">
               <div className="flex items-center justify-between mb-px">
-                <span className={cn('text-[12.5px]', e.isUnread ? 'font-semibold' : 'font-normal')}>{e.subject}</span>
-                <span className="text-[10px] text-muted flex-shrink-0 ml-2">{fR(e.receivedAt)}</span>
+                <span className={cn('text-sm', e.isUnread ? 'font-semibold' : 'font-normal')}>{e.subject}</span>
+                <span className="text-2xs text-muted flex-shrink-0 ml-2">{fR(e.receivedAt)}</span>
               </div>
-              <div className="text-[10.5px] text-muted mb-0.5">{e.fromName} · {e.fromEmail}</div>
-              <div className="text-[11.5px] text-sub truncate">{e.preview}</div>
+              <div className="text-2xs text-muted mb-0.5">{e.fromName} · {e.fromEmail}</div>
+              <div className="text-xs text-sub truncate">{e.preview}</div>
               <div className="flex items-center gap-1 mt-1 flex-wrap">
-                <span className={cn('text-[8px] font-semibold tracking-wide uppercase px-[5px] py-[1px] rounded-sm', CLS_STYLE[e.classification] || CLS_STYLE.auto_reply)}>{clsLabel[e.classification] || e.classification}</span>
+                <span className={cn('text-3xs font-semibold tracking-wide uppercase px-[5px] py-[1px] rounded-sm', CLS_STYLE[e.classification] || CLS_STYLE.auto_reply)}>{clsLabel[e.classification] || e.classification}</span>
                 <ConfBadge value={e.classificationConf} />
-                <AgentTag name={e.classifierAgent} className="!text-[8px]" />
-                {e.isLinked && e.accountName && <Badge variant="ok" className="!text-[8.5px]">Linked: {e.accountName}</Badge>}
-                {e.domain && !e.isLinked && <Badge variant="warn" className="!text-[8.5px]">New: {e.domain}</Badge>}
+                <AgentTag name={e.classifierAgent} className="!text-3xs" />
+                {e.isLinked && e.accountName && <Badge variant="ok" className="!text-3xs">Linked: {e.accountName}</Badge>}
+                {e.domain && !e.isLinked && <Badge variant="warn" className="!text-3xs">New: {e.domain}</Badge>}
               </div>
             </div>
           </div>

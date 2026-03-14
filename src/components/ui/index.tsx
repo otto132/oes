@@ -17,7 +17,7 @@ const badgeStyles: Record<BadgeVariant, string> = {
 
 export function Badge({ variant = 'neutral', children, className }: { variant?: BadgeVariant; children: React.ReactNode; className?: string }) {
   return (
-    <span className={cn('inline-flex items-center gap-1 text-[10px] font-semibold px-1.5 py-[1px] rounded border whitespace-nowrap', badgeStyles[variant], className)}>
+    <span className={cn('inline-flex items-center gap-1 text-2xs font-semibold px-1.5 py-[1px] rounded border whitespace-nowrap', badgeStyles[variant], className)}>
       {children}
     </span>
   );
@@ -28,7 +28,7 @@ export function ScorePill({ scores }: { scores: FIUACScores }) {
   const c = compositeScore(scores);
   const cls = c >= 70 ? 'score-strong' : c >= 45 ? 'score-moderate' : 'score-weak';
   return (
-    <span className={`inline-flex items-center gap-1.5 px-2 py-[2px] rounded text-[11px] font-bold font-mono ${cls}`} title={`F:${scores.scoreFit} I:${scores.scoreIntent} U:${scores.scoreUrgency} A:${scores.scoreAccess} C:${scores.scoreCommercial}`}>
+    <span className={`inline-flex items-center gap-1.5 px-2 py-[2px] rounded text-xs font-bold font-mono ${cls}`} title={`F:${scores.scoreFit} I:${scores.scoreIntent} U:${scores.scoreUrgency} A:${scores.scoreAccess} C:${scores.scoreCommercial}`}>
       <svg width="12" height="12" viewBox="0 0 36 36" className="shrink-0">
         <circle cx="18" cy="18" r="15" fill="none" stroke="currentColor" strokeOpacity="0.12" strokeWidth="3" />
         <circle cx="18" cy="18" r="15" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round"
@@ -53,8 +53,8 @@ export function FIUACBars({ scores }: { scores: FIUACScores }) {
     <div className="flex items-center gap-1">
       {dims.map(d => (
         <div key={d.key} className="flex items-center gap-0.5" title={`${d.label}: ${scores[d.key]}`}>
-          <span className="text-[7px] font-semibold text-muted">{d.label}</span>
-          <div className="w-6 h-[3px] rounded-full bg-white/[.04] overflow-hidden">
+          <span className="text-3xs font-semibold text-muted">{d.label}</span>
+          <div className="w-6 h-[3px] rounded-full bg-[var(--bar-track)] overflow-hidden">
             <div className={`h-full rounded-full ${d.color}`} style={{ width: `${scores[d.key]}%` }} />
           </div>
         </div>
@@ -71,7 +71,7 @@ export function HealthBar({ health }: { health: DealHealth }) {
   return (
     <div className="flex gap-[2px] items-center" title={`Health: ${avg}`}>
       {Array.from({ length: 5 }).map((_, i) => (
-        <div key={i} className={cn('w-[4px] h-[12px] rounded-sm', i < filled ? cls : 'bg-white/[.04]')} />
+        <div key={i} className={cn('w-[4px] h-[12px] rounded-sm', i < filled ? cls : 'bg-[var(--bar-track)]')} />
       ))}
     </div>
   );
@@ -83,7 +83,7 @@ export function ConfBadge({ value }: { value: number }) {
   const dotCls = value >= 0.8 ? 'conf-high' : value >= 0.6 ? 'conf-med' : 'conf-low';
   const textCls = value >= 0.8 ? 'text-brand' : value >= 0.6 ? 'text-warn' : 'text-danger';
   return (
-    <span className={`inline-flex items-center gap-1 text-[10px] font-semibold font-mono ${textCls}`}>
+    <span className={`inline-flex items-center gap-1 text-2xs font-semibold font-mono ${textCls}`}>
       <span className={`conf-dot ${dotCls}`} />{pct}%
     </span>
   );
@@ -92,7 +92,7 @@ export function ConfBadge({ value }: { value: number }) {
 /* ── Agent Tag ── */
 export function AgentTag({ name, className }: { name: string; className?: string }) {
   return (
-    <span className={cn('inline-flex items-center gap-1 text-[9px] font-semibold px-1.5 py-[1px] rounded bg-brand/[.06] text-brand border border-brand/[.10]', className)}>
+    <span className={cn('inline-flex items-center gap-1 text-3xs font-semibold px-1.5 py-[1px] rounded bg-brand/[.06] text-brand border border-brand/[.10]', className)}>
       <svg width="7" height="7" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" /></svg>
       {name}
     </span>
@@ -101,12 +101,12 @@ export function AgentTag({ name, className }: { name: string; className?: string
 
 /* ── Avatar ── */
 const colorMap: Record<string, string> = {
-  green: 'bg-emerald-900/40 text-emerald-400 border border-emerald-500/10',
-  blue: 'bg-blue-900/40 text-blue-400 border border-blue-500/10',
-  purple: 'bg-purple-900/40 text-purple-400 border border-purple-500/10',
+  green: 'bg-[var(--avatar-green-bg)] text-[var(--avatar-green-text)] border border-[var(--avatar-green-border)]',
+  blue: 'bg-[var(--avatar-blue-bg)] text-[var(--avatar-blue-text)] border border-[var(--avatar-blue-border)]',
+  purple: 'bg-[var(--avatar-purple-bg)] text-[var(--avatar-purple-text)] border border-[var(--avatar-purple-border)]',
   default: 'bg-[var(--surface)] text-sub border border-[var(--border)]',
 };
-const sizeMap = { xs: 'w-5 h-5 text-[8px]', sm: 'w-6 h-6 text-[9px]', md: 'w-8 h-8 text-[11px]', lg: 'w-10 h-10 text-[13px]' };
+const sizeMap = { xs: 'w-5 h-5 text-3xs', sm: 'w-6 h-6 text-3xs', md: 'w-8 h-8 text-xs', lg: 'w-10 h-10 text-base' };
 
 export function Avatar({ initials, color = 'default', size = 'sm' }: { initials: string; color?: string; size?: 'xs' | 'sm' | 'md' | 'lg' }) {
   return (
@@ -126,12 +126,12 @@ const stageColors: Record<string, string> = {
   Negotiation: 'text-orange-400 border-orange-400/12 bg-orange-400/[.05]',
   VerbalCommit: 'text-pink-400 border-pink-400/12 bg-pink-400/[.05]',
   ClosedWon: 'text-brand border-brand/12 bg-brand/[.05]',
-  ClosedLost: 'text-muted border-[var(--border)] bg-white/[.02]',
+  ClosedLost: 'text-muted border-[var(--border)] bg-[var(--bar-track)]',
 };
 
 export function StageBadge({ stage }: { stage: string }) {
   return (
-    <span className={`inline-flex items-center gap-1 text-[10px] font-semibold px-1.5 py-[1px] rounded border whitespace-nowrap ${stageColors[stage] || stageColors.Contacted}`}>
+    <span className={`inline-flex items-center gap-1 text-2xs font-semibold px-1.5 py-[1px] rounded border whitespace-nowrap ${stageColors[stage] || stageColors.Contacted}`}>
       <span className="w-1.5 h-1.5 rounded-full bg-current" />{displayLabel(stage)}
     </span>
   );
@@ -139,7 +139,7 @@ export function StageBadge({ stage }: { stage: string }) {
 
 /* ── Section Title ── */
 export function SectionTitle({ children }: { children: React.ReactNode }) {
-  return <div className="text-[9px] font-semibold tracking-[0.1em] uppercase text-muted mb-2">{children}</div>;
+  return <div className="text-3xs font-semibold tracking-[0.1em] uppercase text-muted mb-2">{children}</div>;
 }
 
 /* ── Empty State ── */
@@ -152,12 +152,12 @@ export function EmptyState({ icon, title, description, action }: {
   return (
     <div className="py-12 px-6 text-center">
       <div className="text-2xl mb-2 opacity-30">{icon}</div>
-      <div className="text-[13px] font-medium text-sub mb-1">{title}</div>
-      <div className="text-[12px] text-muted leading-relaxed max-w-[280px] mx-auto">{description}</div>
+      <div className="text-base font-medium text-sub mb-1">{title}</div>
+      <div className="text-sm text-muted leading-relaxed max-w-[280px] mx-auto">{description}</div>
       {action && (
         <button
           onClick={action.onClick}
-          className="mt-3 px-3 py-1.5 text-[12px] font-medium text-brand hover:text-brand/80 transition-colors"
+          className="mt-3 px-3 py-1.5 text-sm font-medium text-brand hover:text-brand/80 transition-colors"
         >
           + {action.label}
         </button>
@@ -198,11 +198,11 @@ export function ErrorState({ message = 'Something went wrong', onRetry }: { mess
   return (
     <div className="py-16 px-6 text-center">
       <AlertTriangle className="w-8 h-8 text-[var(--sub)] mx-auto mb-3 opacity-40" />
-      <div className="text-[13px] font-medium text-[var(--sub)] mb-3">{message}</div>
+      <div className="text-base font-medium text-[var(--sub)] mb-3">{message}</div>
       {onRetry && (
         <button
           onClick={onRetry}
-          className="text-[12px] font-medium text-[var(--brand)] hover:underline"
+          className="text-sm font-medium text-[var(--brand)] hover:underline"
         >
           Try again
         </button>
@@ -212,3 +212,4 @@ export function ErrorState({ message = 'Something went wrong', onRetry }: { mess
 }
 
 export { Button } from './Button';
+export { HelpTip } from './HelpTip';

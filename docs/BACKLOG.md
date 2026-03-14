@@ -518,7 +518,7 @@ Value-add but not blocking beta. Build after product is stable with real users.
 | **Owner** | Frontend + Design |
 | **Required before beta** | No |
 | **Value type** | Adoption |
-| **Status** | Open |
+| **Status** | Done (2026-03-14: CSS variables for light/dark, theme toggle in TopBar + Settings, hardcoded colors replaced across 13+ files) |
 
 ---
 
@@ -557,7 +557,7 @@ Value-add but not blocking beta. Build after product is stable with real users.
 | **Owner** | Frontend |
 | **Required before beta** | No |
 | **Value type** | Speed, Adoption |
-| **Status** | Open |
+| **Status** | Done (2026-03-14: filters persisted to URL search params on accounts, pipeline, signals, queue pages) |
 
 ---
 
@@ -596,7 +596,7 @@ Value-add but not blocking beta. Build after product is stable with real users.
 | **Owner** | Frontend + AI |
 | **Required before beta** | No |
 | **Value type** | Trust, Adoption |
-| **Status** | Open |
+| **Status** | Done (2026-03-14: data-driven reasoning with lightbulb icon on all NBA cards) |
 
 ---
 
@@ -648,7 +648,7 @@ Value-add but not blocking beta. Build after product is stable with real users.
 | **Owner** | Frontend |
 | **Required before beta** | No |
 | **Value type** | Adoption |
-| **Status** | Open |
+| **Status** | Done (2026-03-14: viewDetail() drawer already shows title, badges, relevance, confidence, AI Analysis, AI Reasoning, source URL, convert-to-lead) |
 
 ---
 
@@ -752,7 +752,7 @@ Value-add but not blocking beta. Build after product is stable with real users.
 | **Owner** | Frontend |
 | **Required before beta** | No |
 | **Value type** | Speed (developer velocity) |
-| **Status** | Open |
+| **Status** | Done (2026-03-14: 13-step typography scale, all text-[Npx] replaced with named classes across 28 files) |
 
 ---
 
@@ -791,7 +791,7 @@ Value-add but not blocking beta. Build after product is stable with real users.
 | **Owner** | Backend + Frontend |
 | **Required before beta** | No |
 | **Value type** | Trust |
-| **Status** | Open |
+| **Status** | Done (2026-03-14: patchAgent mutation already wired with status toggle, spinner, and API endpoint) |
 
 ---
 
@@ -856,7 +856,7 @@ Value-add but not blocking beta. Build after product is stable with real users.
 | **Owner** | Frontend |
 | **Required before beta** | No |
 | **Value type** | Adoption |
-| **Status** | Open |
+| **Status** | Done (2026-03-14: HelpTip component with hover/click tooltips, added to home, pipeline, signals, leads pages) |
 
 ---
 

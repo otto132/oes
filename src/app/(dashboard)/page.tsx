@@ -1,13 +1,13 @@
 'use client';
 import { useState, useMemo } from 'react';
 import Link from 'next/link';
-import { Shield, AlertTriangle, TrendingUp, ArrowRight, Zap, Signal, Calendar, Activity, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Shield, AlertTriangle, TrendingUp, ArrowRight, Zap, Signal, Calendar, Activity, ChevronLeft, ChevronRight, Lightbulb } from 'lucide-react';
 import { useSession } from 'next-auth/react';
 import { useHomeSummary } from '@/lib/queries/home';
 import { useMeetingsQuery } from '@/lib/queries/meetings';
 import { healthAvg } from '@/lib/types';
 import { fmt, fRelative } from '@/lib/utils';
-import { Badge, HealthBar, AgentTag, Skeleton, SkeletonCard, SkeletonText, ErrorState } from '@/components/ui';
+import { Badge, HealthBar, AgentTag, Skeleton, SkeletonCard, SkeletonText, ErrorState, HelpTip } from '@/components/ui';
 import { WelcomeBanner } from '@/components/shell/WelcomeBanner';
 import type { Meeting as MeetingType } from '@/lib/types';
 
@@ -93,7 +93,7 @@ export default function HomePage() {
 
   const { stats, nextBestActions, topSignals, todayMeetings, dealsAtRisk, recentActivity } = data as {
     stats: { pipelineTotal: number; pipelineWeighted: number; openDeals: number; atRiskCount: number; pendingApprovals: number; newSignals: number; unreadEmails: number; accountCount: number };
-    nextBestActions: { type: string; title: string; meta: string; urgency: number; href: string }[];
+    nextBestActions: { type: string; title: string; meta: string; urgency: number; href: string; reason?: string }[];
     topSignals: UISignal[];
     todayMeetings: UIMeeting[];
     dealsAtRisk: UIOpportunity[];
@@ -120,8 +120,8 @@ export default function HomePage() {
   return (
     <div className="max-w-[1100px] page-enter">
       <div className="mb-5">
-        <h1 className="text-[24px] md:text-[28px] font-semibold tracking-tight">{greeting}, <span className="text-brand">{firstName}</span></h1>
-        <p className="text-[12px] text-muted mt-1">{new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' })} · {nextBestActions.length} actions pending</p>
+        <h1 className="text-4xl md:text-5xl font-semibold tracking-tight">{greeting}, <span className="text-brand">{firstName}</span></h1>
+        <p className="text-sm text-muted mt-1">{new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' })} · {nextBestActions.length} actions pending</p>
       </div>
 
       <WelcomeBanner name={firstName} stats={{ accountCount: stats.accountCount, openDeals: stats.openDeals, newSignals: stats.newSignals }} />
@@ -138,10 +138,10 @@ export default function HomePage() {
           const up = s.trend[s.trend.length - 1] >= s.trend[0];
           return (
             <div key={s.l} className="p-3.5 rounded-lg bg-[var(--elevated)] border border-[var(--border)]">
-              <div className={`text-[9px] font-semibold tracking-[0.1em] uppercase ${s.c} mb-2`}>{s.l}</div>
+              <div className={`text-3xs font-semibold tracking-[0.1em] uppercase ${s.c} mb-2`}>{s.l}</div>
               <div className="flex items-baseline gap-1.5">
-                <span className="font-mono text-[20px] font-bold tracking-tight leading-none">{s.v}</span>
-                <span className="text-[10px]" style={{ color: s.hex }}>{up ? '↑' : '↓'}</span>
+                <span className="font-mono text-3xl font-bold tracking-tight leading-none">{s.v}</span>
+                <span className="text-2xs" style={{ color: s.hex }}>{up ? '↑' : '↓'}</span>
               </div>
               <svg width={w} height={h} viewBox={`0 0 ${w} ${h}`} className="mt-1.5 block w-full">
                 <defs>
@@ -153,7 +153,7 @@ export default function HomePage() {
                 <polygon points={fillPoints} fill={`url(#sg-${s.l})`} />
                 <polyline points={points} fill="none" stroke={s.hex} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
-              {s.s && <div className="text-[11px] text-muted mt-1">{s.s}</div>}
+              {s.s && <div className="text-xs text-muted mt-1">{s.s}</div>}
             </div>
           );
         })}
@@ -162,8 +162,8 @@ export default function HomePage() {
       <div className="md:hidden mb-3 p-3 rounded-lg bg-[var(--elevated)] border border-[var(--border)] flex flex-wrap justify-between gap-2">
         {statCards.map(s => (
           <div key={s.l} className="text-center min-w-[50px]">
-            <div className={`text-[8px] font-semibold tracking-[0.1em] uppercase ${s.c}`}>{s.l}</div>
-            <div className="font-mono text-[15px] font-bold">{s.v}</div>
+            <div className={`text-3xs font-semibold tracking-[0.1em] uppercase ${s.c}`}>{s.l}</div>
+            <div className="font-mono text-lg font-bold">{s.v}</div>
           </div>
         ))}
       </div>
@@ -174,10 +174,11 @@ export default function HomePage() {
             <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--border)]">
               <div className="flex items-center gap-2">
                 <Zap className="w-3.5 h-3.5 text-brand" />
-                <span className="text-[13px] font-semibold">Next Best Actions</span>
-                <Badge variant="ai" className="!text-[8px]">AI</Badge>
+                <span className="text-base font-semibold">Next Best Actions</span>
+                <HelpTip label="AI-recommended actions ranked by predicted impact on deal progression" />
+                <Badge variant="ai" className="!text-3xs">AI</Badge>
               </div>
-              <span className="text-[10px] text-muted font-mono">{nextBestActions.length}</span>
+              <span className="text-2xs text-muted font-mono">{nextBestActions.length}</span>
             </div>
             {nextBestActions.map((a, i) => {
               const style = nbaStyle[a.type] ?? nbaStyle.next_action;
@@ -185,10 +186,16 @@ export default function HomePage() {
                 <Link key={i} href={a.href} className="flex items-center gap-3 px-4 py-3 border-b border-[var(--border)] hover:bg-[var(--hover)] transition-colors group">
                   <div className={`w-7 h-7 rounded-md bg-[var(--surface)] flex items-center justify-center flex-shrink-0 ${style.color}`}>{style.icon}</div>
                   <div className="flex-1 min-w-0">
-                    <div className="text-[12.5px] font-medium leading-tight">{a.title}</div>
-                    <div className="text-[10.5px] text-muted mt-0.5">{a.meta}</div>
+                    <div className="text-sm font-medium leading-tight">{a.title}</div>
+                    <div className="text-2xs text-muted mt-0.5">{a.meta}</div>
+                    {a.reason && (
+                      <div className="flex items-start gap-1 mt-1">
+                        <Lightbulb className="w-3 h-3 text-warn/60 flex-shrink-0 mt-px" />
+                        <span className="text-3xs text-muted/60 leading-snug">{a.reason}</span>
+                      </div>
+                    )}
                   </div>
-                  <span className="text-[10.5px] font-medium text-brand flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">{style.cta} →</span>
+                  <span className="text-2xs font-medium text-brand flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">{style.cta} →</span>
                 </Link>
               );
             })}
@@ -198,9 +205,9 @@ export default function HomePage() {
             <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--border)]">
               <div className="flex items-center gap-2">
                 <Signal className="w-3.5 h-3.5 text-info" />
-                <span className="text-[13px] font-semibold">Top Signals</span>
+                <span className="text-base font-semibold">Top Signals</span>
               </div>
-              <Link href="/signals" className="text-[10.5px] text-muted hover:text-brand transition-colors">View all →</Link>
+              <Link href="/signals" className="text-2xs text-muted hover:text-brand transition-colors">View all →</Link>
             </div>
             {topSignals.map((s: UISignal) => (
               <Link key={s.id} href={`/signals?open=${s.id}`} className="flex items-start gap-3 px-4 py-3 border-b border-[var(--border)] hover:bg-[var(--hover)] transition-colors">
@@ -208,8 +215,8 @@ export default function HomePage() {
                   <Zap className="w-3.5 h-3.5" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <div className="text-[12.5px] font-medium leading-tight">{s.title}</div>
-                  <div className="mt-1"><AgentTag name={s.agent} className="!text-[8px]" /></div>
+                  <div className="text-sm font-medium leading-tight">{s.title}</div>
+                  <div className="mt-1"><AgentTag name={s.agent} className="!text-3xs" /></div>
                 </div>
               </Link>
             ))}
@@ -220,28 +227,28 @@ export default function HomePage() {
           <div className="rounded-lg bg-[var(--elevated)] border border-[var(--border)] overflow-hidden">
             <div className="flex items-center gap-2 px-4 py-3 border-b border-[var(--border)]">
               <Calendar className="w-3.5 h-3.5 text-purple" />
-              <span className="text-[13px] font-semibold flex-1">
+              <span className="text-base font-semibold flex-1">
                 {scheduleOffset === 0 ? "Today\u2019s Schedule" : scheduleDate.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' })}
               </span>
               <div className="flex items-center gap-1">
                 <button onClick={() => setScheduleOffset(o => o - 1)} aria-label="Previous day" className="p-0.5 rounded hover:bg-[var(--hover)] transition-colors text-muted hover:text-[var(--text)]"><ChevronLeft className="w-3.5 h-3.5" /></button>
-                {scheduleOffset !== 0 && <button onClick={() => setScheduleOffset(0)} className="text-[10px] text-brand hover:underline">Today</button>}
+                {scheduleOffset !== 0 && <button onClick={() => setScheduleOffset(0)} className="text-2xs text-brand hover:underline">Today</button>}
                 <button onClick={() => setScheduleOffset(o => o + 1)} aria-label="Next day" className="p-0.5 rounded hover:bg-[var(--hover)] transition-colors text-muted hover:text-[var(--text)]"><ChevronRight className="w-3.5 h-3.5" /></button>
               </div>
             </div>
             {(() => {
               const meetings = scheduleOffset === 0 ? todayMeetings : scheduleMeetings;
               return meetings.length === 0 ? (
-                <div className="p-6 text-center text-muted text-[12px]">No meetings {scheduleOffset === 0 ? 'today' : 'on this day'}</div>
+                <div className="p-6 text-center text-muted text-sm">No meetings {scheduleOffset === 0 ? 'today' : 'on this day'}</div>
               ) : meetings.map((m: UIMeeting) => (
                 <Link href={`/meetings/${m.id}`} key={m.id} className="block px-4 py-3 border-b border-[var(--border)] hover:bg-[var(--hover)] transition-colors" style={{ textDecoration: 'none', color: 'inherit' }}>
                   <div className="flex items-center gap-2 mb-0.5">
-                    <span className="font-mono text-[11px] text-brand font-semibold">{m.startTime}</span>
-                    <span className="text-[10px] text-muted font-mono">{m.duration}</span>
-                    <Badge variant={m.prepStatus === 'ready' ? 'ok' : 'warn'} className="!text-[8px]">{m.prepStatus === 'ready' ? 'Prep ready' : 'Prep needed'}</Badge>
+                    <span className="font-mono text-xs text-brand font-semibold">{m.startTime}</span>
+                    <span className="text-2xs text-muted font-mono">{m.duration}</span>
+                    <Badge variant={m.prepStatus === 'ready' ? 'ok' : 'warn'} className="!text-3xs">{m.prepStatus === 'ready' ? 'Prep ready' : 'Prep needed'}</Badge>
                   </div>
-                  <div className="text-[12.5px] font-medium">{m.title}</div>
-                  <div className="text-[10px] text-muted mt-0.5">{m.attendees.join(', ')}</div>
+                  <div className="text-sm font-medium">{m.title}</div>
+                  <div className="text-2xs text-muted mt-0.5">{m.attendees.join(', ')}</div>
                 </Link>
               ));
             })()}
@@ -251,15 +258,16 @@ export default function HomePage() {
             <div className="rounded-lg bg-[var(--elevated)] border border-[var(--border)] overflow-hidden">
               <div className="flex items-center gap-2 px-4 py-3 border-b border-[var(--border)]">
                 <AlertTriangle className="w-3.5 h-3.5 text-danger" />
-                <span className="text-[13px] font-semibold">Deals at Risk</span>
+                <span className="text-base font-semibold">Deals at Risk</span>
+                <HelpTip label="Real-time snapshot of deal flow, velocity, and risk across all stages" title="Pipeline Health" />
               </div>
               {dealsAtRisk.map((o: UIOpportunity) => (
                 <Link key={o.id} href={`/pipeline/${o.id}`} className="block px-4 py-3 border-b border-[var(--border)] hover:bg-[var(--hover)] transition-colors">
                   <div className="flex items-center justify-between mb-0.5">
-                    <span className="text-[12.5px] font-medium">{o.name}</span>
+                    <span className="text-sm font-medium">{o.name}</span>
                     <HealthBar health={o.health} />
                   </div>
-                  <div className="text-[10.5px] text-danger">Health: {healthAvg(o.health)} · {o.accountName}</div>
+                  <div className="text-2xs text-danger">Health: {healthAvg(o.health)} · {o.accountName}</div>
                 </Link>
               ))}
             </div>
@@ -268,13 +276,13 @@ export default function HomePage() {
           <div className="rounded-lg bg-[var(--elevated)] border border-[var(--border)] overflow-hidden">
             <div className="flex items-center gap-2 px-4 py-3 border-b border-[var(--border)]">
               <Activity className="w-3.5 h-3.5 text-sub" />
-              <span className="text-[13px] font-semibold">Recent Activity</span>
+              <span className="text-base font-semibold">Recent Activity</span>
             </div>
             {recentActivity.slice(0, 4).map((x: UIActivity) => (
               <div key={x.id} className="px-4 py-2.5 border-b border-[var(--border)] hover:bg-[var(--hover)] transition-colors">
-                {x.accountId && <div className="text-[9px] font-semibold tracking-wide text-muted uppercase">{x.accountName}</div>}
-                <div className="text-[12px] font-medium mt-0.5">{x.summary}</div>
-                <div className="text-[10px] text-muted mt-0.5">{x.author.initials} · {fRelative(x.createdAt)}</div>
+                {x.accountId && <div className="text-3xs font-semibold tracking-wide text-muted uppercase">{x.accountName}</div>}
+                <div className="text-sm font-medium mt-0.5">{x.summary}</div>
+                <div className="text-2xs text-muted mt-0.5">{x.author.initials} · {fRelative(x.createdAt)}</div>
               </div>
             ))}
           </div>

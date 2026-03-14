@@ -39,16 +39,16 @@ export default function DashboardError({
           </svg>
         </div>
 
-        <h2 className="text-[15px] font-semibold text-[var(--text)] mb-1">
+        <h2 className="text-lg font-semibold text-[var(--text)] mb-1">
           Something went wrong
         </h2>
-        <p className="text-[12px] text-[var(--sub)] leading-relaxed mb-5">
+        <p className="text-sm text-[var(--sub)] leading-relaxed mb-5">
           {message}
         </p>
 
         <button
           onClick={reset}
-          className="inline-flex items-center gap-1.5 px-4 py-2 text-[12px] font-semibold rounded-md bg-brand/[.08] text-brand border border-brand/[.12] hover:bg-brand/[.14] transition-colors cursor-pointer"
+          className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-semibold rounded-md bg-brand/[.08] text-brand border border-brand/[.12] hover:bg-brand/[.14] transition-colors cursor-pointer"
         >
           <svg
             width="13"

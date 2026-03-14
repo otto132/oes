@@ -33,7 +33,7 @@ export default function AdminPage() {
   if (isLoading || !stats) {
     return (
       <div className="max-w-[900px] page-enter">
-        <h1 className="text-[18px] font-semibold mb-6">System Health</h1>
+        <h1 className="text-2xl font-semibold mb-6">System Health</h1>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {Array.from({ length: 6 }).map((_, i) => (
             <div key={i} className="rounded-lg border border-border bg-elevated p-4 h-[100px] animate-pulse" />
@@ -45,7 +45,7 @@ export default function AdminPage() {
 
   return (
     <div className="max-w-[900px] page-enter">
-      <h1 className="text-[18px] font-semibold mb-6">System Health</h1>
+      <h1 className="text-2xl font-semibold mb-6">System Health</h1>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {/* Database Status */}
@@ -79,7 +79,7 @@ export default function AdminPage() {
             <Stat label="Total" value={stats.queue.total} />
           </div>
           {stats.queue.pending > 0 && (
-            <Link href="/queue" className="text-[11px] text-brand hover:underline mt-1 inline-block">
+            <Link href="/queue" className="text-xs text-brand hover:underline mt-1 inline-block">
               View queue →
             </Link>
           )}
@@ -92,13 +92,13 @@ export default function AdminPage() {
               <Badge variant={stats.sync.lastRun.status === 'success' ? 'ok' : stats.sync.lastRun.status === 'partial' ? 'warn' : 'err'}>
                 {stats.sync.lastRun.status}
               </Badge>
-              <p className="text-[11px] text-sub mt-1">
+              <p className="text-xs text-sub mt-1">
                 {formatRelativeTime(stats.sync.lastRun.completedAt)} · {stats.sync.lastRun.itemsSynced} items
                 {stats.sync.lastRun.errors > 0 && ` · ${stats.sync.lastRun.errors} errors`}
               </p>
             </>
           ) : (
-            <p className="text-[11px] text-sub">No sync history — connect Outlook in Settings</p>
+            <p className="text-xs text-sub">No sync history — connect Outlook in Settings</p>
           )}
         </Card>
 
@@ -111,22 +111,22 @@ export default function AdminPage() {
                   <Badge variant={r.status === 'completed' ? 'ok' : r.status === 'failed' ? 'err' : 'neutral'}>
                     {r.status}
                   </Badge>
-                  <span className="text-[11px] text-main truncate">{r.agentName}</span>
+                  <span className="text-xs text-main truncate">{r.agentName}</span>
                   {r.completedAt && (
-                    <span className="text-[10px] text-sub ml-auto shrink-0">{formatRelativeTime(r.completedAt)}</span>
+                    <span className="text-2xs text-sub ml-auto shrink-0">{formatRelativeTime(r.completedAt)}</span>
                   )}
                 </div>
               ))}
             </div>
           ) : (
-            <p className="text-[11px] text-sub">No agent runs recorded yet</p>
+            <p className="text-xs text-sub">No agent runs recorded yet</p>
           )}
         </Card>
       </div>
 
       {/* Recent Errors */}
       <div className="mt-6">
-        <h2 className="text-[14px] font-medium mb-3 flex items-center gap-2">
+        <h2 className="text-md font-medium mb-3 flex items-center gap-2">
           <AlertTriangle className="w-4 h-4 text-sub" />
           Recent Errors
         </h2>
@@ -137,8 +137,8 @@ export default function AdminPage() {
                 <Badge variant={err.source === 'sync' ? 'warn' : 'purple'} className="mt-0.5 shrink-0">
                   {err.source}{err.agentName ? `: ${err.agentName}` : ''}
                 </Badge>
-                <span className="text-[12px] text-main break-all flex-1">{err.message}</span>
-                <span className="text-[10px] text-sub shrink-0">{formatRelativeTime(err.createdAt)}</span>
+                <span className="text-sm text-main break-all flex-1">{err.message}</span>
+                <span className="text-2xs text-sub shrink-0">{formatRelativeTime(err.createdAt)}</span>
               </div>
             ))}
           </div>
@@ -159,7 +159,7 @@ function Card({ title, icon: Icon, children }: { title: string; icon: any; child
     <div className="rounded-lg border border-border bg-elevated p-4">
       <div className="flex items-center gap-2 mb-3">
         <Icon className="w-4 h-4 text-sub" />
-        <span className="text-[12px] font-medium text-sub uppercase tracking-wider">{title}</span>
+        <span className="text-sm font-medium text-sub uppercase tracking-wider">{title}</span>
       </div>
       {children}
     </div>
@@ -169,8 +169,8 @@ function Card({ title, icon: Icon, children }: { title: string; icon: any; child
 function Stat({ label, value }: { label: string; value: number }) {
   return (
     <div>
-      <span className="text-[18px] font-semibold text-main">{value.toLocaleString()}</span>
-      <span className="text-[11px] text-sub ml-1.5">{label}</span>
+      <span className="text-2xl font-semibold text-main">{value.toLocaleString()}</span>
+      <span className="text-xs text-sub ml-1.5">{label}</span>
     </div>
   );
 }

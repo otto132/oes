@@ -47,13 +47,25 @@ export default function AccountsPage() {
 }
 
 function AccountsPageInner() {
-  const [search, setSearch] = useState('');
-  const [debouncedSearch, setDebouncedSearch] = useState('');
-  const [typeFilter, setTypeFilter] = useState('all');
-  const [ownerFilter, setOwnerFilter] = useState<'all' | 'me'>('all');
-  const { data: resp, isLoading, isError, refetch } = useAccountsQuery(debouncedSearch || undefined, typeFilter !== 'all' ? typeFilter : undefined, ownerFilter === 'me' ? 'me' : undefined);
-  const router = useRouter();
   const searchParams = useSearchParams();
+  const router = useRouter();
+
+  const [search, setSearch] = useState(searchParams.get('q') || '');
+  const [debouncedSearch, setDebouncedSearch] = useState(searchParams.get('q') || '');
+  const [typeFilter, setTypeFilter] = useState(searchParams.get('type') || 'all');
+  const [ownerFilter, setOwnerFilter] = useState<'all' | 'me'>((searchParams.get('owner') as 'all' | 'me') || 'all');
+  const { data: resp, isLoading, isError, refetch } = useAccountsQuery(debouncedSearch || undefined, typeFilter !== 'all' ? typeFilter : undefined, ownerFilter === 'me' ? 'me' : undefined);
+
+  function updateParams(updates: Record<string, string>) {
+    const params = new URLSearchParams(searchParams.toString());
+    for (const [key, value] of Object.entries(updates)) {
+      const defaults: Record<string, string> = { type: 'all', owner: 'all', q: '' };
+      if (value === defaults[key] || value === '') params.delete(key);
+      else params.set(key, value);
+    }
+    const qs = params.toString();
+    router.replace(qs ? `?${qs}` : window.location.pathname, { scroll: false });
+  }
   const createAccount = useCreateAccount();
   const importAccounts = useImportAccounts();
   const { openDrawer, closeDrawer, addToast } = useStore();
@@ -84,32 +96,32 @@ function AccountsPageInner() {
           onKeyDown={e => { if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') (document.querySelector('[data-submit-account]') as HTMLButtonElement)?.click(); }}
         >
           <label className="flex flex-col gap-1">
-            <span className="text-[10px] font-semibold uppercase tracking-wide text-[var(--muted)]">Company Name *</span>
+            <span className="text-2xs font-semibold uppercase tracking-wide text-[var(--muted)]">Company Name *</span>
             <input
               autoFocus
               onChange={e => { state.name = e.target.value; }}
               placeholder="e.g. Ørsted, Vattenfall"
-              className="px-2.5 py-1.5 text-[12px] rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] placeholder:text-[var(--muted)] focus:outline-none focus:border-brand/40"
+              className="px-2.5 py-1.5 text-sm rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] placeholder:text-[var(--muted)] focus:outline-none focus:border-brand/40"
             />
           </label>
 
           <div className="flex gap-2">
             <label className="flex flex-col gap-1 flex-1">
-              <span className="text-[10px] font-semibold uppercase tracking-wide text-[var(--muted)]">Type</span>
+              <span className="text-2xs font-semibold uppercase tracking-wide text-[var(--muted)]">Type</span>
               <select
                 defaultValue="Unknown"
                 onChange={e => { state.type = e.target.value; }}
-                className="px-2.5 py-1.5 text-[12px] rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] focus:outline-none focus:border-brand/40"
+                className="px-2.5 py-1.5 text-sm rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] focus:outline-none focus:border-brand/40"
               >
                 {ACCOUNT_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
               </select>
             </label>
             <label className="flex flex-col gap-1 flex-1">
-              <span className="text-[10px] font-semibold uppercase tracking-wide text-[var(--muted)]">Country</span>
+              <span className="text-2xs font-semibold uppercase tracking-wide text-[var(--muted)]">Country</span>
               <select
                 defaultValue=""
                 onChange={e => { state.country = e.target.value; }}
-                className="px-2.5 py-1.5 text-[12px] rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] focus:outline-none focus:border-brand/40"
+                className="px-2.5 py-1.5 text-sm rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] focus:outline-none focus:border-brand/40"
               >
                 <option value="">Select...</option>
                 {COUNTRIES.map(c => <option key={c} value={c}>{c}</option>)}
@@ -119,23 +131,23 @@ function AccountsPageInner() {
           </div>
 
           <label className="flex flex-col gap-1">
-            <span className="text-[10px] font-semibold uppercase tracking-wide text-[var(--muted)]">Notes / Pain Hypothesis</span>
+            <span className="text-2xs font-semibold uppercase tracking-wide text-[var(--muted)]">Notes / Pain Hypothesis</span>
             <textarea
               rows={3}
               onChange={e => { state.notes = e.target.value; }}
               placeholder="Initial pain hypothesis or notes..."
-              className="px-2.5 py-1.5 text-[12px] rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] placeholder:text-[var(--muted)] focus:outline-none focus:border-brand/40 resize-none"
+              className="px-2.5 py-1.5 text-sm rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] placeholder:text-[var(--muted)] focus:outline-none focus:border-brand/40 resize-none"
             />
           </label>
         </div>
       ),
       footer: (
         <>
-          <button className="px-3.5 py-1.5 text-[12px] text-[var(--sub)] bg-[var(--surface)] border border-[var(--border)] rounded-md hover:bg-[var(--hover)] transition-colors" onClick={closeDrawer}>Cancel</button>
+          <button className="px-3.5 py-1.5 text-sm text-[var(--sub)] bg-[var(--surface)] border border-[var(--border)] rounded-md hover:bg-[var(--hover)] transition-colors" onClick={closeDrawer}>Cancel</button>
           <button
             data-submit-account
             disabled={createAccount.isPending}
-            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-[12px] font-medium bg-brand text-[#09090b] rounded-md hover:brightness-110 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-sm font-medium bg-brand text-brand-on rounded-md hover:brightness-110 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             onClick={() => {
               if (!state.name.trim()) {
                 addToast({ type: 'error', message: 'Company name is required' });
@@ -177,14 +189,14 @@ function AccountsPageInner() {
               body: (
                 <div className="flex flex-col gap-1.5 max-h-[400px] overflow-y-auto">
                   {issues.map((r: any, i: number) => (
-                    <div key={i} className={cn('px-2.5 py-1.5 rounded-md text-[11.5px] border', r.status === 'skipped' ? 'bg-yellow-500/5 border-yellow-500/20 text-yellow-600' : 'bg-red-500/5 border-red-500/20 text-red-500')}>
+                    <div key={i} className={cn('px-2.5 py-1.5 rounded-md text-xs border', r.status === 'skipped' ? 'bg-yellow-500/5 border-yellow-500/20 text-yellow-600' : 'bg-red-500/5 border-red-500/20 text-red-500')}>
                       <span className="font-medium">Row {r.row}: {r.name || 'Unknown'}</span> — {r.error}
                     </div>
                   ))}
                 </div>
               ),
               footer: (
-                <button className="px-3.5 py-1.5 text-[12px] font-medium bg-brand text-[#09090b] rounded-md hover:brightness-110 transition-colors" onClick={closeDrawer}>Done</button>
+                <button className="px-3.5 py-1.5 text-sm font-medium bg-brand text-brand-on rounded-md hover:brightness-110 transition-colors" onClick={closeDrawer}>Done</button>
               ),
             });
           }
@@ -214,8 +226,8 @@ function AccountsPageInner() {
     <div className="max-w-[1200px] page-enter">
       <div className="flex items-center justify-between mb-3.5">
         <div>
-          <h1 className="text-[18px] font-semibold tracking-tight">Accounts</h1>
-          <p className="text-[12px] text-[var(--sub)] mt-0.5">{sorted.length} account{sorted.length !== 1 ? 's' : ''}</p>
+          <h1 className="text-2xl font-semibold tracking-tight">Accounts</h1>
+          <p className="text-sm text-[var(--sub)] mt-0.5">{sorted.length} account{sorted.length !== 1 ? 's' : ''}</p>
         </div>
         <div className="flex items-center gap-2">
           <input
@@ -232,13 +244,13 @@ function AccountsPageInner() {
           <button
             onClick={() => fileInputRef.current?.click()}
             disabled={importAccounts.isPending}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-[12px] font-medium bg-[var(--surface)] text-[var(--sub)] border border-[var(--border)] rounded-md hover:bg-[var(--hover)] transition-colors disabled:opacity-50"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium bg-[var(--surface)] text-[var(--sub)] border border-[var(--border)] rounded-md hover:bg-[var(--hover)] transition-colors disabled:opacity-50"
           >
             {importAccounts.isPending && <Spinner className="h-3 w-3" />}{importAccounts.isPending ? 'Importing...' : 'Import CSV'}
           </button>
           <button
             onClick={openNewAccountDrawer}
-            className="px-3 py-1.5 text-[12px] font-medium bg-brand text-[#09090b] rounded-md hover:brightness-110 transition-colors"
+            className="px-3 py-1.5 text-sm font-medium bg-brand text-brand-on rounded-md hover:brightness-110 transition-colors"
           >
             + New Account
           </button>
@@ -246,15 +258,15 @@ function AccountsPageInner() {
       </div>
 
       <div className="flex items-center gap-1.5 mb-2.5 flex-wrap">
-        <SearchInput value={search} onChange={setSearch} onDebouncedChange={setDebouncedSearch} placeholder="Search accounts..." className="max-w-[240px] min-w-[140px]" />
+        <SearchInput value={search} onChange={setSearch} onDebouncedChange={(v: string) => { setDebouncedSearch(v); updateParams({ q: v }); }} placeholder="Search accounts..." className="max-w-[240px] min-w-[140px]" />
         <div className="flex gap-1">
           {['all', ...types].map(t => (
-            <button key={t} onClick={() => setTypeFilter(t)} className={cn('px-2 py-1 text-[11.5px] rounded-md transition-colors', typeFilter === t ? 'bg-[var(--surface)] text-[var(--text)] border border-[var(--border)]' : 'text-[var(--muted)] hover:bg-[var(--hover)]')}>{t === 'all' ? 'All' : t}</button>
+            <button key={t} onClick={() => { setTypeFilter(t); updateParams({ type: t }); }} className={cn('px-2 py-1 text-xs rounded-md transition-colors', typeFilter === t ? 'bg-[var(--surface)] text-[var(--text)] border border-[var(--border)]' : 'text-[var(--muted)] hover:bg-[var(--hover)]')}>{t === 'all' ? 'All' : t}</button>
           ))}
         </div>
         <button
-          onClick={() => setOwnerFilter(ownerFilter === 'all' ? 'me' : 'all')}
-          className={`px-2.5 py-1 text-[11px] font-medium rounded-md border transition-colors ${
+          onClick={() => { const next = ownerFilter === 'all' ? 'me' : 'all'; setOwnerFilter(next); updateParams({ owner: next }); }}
+          className={`px-2.5 py-1 text-xs font-medium rounded-md border transition-colors ${
             ownerFilter === 'me'
               ? 'bg-brand/10 border-brand/30 text-brand'
               : 'bg-[var(--surface)] border-[var(--border)] text-[var(--muted)] hover:text-[var(--sub)]'
@@ -269,7 +281,7 @@ function AccountsPageInner() {
         <table className="w-full border-collapse">
           <thead>
             <tr>{['Account', 'Type', 'Score', 'FIUAC', 'Pipeline', 'Last Activity', 'Owner', ''].map(h => (
-              <th key={h} className="text-[9px] font-semibold uppercase tracking-wide text-[var(--muted)] text-left px-3.5 py-2 bg-[var(--surface)] border-b border-[var(--border)] whitespace-nowrap">{h}</th>
+              <th key={h} className="text-3xs font-semibold uppercase tracking-wide text-[var(--muted)] text-left px-3.5 py-2 bg-[var(--surface)] border-b border-[var(--border)] whitespace-nowrap">{h}</th>
             ))}</tr>
           </thead>
           <tbody>
@@ -281,17 +293,17 @@ function AccountsPageInner() {
                 <tr key={a.id} className={cn('hover:bg-[var(--hover)] cursor-pointer transition-colors', isPending && 'opacity-60 animate-pulse', failedInfo && 'border-l-2 border-l-red-500')} onClick={() => router.push(`/accounts/${a.id}`)}>
                   <td className="px-3.5 py-2.5 border-b border-[var(--border)]">
                     <div className="flex items-center gap-2">
-                      <div className="w-[26px] h-[26px] rounded-md bg-brand/[.06] border border-brand/40 text-brand flex items-center justify-center text-[10px] font-semibold flex-shrink-0">{a.name[0]}</div>
-                      <div><div className="font-medium text-[12.5px]">{a.name}</div><div className="text-[10px] text-[var(--muted)]">{a.countryCode} · {a.region}</div></div>
+                      <div className="w-[26px] h-[26px] rounded-md bg-brand/[.06] border border-brand/40 text-brand flex items-center justify-center text-2xs font-semibold flex-shrink-0">{a.name[0]}</div>
+                      <div><div className="font-medium text-sm">{a.name}</div><div className="text-2xs text-[var(--muted)]">{a.countryCode} · {a.region}</div></div>
                     </div>
                   </td>
-                  <td className="px-3.5 py-2.5 border-b border-[var(--border)]"><Badge className="!text-[9.5px]">{a.type}</Badge></td>
+                  <td className="px-3.5 py-2.5 border-b border-[var(--border)]"><Badge className="!text-2xs">{a.type}</Badge></td>
                   <td className="px-3.5 py-2.5 border-b border-[var(--border)]"><ScorePill scores={a.scores} /></td>
                   <td className="px-3.5 py-2.5 border-b border-[var(--border)]"><FIUACBars scores={a.scores} /></td>
-                  <td className="px-3.5 py-2.5 border-b border-[var(--border)]"><span className="font-mono font-semibold text-[12px]">{a.pipelineValue > 0 ? fmt(a.pipelineValue) : '\u2014'}</span></td>
-                  <td className="px-3.5 py-2.5 border-b border-[var(--border)]"><span className={cn('text-[11.5px]', stale ? 'text-warn' : 'text-[var(--sub)]')}>{fRelative(a.lastActivityAt)}</span></td>
+                  <td className="px-3.5 py-2.5 border-b border-[var(--border)]"><span className="font-mono font-semibold text-sm">{a.pipelineValue > 0 ? fmt(a.pipelineValue) : '\u2014'}</span></td>
+                  <td className="px-3.5 py-2.5 border-b border-[var(--border)]"><span className={cn('text-xs', stale ? 'text-warn' : 'text-[var(--sub)]')}>{fRelative(a.lastActivityAt)}</span></td>
                   <td className="px-3.5 py-2.5 border-b border-[var(--border)]"><Avatar initials={a.owner.initials} color={a.owner.color} size="xs" /></td>
-                  <td className="px-3.5 py-2.5 border-b border-[var(--border)] text-[var(--muted)] text-[11px]">{'\u2192'}</td>
+                  <td className="px-3.5 py-2.5 border-b border-[var(--border)] text-[var(--muted)] text-xs">{'\u2192'}</td>
                 </tr>
               );
             })}
@@ -305,12 +317,12 @@ function AccountsPageInner() {
           <Link key={a.id} href={`/accounts/${a.id}`}>
             <div className="rounded-lg p-3 bg-[var(--elevated)] border border-[var(--border)] cursor-pointer">
               <div className="flex items-center justify-between mb-1">
-                <span className="text-[12.5px] font-medium">{a.name}</span><ScorePill scores={a.scores} />
+                <span className="text-sm font-medium">{a.name}</span><ScorePill scores={a.scores} />
               </div>
               <div className="flex items-center gap-1.5 mb-1">
-                <Badge className="!text-[9px]">{a.type}</Badge>
-                <span className="text-[10px] text-[var(--muted)]">{a.countryCode} · {a.region}</span>
-                {a.pipelineValue > 0 && <span className="font-mono font-semibold text-[10px]">{fmt(a.pipelineValue)}</span>}
+                <Badge className="!text-3xs">{a.type}</Badge>
+                <span className="text-2xs text-[var(--muted)]">{a.countryCode} · {a.region}</span>
+                {a.pipelineValue > 0 && <span className="font-mono font-semibold text-2xs">{fmt(a.pipelineValue)}</span>}
               </div>
               <FIUACBars scores={a.scores} />
             </div>

@@ -41,21 +41,21 @@ export function ConfirmDialog({
       onClick={e => { if (e.target === dialogRef.current) onCancel(); }}
     >
       <div className="p-4">
-        <h3 className="text-[14px] font-semibold text-[var(--text)] mb-1">{title}</h3>
-        <p className="text-[12px] text-[var(--sub)] mb-4">{message}</p>
+        <h3 className="text-md font-semibold text-[var(--text)] mb-1">{title}</h3>
+        <p className="text-sm text-[var(--sub)] mb-4">{message}</p>
         <div className="flex justify-end gap-2">
           <button
             onClick={onCancel}
-            className="px-3 py-1.5 text-[12px] text-[var(--sub)] bg-[var(--surface)] border border-[var(--border)] rounded-md hover:bg-[var(--hover)] transition-colors"
+            className="px-3 py-1.5 text-sm text-[var(--sub)] bg-[var(--surface)] border border-[var(--border)] rounded-md hover:bg-[var(--hover)] transition-colors"
           >
             {cancelLabel}
           </button>
           <button
             onClick={onConfirm}
-            className={`px-3 py-1.5 text-[12px] font-medium rounded-md transition-colors ${
+            className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
               variant === 'danger'
                 ? 'bg-red-500/10 text-red-500 border border-red-500/20 hover:bg-red-500/20'
-                : 'bg-brand text-[#09090b] hover:brightness-110'
+                : 'bg-brand text-brand-on hover:brightness-110'
             }`}
           >
             {confirmLabel}

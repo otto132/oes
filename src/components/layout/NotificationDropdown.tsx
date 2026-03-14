@@ -72,11 +72,11 @@ export default function NotificationDropdown() {
         <div className="absolute right-0 top-full mt-1 w-[360px] max-h-[440px] rounded-lg border border-border bg-elevated shadow-lg overflow-hidden z-50">
           {/* Header */}
           <div className="flex items-center justify-between px-4 py-2.5 border-b border-border">
-            <span className="text-[13px] font-medium text-main">Notifications</span>
+            <span className="text-base font-medium text-main">Notifications</span>
             {unreadCount > 0 && (
               <button
                 onClick={handleMarkAllRead}
-                className="text-[11px] text-brand hover:underline"
+                className="text-xs text-brand hover:underline"
               >
                 Mark all as read
               </button>
@@ -86,9 +86,9 @@ export default function NotificationDropdown() {
           {/* List */}
           <div className="overflow-y-auto max-h-[380px]">
             {isLoading ? (
-              <div className="px-4 py-8 text-center text-[12px] text-sub">Loading...</div>
+              <div className="px-4 py-8 text-center text-sm text-sub">Loading...</div>
             ) : notifications.length === 0 ? (
-              <div className="px-4 py-8 text-center text-[12px] text-sub">No notifications yet</div>
+              <div className="px-4 py-8 text-center text-sm text-sub">No notifications yet</div>
             ) : (
               notifications.slice(0, 10).map((n: any) => (
                 <button
@@ -112,12 +112,12 @@ export default function NotificationDropdown() {
 
                   {/* Content */}
                   <div className="flex-1 min-w-0">
-                    <p className="text-[12px] font-medium text-main truncate">{n.title}</p>
-                    <p className="text-[11px] text-sub truncate">{n.message}</p>
+                    <p className="text-sm font-medium text-main truncate">{n.title}</p>
+                    <p className="text-xs text-sub truncate">{n.message}</p>
                   </div>
 
                   {/* Time */}
-                  <span className="text-[10px] text-sub shrink-0 pt-0.5">
+                  <span className="text-2xs text-sub shrink-0 pt-0.5">
                     {formatRelativeTime(n.createdAt)}
                   </span>
                 </button>

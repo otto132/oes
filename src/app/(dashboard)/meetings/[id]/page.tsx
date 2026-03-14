@@ -88,14 +88,14 @@ export default function MeetingDetailPage({
     <div className="max-w-[1100px] page-enter">
       {/* Header */}
       <div className="mb-6">
-        <Link href="/" className="inline-flex items-center gap-1 text-[12px] text-muted hover:text-brand transition-colors mb-3">
+        <Link href="/" className="inline-flex items-center gap-1 text-sm text-muted hover:text-brand transition-colors mb-3">
           <ArrowLeft size={14} /> Back to Home
         </Link>
 
         <div className="flex justify-between items-start">
           <div>
-            <h1 className="text-[24px] md:text-[28px] font-semibold tracking-tight">{meeting.title}</h1>
-            <div className="flex gap-4 text-muted text-[12px] mt-2">
+            <h1 className="text-4xl md:text-5xl font-semibold tracking-tight">{meeting.title}</h1>
+            <div className="flex gap-4 text-muted text-sm mt-2">
               <span className="inline-flex items-center gap-1">
                 <Calendar size={14} />
                 {new Date(meeting.date).toLocaleDateString()}
@@ -116,7 +116,7 @@ export default function MeetingDetailPage({
             </Badge>
             {meeting.prepStatus !== 'ready' && (
               <button
-                className="inline-flex items-center gap-1 text-[11px] font-medium text-brand hover:underline disabled:opacity-50"
+                className="inline-flex items-center gap-1 text-xs font-medium text-brand hover:underline disabled:opacity-50"
                 onClick={handleMarkReady}
                 disabled={updateMeeting.isPending}
               >
@@ -127,7 +127,7 @@ export default function MeetingDetailPage({
         </div>
 
         {account && (
-          <Link href={`/accounts/${account.id}`} className="text-[12px] text-brand hover:underline mt-2 inline-block">
+          <Link href={`/accounts/${account.id}`} className="text-sm text-brand hover:underline mt-2 inline-block">
             {account.name}
           </Link>
         )}
@@ -136,14 +136,14 @@ export default function MeetingDetailPage({
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Prep Panel */}
         <div className="rounded-lg bg-[var(--elevated)] border border-[var(--border)] p-5">
-          <h2 className="text-[13px] font-semibold flex items-center gap-2 mb-4">
+          <h2 className="text-base font-semibold flex items-center gap-2 mb-4">
             <FileText size={16} className="text-brand" /> Meeting Prep
           </h2>
 
           <div className="mb-5">
-            <label className="text-[9px] font-semibold tracking-[0.1em] uppercase text-muted block mb-1.5">Talking Points</label>
+            <label className="text-3xs font-semibold tracking-[0.1em] uppercase text-muted block mb-1.5">Talking Points</label>
             <textarea
-              className="w-full rounded-md bg-[var(--surface)] border border-[var(--border)] text-[12px] p-2.5 resize-y focus:outline-none focus:border-brand/40 transition-colors placeholder:text-muted/50"
+              className="w-full rounded-md bg-[var(--surface)] border border-[var(--border)] text-sm p-2.5 resize-y focus:outline-none focus:border-brand/40 transition-colors placeholder:text-muted/50"
               rows={4}
               value={prepNotes}
               onChange={(e) => setPrepNotes(e.target.value)}
@@ -156,14 +156,14 @@ export default function MeetingDetailPage({
             <>
               {account.pain && (
                 <div className="mb-3">
-                  <label className="text-[9px] font-semibold tracking-[0.1em] uppercase text-muted block mb-1">Pain</label>
-                  <p className="text-[12px] text-sub">{account.pain}</p>
+                  <label className="text-3xs font-semibold tracking-[0.1em] uppercase text-muted block mb-1">Pain</label>
+                  <p className="text-sm text-sub">{account.pain}</p>
                 </div>
               )}
               {account.whyNow && (
                 <div className="mb-3">
-                  <label className="text-[9px] font-semibold tracking-[0.1em] uppercase text-muted block mb-1">Why Now</label>
-                  <p className="text-[12px] text-sub">{account.whyNow}</p>
+                  <label className="text-3xs font-semibold tracking-[0.1em] uppercase text-muted block mb-1">Why Now</label>
+                  <p className="text-sm text-sub">{account.whyNow}</p>
                 </div>
               )}
               {account.scores && <FIUACBars scores={account.scores} />}
@@ -172,10 +172,10 @@ export default function MeetingDetailPage({
 
           {contacts.length > 0 && (
             <div className="mt-4">
-              <label className="text-[9px] font-semibold tracking-[0.1em] uppercase text-muted block mb-2">Key Contacts</label>
-              <table className="w-full text-[12px]">
+              <label className="text-3xs font-semibold tracking-[0.1em] uppercase text-muted block mb-2">Key Contacts</label>
+              <table className="w-full text-sm">
                 <thead>
-                  <tr className="text-[9px] font-semibold tracking-[0.1em] uppercase text-muted">
+                  <tr className="text-3xs font-semibold tracking-[0.1em] uppercase text-muted">
                     <th className="text-left pb-1.5">Name</th>
                     <th className="text-left pb-1.5">Role</th>
                     <th className="text-left pb-1.5">Warmth</th>
@@ -196,9 +196,9 @@ export default function MeetingDetailPage({
 
           {opportunities.length > 0 && (
             <div className="mt-4">
-              <label className="text-[9px] font-semibold tracking-[0.1em] uppercase text-muted block mb-2">Open Opportunities</label>
+              <label className="text-3xs font-semibold tracking-[0.1em] uppercase text-muted block mb-2">Open Opportunities</label>
               {opportunities.map((opp: any) => (
-                <div key={opp.id} className="flex justify-between items-center py-1.5 border-b border-[var(--border)] text-[12px]">
+                <div key={opp.id} className="flex justify-between items-center py-1.5 border-b border-[var(--border)] text-sm">
                   <span>{opp.name}</span>
                   <StageBadge stage={opp.stage} />
                 </div>
@@ -211,12 +211,12 @@ export default function MeetingDetailPage({
         <div className="flex flex-col gap-4">
           {activities.length > 0 && (
             <div className="rounded-lg bg-[var(--elevated)] border border-[var(--border)] p-5">
-              <h2 className="text-[13px] font-semibold mb-3">Recent Activity</h2>
+              <h2 className="text-base font-semibold mb-3">Recent Activity</h2>
               {activities.map((a: any) => (
                 <div key={a.id} className="py-2 border-b border-[var(--border)]">
                   <div className="flex justify-between items-start">
-                    <span className="text-[12px]">{a.summary}</span>
-                    <span className="text-[10px] text-muted whitespace-nowrap ml-2">
+                    <span className="text-sm">{a.summary}</span>
+                    <span className="text-2xs text-muted whitespace-nowrap ml-2">
                       {new Date(a.createdAt).toLocaleDateString()}
                     </span>
                   </div>
@@ -226,13 +226,13 @@ export default function MeetingDetailPage({
           )}
 
           <div className="rounded-lg bg-[var(--elevated)] border border-[var(--border)] p-5">
-            <h2 className="text-[13px] font-semibold flex items-center gap-2 mb-3">
+            <h2 className="text-base font-semibold flex items-center gap-2 mb-3">
               <TrendingUp size={16} className="text-brand" /> Meeting Outcome
             </h2>
 
             {!showOutcome ? (
               <button
-                className={`w-full text-[12px] font-medium py-2 rounded-md border transition-colors ${
+                className={`w-full text-sm font-medium py-2 rounded-md border transition-colors ${
                   isPast
                     ? 'bg-brand/10 text-brand border-brand/20 hover:bg-brand/20'
                     : 'bg-[var(--surface)] text-sub border-[var(--border)] hover:bg-[var(--hover)]'
@@ -244,9 +244,9 @@ export default function MeetingDetailPage({
             ) : (
               <div>
                 <div className="mb-3">
-                  <label className="text-[9px] font-semibold tracking-[0.1em] uppercase text-muted block mb-1">Summary *</label>
+                  <label className="text-3xs font-semibold tracking-[0.1em] uppercase text-muted block mb-1">Summary *</label>
                   <textarea
-                    className="w-full rounded-md bg-[var(--surface)] border border-[var(--border)] text-[12px] p-2.5 resize-y focus:outline-none focus:border-brand/40 transition-colors placeholder:text-muted/50"
+                    className="w-full rounded-md bg-[var(--surface)] border border-[var(--border)] text-sm p-2.5 resize-y focus:outline-none focus:border-brand/40 transition-colors placeholder:text-muted/50"
                     rows={3}
                     value={outcomeForm.summary}
                     onChange={(e) => setOutcomeForm({ ...outcomeForm, summary: e.target.value })}
@@ -255,9 +255,9 @@ export default function MeetingDetailPage({
                 </div>
 
                 <div className="mb-3">
-                  <label className="text-[9px] font-semibold tracking-[0.1em] uppercase text-muted block mb-1">Sentiment</label>
+                  <label className="text-3xs font-semibold tracking-[0.1em] uppercase text-muted block mb-1">Sentiment</label>
                   <select
-                    className="w-full rounded-md bg-[var(--surface)] border border-[var(--border)] text-[12px] p-2 focus:outline-none focus:border-brand/40 transition-colors"
+                    className="w-full rounded-md bg-[var(--surface)] border border-[var(--border)] text-sm p-2 focus:outline-none focus:border-brand/40 transition-colors"
                     value={outcomeForm.sentiment}
                     onChange={(e) => setOutcomeForm({ ...outcomeForm, sentiment: e.target.value as any })}
                   >
@@ -268,9 +268,9 @@ export default function MeetingDetailPage({
                 </div>
 
                 <div className="mb-3">
-                  <label className="text-[9px] font-semibold tracking-[0.1em] uppercase text-muted block mb-1">Next Steps</label>
+                  <label className="text-3xs font-semibold tracking-[0.1em] uppercase text-muted block mb-1">Next Steps</label>
                   <textarea
-                    className="w-full rounded-md bg-[var(--surface)] border border-[var(--border)] text-[12px] p-2.5 resize-y focus:outline-none focus:border-brand/40 transition-colors placeholder:text-muted/50"
+                    className="w-full rounded-md bg-[var(--surface)] border border-[var(--border)] text-sm p-2.5 resize-y focus:outline-none focus:border-brand/40 transition-colors placeholder:text-muted/50"
                     rows={2}
                     value={outcomeForm.nextSteps}
                     onChange={(e) => setOutcomeForm({ ...outcomeForm, nextSteps: e.target.value })}
@@ -279,7 +279,7 @@ export default function MeetingDetailPage({
                 </div>
 
                 <div className="mb-3">
-                  <label className="flex items-center gap-2 text-[12px] text-sub cursor-pointer">
+                  <label className="flex items-center gap-2 text-sm text-sub cursor-pointer">
                     <input
                       type="checkbox"
                       checked={outcomeForm.createFollowUp}
@@ -293,13 +293,13 @@ export default function MeetingDetailPage({
                 {outcomeForm.createFollowUp && (
                   <div className="ml-6 mb-3 space-y-2">
                     <input
-                      className="w-full rounded-md bg-[var(--surface)] border border-[var(--border)] text-[12px] p-2 focus:outline-none focus:border-brand/40 transition-colors placeholder:text-muted/50"
+                      className="w-full rounded-md bg-[var(--surface)] border border-[var(--border)] text-sm p-2 focus:outline-none focus:border-brand/40 transition-colors placeholder:text-muted/50"
                       placeholder="Task title"
                       value={outcomeForm.followUpTitle}
                       onChange={(e) => setOutcomeForm({ ...outcomeForm, followUpTitle: e.target.value })}
                     />
                     <input
-                      className="w-full rounded-md bg-[var(--surface)] border border-[var(--border)] text-[12px] p-2 focus:outline-none focus:border-brand/40 transition-colors"
+                      className="w-full rounded-md bg-[var(--surface)] border border-[var(--border)] text-sm p-2 focus:outline-none focus:border-brand/40 transition-colors"
                       type="date"
                       value={outcomeForm.followUpDue}
                       onChange={(e) => setOutcomeForm({ ...outcomeForm, followUpDue: e.target.value })}
@@ -309,14 +309,14 @@ export default function MeetingDetailPage({
 
                 <div className="flex gap-2 mt-4">
                   <button
-                    className="inline-flex items-center gap-1.5 text-[12px] font-medium py-1.5 px-4 rounded-md bg-brand text-white hover:bg-brand/90 transition-colors disabled:opacity-50"
+                    className="inline-flex items-center gap-1.5 text-sm font-medium py-1.5 px-4 rounded-md bg-brand text-brand-on hover:bg-brand/90 transition-colors disabled:opacity-50"
                     onClick={handleSubmitOutcome}
                     disabled={!outcomeForm.summary || logOutcome.isPending}
                   >
                     {logOutcome.isPending && <Spinner className="h-3 w-3" />}{logOutcome.isPending ? 'Saving...' : 'Save Outcome'}
                   </button>
                   <button
-                    className="text-[12px] font-medium py-1.5 px-4 rounded-md bg-[var(--surface)] border border-[var(--border)] text-sub hover:bg-[var(--hover)] transition-colors"
+                    className="text-sm font-medium py-1.5 px-4 rounded-md bg-[var(--surface)] border border-[var(--border)] text-sub hover:bg-[var(--hover)] transition-colors"
                     onClick={() => setShowOutcome(false)}
                   >
                     Cancel

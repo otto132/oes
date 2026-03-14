@@ -253,9 +253,9 @@ export default function CommandPalette() {
             value={query}
             onChange={e => { setQuery(e.target.value); setActiveIdx(0); }}
             placeholder="Search accounts, deals, leads, pages..."
-            className="flex-1 bg-transparent py-3 text-[14px] text-[var(--text)] placeholder:text-muted outline-none"
+            className="flex-1 bg-transparent py-3 text-md text-[var(--text)] placeholder:text-muted outline-none"
           />
-          <kbd className="hidden sm:inline-flex items-center gap-0.5 text-[10px] font-medium text-muted bg-[var(--surface)] border border-[var(--border)] px-1.5 py-[2px] rounded">
+          <kbd className="hidden sm:inline-flex items-center gap-0.5 text-2xs font-medium text-muted bg-[var(--surface)] border border-[var(--border)] px-1.5 py-[2px] rounded">
             ESC
           </kbd>
         </div>
@@ -263,11 +263,11 @@ export default function CommandPalette() {
         {/* Results */}
         <div ref={listRef} className="max-h-[340px] overflow-y-auto py-1.5">
           {flatItems.length === 0 && (
-            <div className="py-8 text-center text-[13px] text-muted">No results found</div>
+            <div className="py-8 text-center text-base text-muted">No results found</div>
           )}
           {grouped.map(g => (
             <div key={g.group}>
-              <div className="px-4 pt-2.5 pb-1 text-[9px] font-semibold tracking-[0.1em] uppercase text-muted">
+              <div className="px-4 pt-2.5 pb-1 text-3xs font-semibold tracking-[0.1em] uppercase text-muted">
                 {g.label}
               </div>
               {g.items.map(item => {
@@ -280,7 +280,7 @@ export default function CommandPalette() {
                     onClick={item.onSelect}
                     onMouseEnter={() => setActiveIdx(idx)}
                     className={cn(
-                      'flex items-center gap-2.5 w-full px-4 py-[7px] text-left text-[13px] transition-colors',
+                      'flex items-center gap-2.5 w-full px-4 py-[7px] text-left text-base transition-colors',
                       isActive
                         ? 'bg-[var(--hover)] text-[var(--text)]'
                         : 'text-sub hover:bg-[var(--hover)] hover:text-[var(--text)]',
@@ -288,7 +288,7 @@ export default function CommandPalette() {
                   >
                     <item.icon className={cn('w-4 h-4 shrink-0', isActive ? 'text-brand' : 'text-muted')} />
                     <span className="flex-1 truncate">{item.label}</span>
-                    {item.subtitle && <span className="text-[10px] text-muted shrink-0">{item.subtitle}</span>}
+                    {item.subtitle && <span className="text-2xs text-muted shrink-0">{item.subtitle}</span>}
                     {isActive && <ArrowRight className="w-3.5 h-3.5 text-muted shrink-0" />}
                   </button>
                 );
