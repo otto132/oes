@@ -47,15 +47,27 @@ export async function testSignInCallback({ user }: { user: { email?: string | nu
 
   // Auto-create user on first Google sign-in (bypass invitation requirement)
   const tenant = await db.tenant.findFirst();
-  await db.user.create({
-    data: {
-      email: user.email,
-      name: user.name || user.email,
-      initials: deriveInitials(user.name || user.email),
-      role: 'ADMIN',
-      lastLoginAt: new Date(),
-      ...(tenant ? { tenantId: tenant.id } : {}),
-    },
-  });
+  if (tenant) {
+    await db.user.create({
+      data: {
+        email: user.email,
+        name: user.name || user.email,
+        initials: deriveInitials(user.name || user.email),
+        role: 'ADMIN',
+        lastLoginAt: new Date(),
+        tenantId: tenant.id,
+      },
+    });
+  } else {
+    await db.user.create({
+      data: {
+        email: user.email,
+        name: user.name || user.email,
+        initials: deriveInitials(user.name || user.email),
+        role: 'ADMIN',
+        lastLoginAt: new Date(),
+      },
+    });
+  }
   return true;
 }
