@@ -17,6 +17,7 @@ export const patchMeetingSchema = z.object({
   date: z.string().trim().optional(),
   attendees: z.array(z.string()).optional(),
   accountId: z.string().nullable().optional(),
+  prepNotes: z.string().max(5000).optional(),
 }).superRefine((obj, ctx) => {
   if (!Object.values(obj).some(v => v !== undefined)) {
     ctx.addIssue({ code: 'custom', message: 'At least one field is required' });

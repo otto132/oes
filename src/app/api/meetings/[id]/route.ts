@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { auth } from '@/lib/auth';
-import { adaptMeeting, adaptAccount, adaptContact, adaptActivity } from '@/lib/adapters';
+import { adaptMeeting, adaptAccount, adaptContact, adaptActivity, adaptOpportunity } from '@/lib/adapters';
 import { patchMeetingSchema } from '@/lib/schemas/meetings';
 import { unauthorized, notFound, zodError } from '@/lib/api-errors';
 import { logAccess } from '@/lib/access-log';
@@ -44,6 +44,16 @@ export async function GET(
       result.contacts = account.contacts.map(adaptContact);
       result.activities = account.activities.map(a =>
         adaptActivity({ ...a, account: { id: account.id, name: account.name } }),
+      );
+      const opportunities = await db.opportunity.findMany({
+        where: {
+          accountId: account.id,
+          stage: { notIn: ['ClosedWon', 'ClosedLost'] },
+        },
+        include: { owner: true },
+      });
+      result.opportunities = opportunities.map(o =>
+        adaptOpportunity({ ...o, account: { id: account.id, name: account.name } }),
       );
     }
   }
