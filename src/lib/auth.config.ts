@@ -1,25 +1,11 @@
 import type { NextAuthConfig } from "next-auth"
-import Google from "next-auth/providers/google"
-import { env, availableProviders } from "@/lib/env"
 
-// Edge-safe auth config — no Prisma / Node.js imports.
-// Used by middleware; the full config in auth.ts extends this with DB callbacks.
-
-const providers: NextAuthConfig["providers"] = []
-
-const { google } = availableProviders()
-
-if (google) {
-  providers.push(
-    Google({
-      clientId: env.GOOGLE_CLIENT_ID!,
-      clientSecret: env.GOOGLE_CLIENT_SECRET!,
-    })
-  )
-}
+// Edge-safe auth config — absolute minimum for middleware session checks.
+// No providers, no Prisma, no heavy imports.
+// The full config in auth.ts extends this with providers and DB callbacks.
 
 export const authConfig: NextAuthConfig = {
-  providers,
+  providers: [],
   session: { strategy: "jwt" },
   pages: { signIn: "/login" },
   cookies: {
