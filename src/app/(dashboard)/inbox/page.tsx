@@ -175,11 +175,12 @@ export default function InboxPage() {
                 onClick={ev => { ev.stopPropagation(); markRead.mutate(failedInfo.variables as any); }}
                 className="absolute top-1 right-1 p-0.5 rounded-full bg-red-500/10 text-red-500 hover:bg-red-500/20 transition-colors"
                 title={failedInfo.error}
+                aria-label="Retry"
               >
                 <RotateCw className="w-2.5 h-2.5" />
               </button>
             )}
-            <div className={cn('w-[5px] h-[5px] rounded-full flex-shrink-0 mt-[7px]', e.isUnread ? 'bg-info' : 'bg-transparent')} />
+            <div className={cn('w-[5px] h-[5px] rounded-full flex-shrink-0 mt-[7px]', e.isUnread ? 'bg-info' : 'bg-transparent')} {...(e.isUnread ? { role: 'status', 'aria-label': 'Unread' } : {})} />
             <div className="flex-1 min-w-0">
               <div className="flex items-center justify-between mb-px">
                 <span className={cn('text-[12.5px]', e.isUnread ? 'font-semibold' : 'font-normal')}>{e.subject}</span>

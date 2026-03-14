@@ -421,6 +421,10 @@ model Opportunity {
   lossCompetitor String?
   lossNotes      String? @db.Text
 
+  // Deal intelligence
+  lessonsLearned  String? @db.Text
+  keyStakeholders String?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -483,6 +487,7 @@ model Task {
   due         DateTime?
   source      String       @default("Manual") // "Manual", "AI Suggested", "Pipeline Hygiene Agent", etc.
   completedAt DateTime?
+  notes       String?      @db.Text
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
 

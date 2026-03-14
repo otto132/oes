@@ -11,6 +11,7 @@ import { canMutate } from '@/lib/rbac';
 import { auth } from '@/lib/auth';
 import { handleApproval } from '@/lib/agents/chain';
 import { notifyUsers } from '@/lib/notifications';
+import { logger } from '@/lib/logger';
 
 /** Typed payload interfaces for queue item side-effects */
 interface LeadQualificationPayload {
@@ -285,7 +286,7 @@ export const POST = withHandler(queueActionSchema, async (req, ctx) => {
 
     // Trigger chain agents (fire-and-forget)
     handleApproval(updated, (editedPayload || item.payload) as Record<string, unknown>).catch((err) => {
-      console.error('Chain coordinator error:', err);
+      logger.error('Chain coordinator error', { error: err instanceof Error ? err.message : String(err) });
     });
 
     const adapted = adaptQueueItem(updated);

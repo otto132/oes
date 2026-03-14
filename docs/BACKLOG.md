@@ -531,7 +531,7 @@ Value-add but not blocking beta. Build after product is stable with real users.
 | **Owner** | Design + Frontend |
 | **Required before beta** | No |
 | **Value type** | Adoption, Trust |
-| **Status** | Open |
+| **Status** | Done (2026-03-14: bumped --muted to zinc-500 for WCAG AA 4.5:1 compliance) |
 
 ---
 
@@ -570,7 +570,7 @@ Value-add but not blocking beta. Build after product is stable with real users.
 | **Owner** | Frontend |
 | **Required before beta** | No |
 | **Value type** | Adoption |
-| **Status** | Open |
+| **Status** | Done (2026-03-14: CommentInput component with Cmd+Enter submit, useCommentOnTask hook) |
 
 ---
 
@@ -583,7 +583,7 @@ Value-add but not blocking beta. Build after product is stable with real users.
 | **Owner** | Frontend |
 | **Required before beta** | No |
 | **Value type** | Adoption, Trust |
-| **Status** | Open |
+| **Status** | Done (2026-03-14: aria-labels on Drawer close, schedule nav, inbox unread indicator) |
 
 ---
 
@@ -622,7 +622,7 @@ Value-add but not blocking beta. Build after product is stable with real users.
 | **Owner** | Backend |
 | **Required before beta** | No |
 | **Value type** | Speed |
-| **Status** | Open |
+| **Status** | Done (2026-03-14: auto-dismiss signals >90 days in retention job) |
 
 ---
 
@@ -700,7 +700,7 @@ Value-add but not blocking beta. Build after product is stable with real users.
 | **Owner** | Backend |
 | **Required before beta** | No |
 | **Value type** | Risk reduction |
-| **Status** | Open |
+| **Status** | Done (2026-03-14: routed queue/sync console.error through redaction logger) |
 
 ---
 
@@ -739,7 +739,7 @@ Value-add but not blocking beta. Build after product is stable with real users.
 | **Owner** | Frontend |
 | **Required before beta** | No |
 | **Value type** | Adoption |
-| **Status** | Open |
+| **Status** | Done (2026-03-14: tasks page mobile layout, drawer responsive padding/footer stacking, touch targets) |
 
 ---
 
@@ -804,7 +804,7 @@ Value-add but not blocking beta. Build after product is stable with real users.
 | **Owner** | Backend |
 | **Required before beta** | No |
 | **Value type** | Speed (developer velocity) |
-| **Status** | Open |
+| **Status** | Done (2026-03-14: replaced hardcoded dates with daysAgo/daysFromNow/hoursAgo helpers) |
 
 ---
 
@@ -830,7 +830,7 @@ Value-add but not blocking beta. Build after product is stable with real users.
 | **Owner** | Ops |
 | **Required before beta** | No |
 | **Value type** | Risk reduction |
-| **Status** | Open |
+| **Status** | Done (2026-03-14: enhanced /api/health with dbLatency, memory, uptime; added HEAD method) |
 
 ---
 
@@ -869,7 +869,7 @@ Value-add but not blocking beta. Build after product is stable with real users.
 | **Owner** | Frontend |
 | **Required before beta** | No |
 | **Value type** | Adoption |
-| **Status** | Open |
+| **Status** | Done (2026-03-14: added action prop to EmptyState, CTA buttons on leads/pipeline/accounts pages) |
 
 ---
 

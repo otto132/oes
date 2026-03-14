@@ -43,6 +43,7 @@ export async function PATCH(
   if (body.reviewerId !== undefined) {
     data.reviewerId = body.reviewerId;
   }
+  if (body.notes !== undefined) data.notes = body.notes;
 
   const updated = await db.task.update({
     where: { id },

@@ -983,7 +983,7 @@ export default function AccountDetailPage() {
         </div>
         <div className="rounded-lg bg-[var(--elevated)] border border-[var(--border)] p-3.5">
           {a.contacts.length === 0 ? (
-            <EmptyState icon="\uD83D\uDC65" title="No contacts" description="Add contacts to build the buying committee map." />
+            <EmptyState icon="\uD83D\uDC65" title="No contacts" description="Add contacts to build the buying committee map." action={{ label: 'Add Contact', onClick: () => openAddContactDrawer() }} />
           ) : (
             a.contacts.map(c => (
               <div key={c.id} className="group flex items-center gap-3 py-2.5 border-b border-[var(--border)] last:border-b-0">
@@ -1020,7 +1020,7 @@ export default function AccountDetailPage() {
             </button>
           </div>
           {accOpps.length === 0 ? (
-            <EmptyState icon="\uD83D\uDCCA" title="No opportunities" description="Create one or convert a qualified lead." />
+            <EmptyState icon="\uD83D\uDCCA" title="No opportunities" description="Create one or convert a qualified lead." action={{ label: 'Create Opportunity', onClick: () => openNewOppDrawer() }} />
           ) : (
           <div className="flex flex-col gap-2">
             {accOpps.map(o => (

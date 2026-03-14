@@ -127,7 +127,7 @@ export default function OppDetailPage() {
   const isMutating = move.isPending || closeWon.isPending || closeLost.isPending || updateOpp.isPending;
 
   function openCloseWonDrawer() {
-    const state = { winNotes: '', competitorBeaten: '' };
+    const state = { winNotes: '', competitorBeaten: '', keyStakeholders: '', lessonsLearned: '' };
     openDrawer({
       title: 'Close Won',
       subtitle: o!.name,
@@ -150,6 +150,23 @@ export default function OppDetailPage() {
               className="px-2.5 py-1.5 text-[12px] rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] placeholder:text-[var(--muted)] focus:outline-none focus:border-brand/40"
             />
           </label>
+          <label className="flex flex-col gap-1">
+            <span className="text-[10px] font-semibold uppercase tracking-wide text-[var(--muted)]">Key Stakeholders (optional)</span>
+            <input
+              onChange={e => { state.keyStakeholders = e.target.value; }}
+              placeholder="e.g. CTO Jane Doe, VP Sales John Smith"
+              className="px-2.5 py-1.5 text-[12px] rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] placeholder:text-[var(--muted)] focus:outline-none focus:border-brand/40"
+            />
+          </label>
+          <label className="flex flex-col gap-1">
+            <span className="text-[10px] font-semibold uppercase tracking-wide text-[var(--muted)]">Lessons Learned (optional)</span>
+            <textarea
+              onChange={e => { state.lessonsLearned = e.target.value; }}
+              rows={2}
+              placeholder="What should we replicate in future deals?"
+              className="px-2.5 py-1.5 text-[12px] rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] placeholder:text-[var(--muted)] focus:outline-none focus:border-brand/40 resize-y"
+            />
+          </label>
         </div>
       ),
       footer: (
@@ -169,6 +186,8 @@ export default function OppDetailPage() {
                   id: o!.id,
                   winNotes: state.winNotes || undefined,
                   competitorBeaten: state.competitorBeaten || undefined,
+                  keyStakeholders: state.keyStakeholders || undefined,
+                  lessonsLearned: state.lessonsLearned || undefined,
                 },
                 {
                   onSuccess: () => {
@@ -188,7 +207,7 @@ export default function OppDetailPage() {
   }
 
   function openCloseLostDrawer() {
-    const state = { lossReason: '', lossCompetitor: '', lossNotes: '' };
+    const state = { lossReason: '', lossCompetitor: '', lossNotes: '', lessonsLearned: '' };
     let competitorEl: HTMLDivElement | null = null;
 
     openDrawer({
@@ -227,11 +246,20 @@ export default function OppDetailPage() {
             </label>
           </div>
           <label className="flex flex-col gap-1">
-            <span className="text-[10px] font-semibold uppercase tracking-wide text-[var(--muted)]">What can we learn? (optional)</span>
+            <span className="text-[10px] font-semibold uppercase tracking-wide text-[var(--muted)]">What could we have done differently? (optional)</span>
             <textarea
               onChange={e => { state.lossNotes = e.target.value; }}
               rows={3}
               placeholder="Lessons learned, what to improve..."
+              className="px-2.5 py-1.5 text-[12px] rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] placeholder:text-[var(--muted)] focus:outline-none focus:border-brand/40 resize-y"
+            />
+          </label>
+          <label className="flex flex-col gap-1">
+            <span className="text-[10px] font-semibold uppercase tracking-wide text-[var(--muted)]">Lessons Learned (optional)</span>
+            <textarea
+              onChange={e => { state.lessonsLearned = e.target.value; }}
+              rows={2}
+              placeholder="Broader takeaways for the team..."
               className="px-2.5 py-1.5 text-[12px] rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] placeholder:text-[var(--muted)] focus:outline-none focus:border-brand/40 resize-y"
             />
           </label>
@@ -259,6 +287,7 @@ export default function OppDetailPage() {
                   lossReason: state.lossReason,
                   lossCompetitor: state.lossCompetitor || undefined,
                   lossNotes: state.lossNotes || undefined,
+                  lessonsLearned: state.lessonsLearned || undefined,
                 },
                 {
                   onSuccess: () => {

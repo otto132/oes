@@ -59,6 +59,7 @@ export async function testSignInCallback({ user }: { user: { email?: string | nu
       },
     });
   } else {
+    const newTenant = await db.tenant.create({ data: { name: 'Default', slug: 'default' } });
     await db.user.create({
       data: {
         email: user.email,
@@ -66,6 +67,7 @@ export async function testSignInCallback({ user }: { user: { email?: string | nu
         initials: deriveInitials(user.name || user.email),
         role: 'ADMIN',
         lastLoginAt: new Date(),
+        tenantId: newTenant.id,
       },
     });
   }

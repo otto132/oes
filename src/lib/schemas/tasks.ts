@@ -6,6 +6,7 @@ export const patchTaskSchema = z.object({
   due: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
   assigneeIds: z.array(z.string()).optional(),
   reviewerId: z.string().nullable().optional(),
+  notes: z.string().optional(),
 }).superRefine((obj, ctx) => {
   if (!Object.values(obj).some(v => v !== undefined)) {
     ctx.addIssue({ code: 'custom', message: 'At least one field is required' });

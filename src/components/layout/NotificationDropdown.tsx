@@ -59,6 +59,7 @@ export default function NotificationDropdown() {
     <div ref={ref} className="relative">
       <button
         onClick={() => setOpen((v) => !v)}
+        aria-label="Notifications"
         className="relative w-8 h-8 rounded-md flex items-center justify-center text-sub hover:text-main hover:bg-[var(--surface)] transition-colors"
       >
         <Bell className="w-4 h-4" />

@@ -374,7 +374,7 @@ export default function LeadsPage() {
       {/* Mobile list */}
       <div className="md:hidden flex flex-col gap-1.5">
         {leads.length === 0 ? (
-          <EmptyState icon="🎯" title="No active leads" description="Convert signals or add leads manually." />
+          <EmptyState icon="🎯" title="No active leads" description="Convert signals or add leads manually." action={{ label: 'Create Lead', onClick: () => openCreateLeadDrawer() }} />
         ) : [...leads].sort((a, b) => compositeScore(b.scores) - compositeScore(a.scores)).map(l => (
           <div key={l.id} className="rounded-lg p-3 bg-[var(--elevated)] border border-[var(--border)] cursor-pointer hover:bg-[var(--hover)] hover:border-[var(--border-strong)] transition-colors">
             <div className="flex items-center justify-between mb-1">
