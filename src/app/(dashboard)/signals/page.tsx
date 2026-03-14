@@ -5,8 +5,9 @@ import { ApiError } from '@/lib/api-client';
 import { useSignalsQuery, useConvertSignal, useDismissSignal } from '@/lib/queries/signals';
 import { Badge, ConfBadge, AgentTag, EmptyState, Skeleton, SkeletonCard, SkeletonText, ErrorState } from '@/components/ui';
 import { signalLabel, signalColor, fR, cn } from '@/lib/utils';
-import { Zap, Check } from 'lucide-react';
+import { Zap, Check, RotateCw } from 'lucide-react';
 import type { Signal } from '@/lib/types';
+import { usePendingMutations, useFailedMutations } from '@/hooks/use-mutation-state';
 
 const FILTERS = [
   { k: 'all', l: 'All' }, { k: 'ppa_announcement', l: 'PPA' }, { k: 'renewable_target', l: 'Target' },
@@ -45,6 +46,8 @@ export default function SignalsPage() {
   const convert = useConvertSignal();
   const dismiss = useDismissSignal();
   const addToast = useStore(s => s.addToast);
+  const pendingIds = usePendingMutations(['signals']);
+  const failedMutations = useFailedMutations(['signals']);
 
   if (isLoading) return <SignalsSkeleton />;
   if (isError) return <ErrorState onRetry={() => refetch()} />;
@@ -191,8 +194,19 @@ export default function SignalsPage() {
           <EmptyState icon="📶" title="No signals match this filter" description="Try a different filter or wait for the Signal Hunter agent to detect new activity." />
         ) : filtered.map((s: any) => {
           const converted = s.status === 'converted';
+          const isPending = pendingIds.has(s.id);
+          const failedInfo = failedMutations.get(s.id);
           return (
-            <div key={s.id} className={cn('flex items-start gap-2.5 px-4 py-3.5 border-b border-[var(--border)] hover:bg-[var(--hover)] transition-colors cursor-pointer', converted && 'opacity-60')} onClick={() => viewDetail(s.id)}>
+            <div key={s.id} className={cn('flex items-start gap-2.5 px-4 py-3.5 border-b border-[var(--border)] hover:bg-[var(--hover)] transition-colors cursor-pointer relative', converted && 'opacity-60', isPending && 'opacity-60 animate-pulse', failedInfo && 'border-l-2 border-l-red-500')} onClick={() => viewDetail(s.id)}>
+              {failedInfo && (
+                <button
+                  onClick={e => { e.stopPropagation(); dismiss.mutate(failedInfo.variables as any); }}
+                  className="absolute top-2 right-2 p-0.5 rounded-full bg-red-500/10 text-red-500 hover:bg-red-500/20 transition-colors"
+                  title={failedInfo.error}
+                >
+                  <RotateCw className="w-2.5 h-2.5" />
+                </button>
+              )}
               <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 bg-[var(--surface)]">
                 {converted ? <Check className="w-[15px] h-[15px] text-[var(--brand)]" /> : <Zap className={`w-[15px] h-[15px] ${signalColor[s.type] || 'text-[var(--muted)]'}`} />}
               </div>

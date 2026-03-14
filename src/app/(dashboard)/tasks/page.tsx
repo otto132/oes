@@ -7,6 +7,8 @@ import { useTasksQuery, useCreateTask, useCompleteTask, useUpdateTask } from '@/
 import { Badge, Avatar, AgentTag, EmptyState, Skeleton, SkeletonCard, SkeletonText, ErrorState } from '@/components/ui';
 import { fDate, isOverdue, cn, fR, displayLabel } from '@/lib/utils';
 import type { Task, TaskPriority, Goal } from '@/lib/types';
+import { usePendingMutations, useFailedMutations } from '@/hooks/use-mutation-state';
+import { RotateCw } from 'lucide-react';
 
 function TasksSkeleton() {
   return (
@@ -56,6 +58,8 @@ function TasksPageInner() {
   const updateTask = useUpdateTask();
   const addToast = useStore(s => s.addToast);
   const autoCreateFired = useRef(false);
+  const pendingIds = usePendingMutations(['tasks']);
+  const failedMutations = useFailedMutations(['tasks']);
 
   // Always fetch all tasks (including completed) so goal progress bars
   // can compute done/total correctly. Client-side filtering for the
@@ -517,8 +521,19 @@ function TasksPageInner() {
   function TaskRow({ t }: { t: Task }) {
     const od = t.status !== 'Done' && isOverdue(t.dueDate);
     const done = t.status === 'Done';
+    const isPending = pendingIds.has(t.id);
+    const failedInfo = failedMutations.get(t.id);
     return (
-      <div className={cn('flex items-center gap-2.5 px-3.5 py-2.5 rounded-lg bg-[var(--elevated)] border border-[var(--border)] hover:bg-[var(--hover)] transition-colors', done && 'opacity-50')}>
+      <div className={cn('flex items-center gap-2.5 px-3.5 py-2.5 rounded-lg bg-[var(--elevated)] border border-[var(--border)] hover:bg-[var(--hover)] transition-colors relative', done && 'opacity-50', isPending && 'opacity-60 animate-pulse', failedInfo && 'border-l-2 border-l-red-500')}>
+        {failedInfo && (
+          <button
+            onClick={e => { e.stopPropagation(); completeTask.mutate(failedInfo.variables as any); }}
+            className="absolute top-1 right-1 p-0.5 rounded-full bg-red-500/10 text-red-500 hover:bg-red-500/20 transition-colors"
+            title={failedInfo.error}
+          >
+            <RotateCw className="w-2.5 h-2.5" />
+          </button>
+        )}
         <div
           className={cn('w-4 h-4 rounded border-[1.5px] flex-shrink-0 flex items-center justify-center cursor-pointer', done ? 'border-brand bg-brand-dim text-brand text-[9px]' : od ? 'border-danger' : 'border-[var(--border-strong)]')}
           onClick={e => { e.stopPropagation(); if (!done) openCompleteDrawer(t); }}

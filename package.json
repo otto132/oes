@@ -8,6 +8,7 @@
     "start": "next start",
     "lint": "next lint",
     "lint:imports": "eslint src/",
+    "lint:tenant": "! grep -r --include='*.ts' \"import { db } from '@/lib/db'\" src/app/api/ --exclude-dir=auth | grep -v 'health/route.ts' | grep -v 'sync/route.ts' | grep -v '__tests__'",
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
     "db:push": "prisma db push",

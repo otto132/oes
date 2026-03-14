@@ -10,6 +10,8 @@ import { fRelative, queueTypeLabel, cn, displayLabel } from '@/lib/utils';
 import { Badge, ConfBadge, AgentTag, ScorePill, FIUACBars, EmptyState, Skeleton, SkeletonCard, SkeletonText, ErrorState } from '@/components/ui';
 import type { QueueItem } from '@/lib/types';
 import { useStore } from '@/lib/store';
+import { usePendingMutations, useFailedMutations } from '@/hooks/use-mutation-state';
+import { RotateCw } from 'lucide-react';
 
 const TYPE_STYLE: Record<string, string> = {
   outreach_draft: 'text-info bg-info/[.06] border-info/[.10]',
@@ -30,6 +32,8 @@ export default function QueuePage() {
 
   const { addToast, openDrawer, closeDrawer } = useStore();
   const qc = useQueryClient();
+  const pendingIds = usePendingMutations(['queue']);
+  const failedMutations = useFailedMutations(['queue']);
 
   function handleApproveSuccess(q: QueueItem) {
     const p = q.payload || {};
@@ -197,8 +201,19 @@ export default function QueuePage() {
   function QueueCard({ q }: { q: QueueItem }) {
     const isExp = expanded === q.id;
     const isRej = rejectOpen === q.id;
+    const isPending = pendingIds.has(q.id);
+    const failedInfo = failedMutations.get(q.id);
     return (
-      <div className="rounded-lg bg-[var(--elevated)] border border-[var(--border)] p-4 hover:border-[var(--border-strong)] transition-colors">
+      <div className={cn('rounded-lg bg-[var(--elevated)] border border-[var(--border)] p-4 hover:border-[var(--border-strong)] transition-colors relative', isPending && 'opacity-60 animate-pulse', failedInfo && 'border-l-2 border-l-red-500')}>
+        {failedInfo && (
+          <button
+            onClick={() => approve.mutate({ id: q.id })}
+            className="absolute top-2 right-2 p-1 rounded-full bg-red-500/10 text-red-500 hover:bg-red-500/20 transition-colors"
+            title={failedInfo.error}
+          >
+            <RotateCw className="w-3 h-3" />
+          </button>
+        )}
         {/* Header row */}
         <div className="flex items-center justify-between mb-2 flex-wrap gap-1.5">
           <div className="flex items-center gap-1.5 flex-wrap">

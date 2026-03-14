@@ -4,6 +4,8 @@ import { useInboxQuery, useCreateTaskFromEmail, useCreateAccountFromEmail, useMa
 import { Badge, ConfBadge, AgentTag, EmptyState, Skeleton, SkeletonCard, SkeletonText, ErrorState } from '@/components/ui';
 import { fR, clsLabel, cn } from '@/lib/utils';
 import type { Email } from '@/lib/types';
+import { usePendingMutations, useFailedMutations } from '@/hooks/use-mutation-state';
+import { RotateCw } from 'lucide-react';
 
 const CLS_STYLE: Record<string, string> = {
   positive_reply: 'text-brand bg-brand-dim',
@@ -42,6 +44,8 @@ export default function InboxPage() {
   const createTaskFromEmail = useCreateTaskFromEmail();
   const createAccountFromEmail = useCreateAccountFromEmail();
   const markRead = useMarkEmailRead();
+  const pendingIds = usePendingMutations(['inbox']);
+  const failedMutations = useFailedMutations(['inbox']);
 
   if (isLoading) return <InboxSkeleton />;
   if (isError) return <ErrorState onRetry={() => refetch()} />;
@@ -145,8 +149,20 @@ export default function InboxPage() {
       <div className="rounded-lg bg-[var(--elevated)] border border-[var(--border)] overflow-hidden">
         {active.length === 0 ? (
           <EmptyState icon="📬" title="Inbox clear" description="All emails have been archived or triaged." />
-        ) : active.map((e: any) => (
-          <div key={e.id} className="flex gap-2.5 items-start px-4 py-2.5 border-b border-[var(--border)] hover:bg-[var(--hover)] transition-colors cursor-pointer" onClick={() => viewEmail(e.id)}>
+        ) : active.map((e: any) => {
+          const isPending = pendingIds.has(e.id);
+          const failedInfo = failedMutations.get(e.id);
+          return (
+          <div key={e.id} className={cn('flex gap-2.5 items-start px-4 py-2.5 border-b border-[var(--border)] hover:bg-[var(--hover)] transition-colors cursor-pointer relative', isPending && 'opacity-60 animate-pulse', failedInfo && 'border-l-2 border-l-red-500')} onClick={() => viewEmail(e.id)}>
+            {failedInfo && (
+              <button
+                onClick={ev => { ev.stopPropagation(); markRead.mutate(failedInfo.variables as any); }}
+                className="absolute top-1 right-1 p-0.5 rounded-full bg-red-500/10 text-red-500 hover:bg-red-500/20 transition-colors"
+                title={failedInfo.error}
+              >
+                <RotateCw className="w-2.5 h-2.5" />
+              </button>
+            )}
             <div className={cn('w-[5px] h-[5px] rounded-full flex-shrink-0 mt-[7px]', e.isUnread ? 'bg-info' : 'bg-transparent')} />
             <div className="flex-1 min-w-0">
               <div className="flex items-center justify-between mb-px">
@@ -164,7 +180,7 @@ export default function InboxPage() {
               </div>
             </div>
           </div>
-        ))}
+        );})}
       </div>
     </div>
   );

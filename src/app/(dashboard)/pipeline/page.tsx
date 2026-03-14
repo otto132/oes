@@ -8,6 +8,8 @@ import { KANBAN_STAGES, STAGE_COLOR, STAGE_PROB, healthAvg } from '@/lib/types';
 import { useStore } from '@/lib/store';
 import { api } from '@/lib/api-client';
 import type { Opportunity } from '@/lib/types';
+import { usePendingMutations, useFailedMutations } from '@/hooks/use-mutation-state';
+import { RotateCw } from 'lucide-react';
 
 function riskHex(h: { healthEngagement: number; healthStakeholders: number; healthCompetitive: number; healthTimeline: number }): string {
   const a = healthAvg(h);
@@ -197,6 +199,8 @@ export default function PipelinePage() {
   const [dragId, setDragId] = useState<string | null>(null);
   const [dropStage, setDropStage] = useState<string | null>(null);
   const dragCounter = useRef<Record<string, number>>({});
+  const pendingIds = usePendingMutations(['opportunities']);
+  const failedMutations = useFailedMutations(['opportunities']);
 
   function openNewOppDrawer(prefilledAccountId?: string, prefilledAccountName?: string) {
     const submitRef = { current: () => {} };
@@ -337,6 +341,8 @@ export default function PipelinePage() {
                     const stageIdx = KANBAN_STAGES.indexOf(o.stage);
                     const progress = ((stageIdx + 1) / KANBAN_STAGES.length) * 100;
                     const stageColor = STAGE_COLOR[o.stage] || '#3ecf8e';
+                    const isPending = pendingIds.has(o.id);
+                    const failedInfo = failedMutations.get(o.id);
                     return (
                     <Link key={o.id} href={`/pipeline/${o.id}`} draggable={false}>
                       <div
@@ -352,11 +358,22 @@ export default function PipelinePage() {
                           dragCounter.current = {};
                         }}
                         className={cn(
-                          'stagger-item rounded-lg mb-1.5 bg-[var(--elevated)] border border-[var(--border)] cursor-grab hover:-translate-y-px hover:border-[var(--border-strong)] transition-all overflow-hidden',
-                          dragId === o.id && 'opacity-40 scale-[0.97] shadow-lg rotate-[1deg]'
+                          'stagger-item rounded-lg mb-1.5 bg-[var(--elevated)] border border-[var(--border)] cursor-grab hover:-translate-y-px hover:border-[var(--border-strong)] transition-all overflow-hidden relative',
+                          dragId === o.id && 'opacity-40 scale-[0.97] shadow-lg rotate-[1deg]',
+                          isPending && 'opacity-60 animate-pulse',
+                          failedInfo && 'border-l-2 border-l-red-500'
                         )}
-                        style={{ borderLeft: `2px solid ${riskHex(o.health)}` }}
+                        style={failedInfo ? undefined : { borderLeft: `2px solid ${riskHex(o.health)}` }}
                       >
+                        {failedInfo && (
+                          <button
+                            onClick={e => { e.preventDefault(); e.stopPropagation(); moveStage.mutate(failedInfo.variables as any); }}
+                            className="absolute top-1 right-1 z-10 p-0.5 rounded-full bg-red-500/10 text-red-500 hover:bg-red-500/20 transition-colors"
+                            title={failedInfo.error}
+                          >
+                            <RotateCw className="w-2.5 h-2.5" />
+                          </button>
+                        )}
                         {/* Stage progress bar */}
                         <div className="h-[2px] bg-[var(--surface)]">
                           <div className="h-full rounded-r-full transition-all" style={{ width: `${progress}%`, background: stageColor }} />

@@ -2,8 +2,10 @@
 import { useStore } from '@/lib/store';
 import { useLeadsQuery, useCreateLead, useAdvanceLead, useDisqualifyLead, useConvertLead } from '@/lib/queries/leads';
 import { Badge, Avatar, FIUACBars, ScorePill, EmptyState, Skeleton, SkeletonCard, SkeletonText, ErrorState } from '@/components/ui';
-import { compositeScore } from '@/lib/utils';
+import { compositeScore, cn } from '@/lib/utils';
 import type { Lead } from '@/lib/types';
+import { usePendingMutations, useFailedMutations } from '@/hooks/use-mutation-state';
+import { RotateCw } from 'lucide-react';
 
 function LeadsSkeleton() {
   return (
@@ -45,6 +47,8 @@ export default function LeadsPage() {
   const advance = useAdvanceLead();
   const disqualify = useDisqualifyLead();
   const convertLead = useConvertLead();
+  const pendingIds = usePendingMutations(['leads']);
+  const failedMutations = useFailedMutations(['leads']);
 
   function openCreateLeadDrawer() {
     const state = { company: '', type: 'Unknown', country: '', pain: '' };
@@ -304,8 +308,20 @@ export default function LeadsPage() {
               <div className="min-h-[50px]">
                 {cards.length === 0 ? (
                   <div className="h-[50px] rounded-lg border border-dashed border-[var(--border)] flex items-center justify-center text-[10px] text-muted">No items</div>
-                ) : cards.map(l => (
-                  <div key={l.id} className="group rounded-lg p-3 mb-1.5 bg-[var(--elevated)] border border-[var(--border)] cursor-pointer hover:-translate-y-px hover:border-[var(--border-strong)] transition-all">
+                ) : cards.map(l => {
+                  const isPending = pendingIds.has(l.id);
+                  const failedInfo = failedMutations.get(l.id);
+                  return (
+                  <div key={l.id} className={cn('group rounded-lg p-3 mb-1.5 bg-[var(--elevated)] border border-[var(--border)] cursor-pointer hover:-translate-y-px hover:border-[var(--border-strong)] transition-all relative', isPending && 'opacity-60 animate-pulse', failedInfo && 'border-l-2 border-l-red-500')}>
+                    {failedInfo && (
+                      <button
+                        onClick={() => advance.mutate((failedInfo.variables as any))}
+                        className="absolute top-1 right-1 p-0.5 rounded-full bg-red-500/10 text-red-500 hover:bg-red-500/20 transition-colors"
+                        title={failedInfo.error}
+                      >
+                        <RotateCw className="w-2.5 h-2.5" />
+                      </button>
+                    )}
                     <div className="text-[10px] text-muted mb-0.5">{l.type || 'Unknown'} · {l.country || '—'}</div>
                     <div className="text-[12.5px] font-medium mb-1.5">{l.company}</div>
                     <div className="text-[11px] text-sub leading-tight line-clamp-2 mb-2">{l.pain || 'No pain hypothesis yet'}</div>
@@ -348,7 +364,7 @@ export default function LeadsPage() {
                       </button>
                     </div>
                   </div>
-                ))}
+                );})}
               </div>
             </div>
           );

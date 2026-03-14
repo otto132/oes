@@ -8,6 +8,8 @@ import { compositeScore } from '@/lib/types';
 import type { Account } from '@/lib/types';
 import { fmt, fRelative, cn } from '@/lib/utils';
 import { ScorePill, FIUACBars, Badge, Avatar, Skeleton, SkeletonCard, SkeletonText, ErrorState } from '@/components/ui';
+import { usePendingMutations, useFailedMutations } from '@/hooks/use-mutation-state';
+import { RotateCw } from 'lucide-react';
 
 function AccountsSkeleton() {
   return (
@@ -53,6 +55,8 @@ function AccountsPageInner() {
   const createAccount = useCreateAccount();
   const { openDrawer, closeDrawer, addToast } = useStore();
   const autoCreateFired = useRef(false);
+  const pendingIds = usePendingMutations(['accounts']);
+  const failedMutations = useFailedMutations(['accounts']);
 
   const ACCOUNT_TYPES = ['Unknown', 'PPA Buyer', 'Certificate Trader', 'Corporate Offtaker'];
   const COUNTRIES = ['Finland', 'Denmark', 'Sweden', 'Norway', 'Germany', 'Netherlands', 'UK', 'US'];
@@ -203,8 +207,10 @@ function AccountsPageInner() {
           <tbody>
             {sorted.map(a => {
               const stale = (Date.now() - new Date(a.lastActivityAt).getTime()) / 864e5 > 14;
+              const isPending = pendingIds.has(a.id);
+              const failedInfo = failedMutations.get(a.id);
               return (
-                <tr key={a.id} className="hover:bg-[var(--hover)] cursor-pointer transition-colors" onClick={() => window.location.href = `/accounts/${a.id}`}>
+                <tr key={a.id} className={cn('hover:bg-[var(--hover)] cursor-pointer transition-colors', isPending && 'opacity-60 animate-pulse', failedInfo && 'border-l-2 border-l-red-500')} onClick={() => window.location.href = `/accounts/${a.id}`}>
                   <td className="px-3.5 py-2.5 border-b border-[var(--border)]">
                     <div className="flex items-center gap-2">
                       <div className="w-[26px] h-[26px] rounded-md bg-brand/[.06] border border-brand/40 text-brand flex items-center justify-center text-[10px] font-semibold flex-shrink-0">{a.name[0]}</div>
