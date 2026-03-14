@@ -138,15 +138,15 @@ describe('isOverdue', () => {
 describe('weightedValue', () => {
   it('calculates weighted value for known stage', () => {
     // Solution Fit = 50%
-    expect(weightedValue(100_000, 'Solution Fit')).toBe(50_000);
+    expect(weightedValue(100_000, 'SolutionFit')).toBe(50_000);
   });
 
   it('returns 0 for Closed Lost (0%)', () => {
-    expect(weightedValue(200_000, 'Closed Lost')).toBe(0);
+    expect(weightedValue(200_000, 'ClosedLost')).toBe(0);
   });
 
   it('returns full amount for Closed Won (100%)', () => {
-    expect(weightedValue(200_000, 'Closed Won')).toBe(200_000);
+    expect(weightedValue(200_000, 'ClosedWon')).toBe(200_000);
   });
 
   it('returns 0 for unknown stage', () => {

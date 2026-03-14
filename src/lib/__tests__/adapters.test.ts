@@ -55,7 +55,7 @@ describe('adaptFIUAC', () => {
       scoreCommercial: 75,
     };
     expect(adaptFIUAC(row)).toEqual({
-      f: 80, i: 65, u: 90, a: 50, c: 75,
+      scoreFit: 80, scoreIntent: 65, scoreUrgency: 90, scoreAccess: 50, scoreCommercial: 75,
     });
   });
 
@@ -64,7 +64,9 @@ describe('adaptFIUAC', () => {
       scoreFit: 0, scoreIntent: 0, scoreUrgency: 0,
       scoreAccess: 0, scoreCommercial: 0,
     };
-    expect(adaptFIUAC(row)).toEqual({ f: 0, i: 0, u: 0, a: 0, c: 0 });
+    expect(adaptFIUAC(row)).toEqual({
+      scoreFit: 0, scoreIntent: 0, scoreUrgency: 0, scoreAccess: 0, scoreCommercial: 0,
+    });
   });
 });
 
@@ -77,7 +79,7 @@ describe('adaptHealth', () => {
       healthTimeline: 6,
     };
     expect(adaptHealth(row)).toEqual({
-      eng: 7, stake: 5, comp: 8, time: 6,
+      healthEngagement: 7, healthStakeholders: 5, healthCompetitive: 8, healthTimeline: 6,
     });
   });
 });
@@ -115,7 +117,7 @@ describe('adaptSignal', () => {
     relevance: 85,
     confidence: 0.923456,
     agent: 'signal-scanner',
-    status: 'new_signal',
+    status: 'new',
     detectedAt: new Date('2025-06-15T10:30:00Z'),
   };
 
@@ -126,7 +128,7 @@ describe('adaptSignal', () => {
 
   it('formats confidence to two decimal places', () => {
     const result = adaptSignal(base);
-    expect(result.confidence).toBe('0.92');
+    expect(result.confidence).toBe(0.923456);
   });
 
   it('maps source field', () => {
@@ -153,10 +155,10 @@ describe('adaptSignal', () => {
       source: 'NewsAPI',
       sourceUrl: 'https://example.com/article',
       detectedAt: '2025-06-15T10:30:00.000Z',
-      sum: 'Company signed a 10-year PPA',
-      rel: 85,
-      confidence: '0.92',
-      why: 'Strong renewable commitment',
+      summary: 'Company signed a 10-year PPA',
+      relevance: 85,
+      confidence: 0.923456,
+      reasoning: 'Strong renewable commitment',
       status: 'new',
       agent: 'signal-scanner',
     });
@@ -166,7 +168,7 @@ describe('adaptSignal', () => {
 describe('adaptContact', () => {
   it('maps role through enum value', () => {
     const result = adaptContact(makeContact());
-    expect(result.role).toBe('Economic Buyer');
+    expect(result.role).toBe('EconomicBuyer');
   });
 
   it('omits phone when null', () => {
@@ -220,13 +222,13 @@ describe('adaptOpportunity', () => {
 
   it('maps stage through enum value', () => {
     const result = adaptOpportunity(base);
-    expect(result.stage).toBe('Solution Fit');
+    expect(result.stage).toBe('SolutionFit');
   });
 
   it('adapts health sub-object', () => {
     const result = adaptOpportunity(base);
     expect(result.health).toEqual({
-      eng: 70, stake: 55, comp: 80, time: 60,
+      healthEngagement: 70, healthStakeholders: 55, healthCompetitive: 80, healthTimeline: 60,
     });
   });
 
@@ -322,13 +324,13 @@ describe('adaptQueueItem', () => {
   it('includes rejectionReason when present', () => {
     const result = adaptQueueItem({
       ...base,
-      rejectionReason: 'Low quality',
+      rejReason: 'Low quality',
     });
     expect(result.rejectionReason).toBe('Low quality');
   });
 
   it('omits rejectionReason when null', () => {
-    const result = adaptQueueItem({ ...base, rejectionReason: null });
+    const result = adaptQueueItem({ ...base, rejReason: null });
     expect(result).not.toHaveProperty('rejectionReason');
   });
 });
@@ -355,12 +357,14 @@ describe('adaptLead', () => {
 
   it('maps scores through adaptFIUAC', () => {
     const result = adaptLead(base);
-    expect(result.scores).toEqual({ f: 80, i: 70, u: 60, a: 50, c: 90 });
+    expect(result.scores).toEqual({
+      scoreFit: 80, scoreIntent: 70, scoreUrgency: 60, scoreAccess: 50, scoreCommercial: 90,
+    });
   });
 
   it('formats confidence to two decimals', () => {
     const result = adaptLead(base);
-    expect(result.confidence).toBe('0.76');
+    expect(result.confidence).toBe(0.756);
   });
 
   it('converts createdAt to ISO string', () => {
@@ -428,7 +432,7 @@ describe('adaptAccount', () => {
   it('adapts nested contacts', () => {
     const result = adaptAccount(base);
     expect(result.contacts).toHaveLength(1);
-    expect(result.contacts[0].role).toBe('Economic Buyer');
+    expect(result.contacts[0].role).toBe('EconomicBuyer');
   });
 });
 
@@ -451,7 +455,7 @@ describe('adaptTask', () => {
 
   it('maps status through enum value', () => {
     const result = adaptTask(base);
-    expect(result.status).toBe('In Progress');
+    expect(result.status).toBe('InProgress');
   });
 
   it('converts dueDate Date to ISO string', () => {
@@ -639,13 +643,13 @@ describe('adaptMeeting', () => {
     expect(result).toEqual({
       id: 'm1',
       title: 'Discovery Call',
-      time: '10:00',
+      startTime: '10:00',
       duration: '30 min',
       date: '2025-06-20T00:00:00.000Z',
       accountName: 'Acme Corp',
       accountId: 'a1',
-      who: ['Alice', 'Bob'],
-      prep: 'ready',
+      attendees: ['Alice', 'Bob'],
+      prepStatus: 'ready',
     });
   });
 
@@ -682,13 +686,13 @@ describe('adaptActivity', () => {
     expect(result).toEqual({
       id: 'act1',
       type: 'Email',
-      date: '2025-06-18T11:00:00.000Z',
+      createdAt: '2025-06-18T11:00:00.000Z',
       accountId: 'a1',
       accountName: 'Acme Corp',
-      sum: 'Sent follow-up',
+      summary: 'Sent follow-up',
       detail: 'Discussed pricing',
-      who: { id: 'u1', name: 'Alice Smith', initials: 'AS', role: 'AE', color: '#3b82f6' },
-      src: 'gmail',
+      author: { id: 'u1', name: 'Alice Smith', initials: 'AS', role: 'AE', color: '#3b82f6' },
+      source: 'gmail',
     });
   });
 
