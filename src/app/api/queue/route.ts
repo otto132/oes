@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { Prisma, SignalType, AccountType, LeadStage, TaskPriority } from '@prisma/client';
 import type { QueueItemType } from '@prisma/client';
 import { resolveTenantDb } from '@/lib/tenant';
+import { db as rawDb } from '@/lib/db';
 import { adaptQueueItem } from '@/lib/adapters';
 import { withHandler } from '@/lib/api-handler';
 import { queueActionSchema } from '@/lib/schemas/queue';
@@ -146,13 +147,12 @@ export const POST = withHandler(queueActionSchema, async (req, ctx) => {
     return forbidden('Only ADMIN or MEMBER roles can approve or reject queue items');
   }
 
-  const db = resolveTenantDb(ctx.session as any);
   const body = ctx.body;
   const userId = ctx.session.user.id;
 
   if (body.action === 'approve') {
     const { id, editedPayload } = body;
-    const item = await db.queueItem.findUnique({ where: { id } });
+    const item = await ctx.db.queueItem.findUnique({ where: { id } });
     if (!item) return notFound('Queue item not found');
 
     // Validate editedPayload against type-specific schema
@@ -166,7 +166,7 @@ export const POST = withHandler(queueActionSchema, async (req, ctx) => {
       }
     }
 
-    const updated = await db.queueItem.update({
+    const updated = await ctx.db.queueItem.update({
       where: { id },
       data: {
         status: 'approved',
@@ -189,7 +189,7 @@ export const POST = withHandler(queueActionSchema, async (req, ctx) => {
     // Apply side-effects based on type
     if (item.type === 'lead_qualification') {
       const payload = (effectivePayload ?? item.payload) as unknown as LeadQualificationPayload;
-      await db.lead.create({
+      await ctx.db.lead.create({
         data: {
           company: payload.company,
           source: 'AI Qualified',
@@ -209,14 +209,14 @@ export const POST = withHandler(queueActionSchema, async (req, ctx) => {
     } else if (item.type === 'enrichment' && item.accId) {
       const payload = (effectivePayload ?? item.payload) as unknown as EnrichmentPayload;
       if (payload.field) {
-        await db.account.update({
+        await ctx.db.account.update({
           where: { id: item.accId },
           data: { [payload.field]: payload.after, lastActivityAt: new Date() },
         });
       }
     } else if (item.type === 'task_creation') {
       const payload = (effectivePayload ?? item.payload) as unknown as TaskCreationPayload;
-      await db.task.create({
+      await ctx.db.task.create({
         data: {
           title: payload.task,
           due: payload.due ? new Date(payload.due) : new Date(Date.now() + 7 * 864e5),
@@ -229,7 +229,7 @@ export const POST = withHandler(queueActionSchema, async (req, ctx) => {
       });
     } else if (item.type === 'signal_review') {
       const payload = (effectivePayload ?? item.payload) as unknown as SignalReviewPayload;
-      await db.signal.create({
+      await ctx.db.signal.create({
         data: {
           type: (payload.signalType || 'market_entry') as SignalType,
           title: String(payload.headline || item.title),
@@ -244,7 +244,7 @@ export const POST = withHandler(queueActionSchema, async (req, ctx) => {
       });
     } else if (item.type === 'outreach_draft') {
       const payload = (effectivePayload ?? item.payload) as unknown as OutreachDraftPayload;
-      await db.activity.create({
+      await ctx.db.activity.create({
         data: {
           type: 'Email',
           summary: 'Outreach sent: ' + (payload.subject || '').slice(0, 60),
@@ -255,16 +255,16 @@ export const POST = withHandler(queueActionSchema, async (req, ctx) => {
         },
       });
       if (item.accId) {
-        await db.account.update({ where: { id: item.accId }, data: { lastActivityAt: new Date() } });
+        await ctx.db.account.update({ where: { id: item.accId }, data: { lastActivityAt: new Date() } });
       }
     }
 
-    // Notify admins of approval
-    const admins = await db.user.findMany({
+    // Notify admins of approval (rawDb used — notifyUsers needs PrismaClient, not ScopedDb)
+    const admins = await rawDb.user.findMany({
       where: { role: 'ADMIN', isActive: true },
       select: { id: true },
     });
-    await notifyUsers(db, admins.map(a => a.id), userId, {
+    await notifyUsers(rawDb, admins.map(a => a.id), userId, {
       type: 'QUEUE_ITEM',
       title: 'Queue item approved',
       message: item.title.slice(0, 100),
@@ -273,7 +273,7 @@ export const POST = withHandler(queueActionSchema, async (req, ctx) => {
     });
 
     // Log approval activity
-    await db.activity.create({
+    await ctx.db.activity.create({
       data: {
         type: 'Note',
         summary: 'Queue approved: ' + item.title.slice(0, 60),
@@ -292,7 +292,7 @@ export const POST = withHandler(queueActionSchema, async (req, ctx) => {
     const adapted = adaptQueueItem(updated);
     // Resolve reviewer display name (reviewedById is a plain string, no relation)
     if (updated.reviewedById) {
-      const reviewer = await db.user.findUnique({ where: { id: updated.reviewedById }, select: { name: true } });
+      const reviewer = await rawDb.user.findUnique({ where: { id: updated.reviewedById }, select: { name: true } });
       if (reviewer) adapted.reviewedBy = reviewer.name;
     }
     return NextResponse.json({ data: adapted });
@@ -300,19 +300,19 @@ export const POST = withHandler(queueActionSchema, async (req, ctx) => {
 
   if (body.action === 'reject') {
     const { id, reason } = body;
-    const item = await db.queueItem.findUnique({ where: { id } });
+    const item = await ctx.db.queueItem.findUnique({ where: { id } });
     if (!item) return notFound('Queue item not found');
-    const updated = await db.queueItem.update({
+    const updated = await ctx.db.queueItem.update({
       where: { id },
       data: { status: 'rejected', reviewedById: userId, reviewedAt: new Date(), rejReason: reason },
     });
 
-    // Notify admins of rejection
-    const admins = await db.user.findMany({
+    // Notify admins of rejection (rawDb used — notifyUsers needs PrismaClient, not ScopedDb)
+    const admins = await rawDb.user.findMany({
       where: { role: 'ADMIN', isActive: true },
       select: { id: true },
     });
-    await notifyUsers(db, admins.map(a => a.id), userId, {
+    await notifyUsers(rawDb, admins.map(a => a.id), userId, {
       type: 'QUEUE_ITEM',
       title: 'Queue item rejected',
       message: `${item.title.slice(0, 80)}${reason ? ' — ' + reason.slice(0, 50) : ''}`,
@@ -322,7 +322,7 @@ export const POST = withHandler(queueActionSchema, async (req, ctx) => {
 
     const adapted = adaptQueueItem(updated);
     if (updated.reviewedById) {
-      const reviewer = await db.user.findUnique({ where: { id: updated.reviewedById }, select: { name: true } });
+      const reviewer = await rawDb.user.findUnique({ where: { id: updated.reviewedById }, select: { name: true } });
       if (reviewer) adapted.reviewedBy = reviewer.name;
     }
     return NextResponse.json({ data: adapted });

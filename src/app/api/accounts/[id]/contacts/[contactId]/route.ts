@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { Prisma } from '@prisma/client';
-import { resolveTenantDb } from '@/lib/tenant';
 import { auth } from '@/lib/auth';
 import { requireRole } from '@/lib/rbac';
 import { scopedDb } from '@/lib/scoped-db';
@@ -27,7 +26,7 @@ type RouteCtx = { params: Promise<{ id: string; contactId: string }> };
 export async function PATCH(req: NextRequest, { params }: RouteCtx) {
   const session = await auth();
   if (!session?.user?.id) return unauthorized();
-  const db = resolveTenantDb(session as any);
+  const db = scopedDb(session.user.id, (session.user as any).role ?? 'MEMBER');
 
   const { id: accountId, contactId } = await params;
 
@@ -53,7 +52,7 @@ export async function PATCH(req: NextRequest, { params }: RouteCtx) {
 export async function DELETE(_req: NextRequest, { params }: RouteCtx) {
   const session = await auth();
   if (!session?.user?.id) return unauthorized();
-  const db = resolveTenantDb(session as any);
+  const db = scopedDb(session.user.id, (session.user as any).role ?? 'MEMBER');
 
   const denied = requireRole(session, 'ADMIN', 'MEMBER');
   if (denied) return denied;
@@ -61,9 +60,7 @@ export async function DELETE(_req: NextRequest, { params }: RouteCtx) {
   const { id: accountId, contactId } = await params;
 
   // Verify account is within user's access boundary
-  const userRole = (session.user as { role?: string }).role ?? 'VIEWER';
-  const scoped = scopedDb(session.user.id, userRole);
-  const account = await scoped.account.findUnique({ where: { id: accountId } });
+  const account = await db.account.findUnique({ where: { id: accountId } });
   if (!account) return notFound('Account not found');
 
   // Verify contact belongs to this account

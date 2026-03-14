@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { resolveTenantDb } from '@/lib/tenant';
+import { db as rawDb } from '@/lib/db';
+import { scopedDb } from '@/lib/scoped-db';
 import { auth } from '@/lib/auth';
 import { adaptTask } from '@/lib/adapters';
 import { patchTaskSchema } from '@/lib/schemas/tasks';
@@ -20,7 +21,7 @@ export async function PATCH(
 ) {
   const session = await auth();
   if (!session?.user?.id) return unauthorized();
-  const db = resolveTenantDb(session as any);
+  const db = scopedDb(session.user.id, (session.user as any).role ?? 'MEMBER');
 
   const { id } = await params;
 
@@ -53,7 +54,7 @@ export async function PATCH(
 
   // Notify new assignees if assigneeIds changed
   if (body.assigneeIds !== undefined) {
-    await notifyUsers(db, body.assigneeIds, session.user.id, {
+    await notifyUsers(rawDb, body.assigneeIds, session.user.id, {
       type: 'TASK_ASSIGNED',
       title: 'Task assigned to you',
       message: updated.title.slice(0, 100),

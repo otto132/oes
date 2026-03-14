@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { Prisma, AccountType, type SignalType } from '@prisma/client';
 import { resolveTenantDb } from '@/lib/tenant';
+import { db as rawDb } from '@/lib/db';
 import { auth } from '@/lib/auth';
 import { adaptSignal } from '@/lib/adapters';
 import { withHandler } from '@/lib/api-handler';
@@ -33,24 +34,23 @@ export async function GET(req: NextRequest) {
 
 // ── POST /api/signals (dismiss, convert) ─────────
 export const POST = withHandler(signalActionSchema, async (req, ctx) => {
-  const db = resolveTenantDb(ctx.session as any);
   const body = ctx.body;
 
   if (body.action === 'dismiss') {
-    const signal = await db.signal.update({ where: { id: body.id }, data: { status: 'dismissed' } });
+    const signal = await ctx.db.signal.update({ where: { id: body.id }, data: { status: 'dismissed' } });
     return NextResponse.json({ data: adaptSignal(signal) });
   }
 
   if (body.action === 'convert') {
     const { id, company, type, country } = body;
-    // Check for duplicates
-    const dup = await db.lead.findFirst({ where: { company: { equals: company, mode: 'insensitive' } } });
+    // Cross-user duplicate checks use raw unscoped db
+    const dup = await rawDb.lead.findFirst({ where: { company: { equals: company, mode: 'insensitive' } } });
     if (dup) return conflict(`Lead "${dup.company}" already exists`);
-    const dupAcc = await db.account.findFirst({ where: { name: { equals: company, mode: 'insensitive' } } });
+    const dupAcc = await rawDb.account.findFirst({ where: { name: { equals: company, mode: 'insensitive' } } });
     if (dupAcc) return conflict(`Account "${dupAcc.name}" already exists`);
 
-    const signal = await db.signal.update({ where: { id }, data: { status: 'converted' } });
-    const lead = await db.lead.create({
+    const signal = await ctx.db.signal.update({ where: { id }, data: { status: 'converted' } });
+    const lead = await ctx.db.lead.create({
       data: {
         company,
         source: 'Signal',

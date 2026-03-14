@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { resolveTenantDb } from '@/lib/tenant';
+import { scopedDb } from '@/lib/scoped-db';
 import { auth } from '@/lib/auth';
 import { createContactSchema } from '@/lib/schemas/contacts';
 
@@ -11,7 +11,7 @@ export async function POST(
   if (!session?.user?.id) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
-  const db = resolveTenantDb(session as any);
+  const db = scopedDb(session.user.id, (session.user as any).role ?? 'VIEWER');
 
   const { id: accountId } = await params;
   const raw = await req.json();

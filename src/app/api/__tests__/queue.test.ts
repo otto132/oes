@@ -17,7 +17,8 @@ const { mockDb, mockAuth: _mockAuthFn } = vi.hoisted(() => {
       task: { create: fn() },
       activity: { create: fn() },
       account: { update: fn() },
-      user: { findUnique: fn() },
+      user: { findUnique: fn(), findMany: fn() },
+      notification: { findFirst: fn(), create: fn() },
     },
     mockAuth: fn(),
   };
@@ -86,6 +87,9 @@ describe('POST /api/queue', () => {
     vi.clearAllMocks();
     mockAuth();
     mockDb.user.findUnique.mockResolvedValue({ name: 'Test User' });
+    mockDb.user.findMany.mockResolvedValue([]);
+    mockDb.notification.findFirst.mockResolvedValue(null);
+    mockDb.notification.create.mockResolvedValue({ id: 'notif-1' });
   });
 
   // ── Approve: lead_qualification ──────────────────────────
@@ -163,6 +167,7 @@ describe('POST /api/queue', () => {
   // ── Reject ───────────────────────────────────────────────
   it('rejecting a queue item sets status to rejected', async () => {
     const item = makeQueueItem();
+    mockDb.queueItem.findUnique.mockResolvedValue(item);
     const updatedItem = {
       ...item,
       status: 'rejected',
@@ -208,7 +213,7 @@ describe('POST /api/queue', () => {
     const json = await res.json();
 
     expect(res.status).toBe(404);
-    expect(json.error).toEqual({ code: 'NOT_FOUND', message: 'Queue item not found' });
+    expect(json.error).toMatchObject({ code: 'NOT_FOUND', message: 'Queue item not found' });
   });
 
   // ── Invalid item ID returns 404 ──────────────────────────
@@ -219,7 +224,7 @@ describe('POST /api/queue', () => {
     const json = await res.json();
 
     expect(res.status).toBe(404);
-    expect(json.error).toEqual({ code: 'NOT_FOUND', message: 'Queue item not found' });
+    expect(json.error).toMatchObject({ code: 'NOT_FOUND', message: 'Queue item not found' });
   });
 
   // ── Unauthorized ─────────────────────────────────────────
@@ -230,6 +235,6 @@ describe('POST /api/queue', () => {
     const json = await res.json();
 
     expect(res.status).toBe(401);
-    expect(json.error).toEqual({ code: 'UNAUTHORIZED', message: 'Unauthorized' });
+    expect(json.error).toMatchObject({ code: 'UNAUTHORIZED', message: 'Unauthorized' });
   });
 });

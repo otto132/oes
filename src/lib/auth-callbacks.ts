@@ -1,4 +1,5 @@
 import { db } from '@/lib/db';
+import { logger } from '@/lib/logger';
 
 function deriveInitials(name: string): string {
   return name
@@ -45,31 +46,8 @@ export async function testSignInCallback({ user }: { user: { email?: string | nu
     return true;
   }
 
-  // Auto-create user on first Google sign-in (bypass invitation requirement)
-  const tenant = await db.tenant.findFirst();
-  if (tenant) {
-    await db.user.create({
-      data: {
-        email: user.email,
-        name: user.name || user.email,
-        initials: deriveInitials(user.name || user.email),
-        role: 'ADMIN',
-        lastLoginAt: new Date(),
-        tenantId: tenant.id,
-      },
-    });
-  } else {
-    const newTenant = await db.tenant.create({ data: { name: 'Default', slug: 'default' } });
-    await db.user.create({
-      data: {
-        email: user.email,
-        name: user.name || user.email,
-        initials: deriveInitials(user.name || user.email),
-        role: 'ADMIN',
-        lastLoginAt: new Date(),
-        tenantId: newTenant.id,
-      },
-    });
-  }
-  return true;
+  // No existing user and no invitation → reject sign-in.
+  // Users must be added manually to the database or invited.
+  logger.warn('[auth] Sign-in rejected: unknown user', { email: user.email });
+  return false;
 }

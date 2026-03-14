@@ -74,4 +74,33 @@ describe('withHandler', () => {
     const body = await res.json();
     expect(body).toEqual({ cursor: 'abc', limit: 25 });
   });
+
+  it('returns 404 when handler throws AccessDeniedError', async () => {
+    mockedAuth.mockResolvedValue({ user: { id: 'u1' } } as any);
+    const { AccessDeniedError } = await import('../scoped-db');
+    const handler = withHandler(null, async () => {
+      throw new AccessDeniedError('account');
+    });
+    const res = await handler(makeReq(undefined, 'GET'));
+    expect(res.status).toBe(404);
+    const body = await res.json();
+    expect(body.error.message).toBe('Record not found or access denied');
+  });
+
+  it('transforms Prisma errors into generic 500', async () => {
+    mockedAuth.mockResolvedValue({ user: { id: 'u1' } } as any);
+    const { Prisma } = await import('@prisma/client');
+    const prismaError = new Prisma.PrismaClientKnownRequestError(
+      'Unique constraint failed on the fields: (`User_email_key`)',
+      { code: 'P2002', clientVersion: '5.0.0', meta: { target: ['User_email_key'] } },
+    );
+    const handler = withHandler(null, async () => {
+      throw prismaError;
+    });
+    const res = await handler(makeReq(undefined, 'GET'));
+    expect(res.status).toBe(500);
+    const body = await res.json();
+    expect(body.error.message).toBe('Internal server error');
+    expect(JSON.stringify(body)).not.toContain('User_email_key');
+  });
 });

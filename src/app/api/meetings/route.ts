@@ -41,19 +41,18 @@ export async function GET(req: NextRequest) {
 }
 
 export const POST = withHandler(createMeetingSchema, async (_req, ctx) => {
-  const db = resolveTenantDb(ctx.session as any);
   const { title, date, startTime, duration, attendees, accountId } = ctx.body;
 
   let accountName: string | null = null;
   if (accountId) {
-    const account = await db.account.findUnique({
+    const account = await ctx.db.account.findUnique({
       where: { id: accountId },
       select: { name: true },
     });
     accountName = account?.name ?? null;
   }
 
-  const meeting = await db.meeting.create({
+  const meeting = await ctx.db.meeting.create({
     data: {
       title,
       date: new Date(date),
