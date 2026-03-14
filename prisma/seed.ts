@@ -23,11 +23,23 @@ async function main() {
   await prisma.account.deleteMany();
   await prisma.user.deleteMany();
   await prisma.agentConfig.deleteMany();
+  await prisma.tenant.deleteMany();
+
+  // ── Tenant ──────────────────────────────────────
+  const tenant = await prisma.tenant.create({
+    data: {
+      id: 'tenant-default',
+      name: 'Eco-Insight',
+      slug: 'eco-insight',
+      plan: 'free',
+    },
+  });
+  console.log('  ✓ 1 tenant');
 
   // ── Users ──────────────────────────────────────
-  const u1 = await prisma.user.create({ data: { id: 'u1', name: 'Juuso Kari', initials: 'JK', email: 'juuso@eco-insight.com', role: 'ADMIN', color: 'green' } });
-  const u2 = await prisma.user.create({ data: { id: 'u2', name: 'Laura Puranen', initials: 'LP', email: 'laura@eco-insight.com', role: 'ADMIN', color: 'default' } });
-  const u3 = await prisma.user.create({ data: { id: 'u3', name: 'Nick Schoch', initials: 'NS', email: 'nick@eco-insight.com', role: 'MEMBER', color: 'blue' } });
+  const u1 = await prisma.user.create({ data: { id: 'u1', name: 'Juuso Kari', initials: 'JK', email: 'juuso@eco-insight.com', role: 'ADMIN', color: 'green', tenantId: 'tenant-default' } });
+  const u2 = await prisma.user.create({ data: { id: 'u2', name: 'Laura Puranen', initials: 'LP', email: 'laura@eco-insight.com', role: 'ADMIN', color: 'default', tenantId: 'tenant-default' } });
+  const u3 = await prisma.user.create({ data: { id: 'u3', name: 'Nick Schoch', initials: 'NS', email: 'nick@eco-insight.com', role: 'MEMBER', color: 'blue', tenantId: 'tenant-default' } });
   console.log('  ✓ 3 users');
 
   // ── Signals ────────────────────────────────────

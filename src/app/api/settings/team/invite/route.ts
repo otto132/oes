@@ -51,6 +51,7 @@ export async function POST(req: NextRequest) {
       role,
       invitedById: session.user.id,
       expiresAt,
+      tenantId: dbUser.tenantId,
     },
   });
 

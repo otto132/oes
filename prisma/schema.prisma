@@ -171,6 +171,25 @@ enum Role {
 }
 
 // ═══════════════════════════════════════════════════════════════
+// TENANTS
+// ═══════════════════════════════════════════════════════════════
+
+model Tenant {
+  id                 String   @id @default(cuid())
+  name               String
+  slug               String   @unique
+  plan               String   @default("free")
+  settings           Json     @default("{}")
+  dbConnectionString String?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+  users              User[]
+  invitations        Invitation[]
+
+  @@map("tenants")
+}
+
+// ═══════════════════════════════════════════════════════════════
 // USERS
 // ═══════════════════════════════════════════════════════════════
 
@@ -189,6 +208,9 @@ model User {
   lastLoginAt          DateTime?
   linkedinConnections  Json?     // Team member's LinkedIn connection data
 
+  tenantId  String
+  tenant    Tenant @relation(fields: [tenantId], references: [id])
+
   // Relations
   ownedLeads        Lead[]             @relation("LeadOwner")
   ownedAccounts     Account[]          @relation("AccountOwner")
@@ -203,6 +225,7 @@ model User {
   integrationTokens IntegrationToken[]
   syncLogs          SyncLog[]
 
+  @@index([tenantId])
   @@map("users")
 }
 
@@ -702,7 +725,11 @@ model Invitation {
   createdAt   DateTime         @default(now())
   updatedAt   DateTime         @updatedAt
 
+  tenantId  String
+  tenant    Tenant @relation(fields: [tenantId], references: [id])
+
   @@index([email, status])
   @@index([token])
+  @@index([tenantId])
   @@map("invitations")
 }

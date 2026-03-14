@@ -39,6 +39,7 @@ export async function testSignInCallback({ user }: { user: { email?: string | nu
       initials: deriveInitials(user.name || user.email),
       role: invitation.role,
       lastLoginAt: new Date(),
+      tenantId: invitation.tenantId,
     },
   });
 
