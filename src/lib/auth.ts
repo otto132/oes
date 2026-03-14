@@ -1,24 +1,13 @@
 import NextAuth from "next-auth"
-import type { NextAuthConfig } from "next-auth"
-import Google from "next-auth/providers/google"
 import Credentials from "next-auth/providers/credentials"
 import { db } from "@/lib/db"
-import { env, availableProviders } from "@/lib/env"
+import { authConfig } from "./auth.config"
 import { testSignInCallback } from "./auth-callbacks"
 
-// Build providers array based on which env vars are configured
-const providers: NextAuthConfig["providers"] = []
+// Full auth config — extends the edge-safe base with DB-dependent callbacks.
+// The middleware uses authConfig directly (no Prisma in the edge bundle).
 
-const { google } = availableProviders()
-
-if (google) {
-  providers.push(
-    Google({
-      clientId: env.GOOGLE_CLIENT_ID!,
-      clientSecret: env.GOOGLE_CLIENT_SECRET!,
-    })
-  )
-}
+const providers = [...authConfig.providers]
 
 // Dev-only credentials provider — auto-signs in as first active user
 if (process.env.NODE_ENV === "development") {
@@ -40,44 +29,8 @@ if (process.env.NODE_ENV === "development") {
 }
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
+  ...authConfig,
   providers,
-  session: { strategy: "jwt" },
-  pages: { signIn: "/login" },
-  cookies: {
-    sessionToken: {
-      name: process.env.NODE_ENV === "production"
-        ? "__Secure-next-auth.session-token"
-        : "next-auth.session-token",
-      options: {
-        httpOnly: true,
-        sameSite: "lax",
-        path: "/",
-        secure: process.env.NODE_ENV === "production",
-      },
-    },
-    csrfToken: {
-      name: process.env.NODE_ENV === "production"
-        ? "__Host-next-auth.csrf-token"
-        : "next-auth.csrf-token",
-      options: {
-        httpOnly: true,
-        sameSite: "lax",
-        path: "/",
-        secure: process.env.NODE_ENV === "production",
-      },
-    },
-    callbackUrl: {
-      name: process.env.NODE_ENV === "production"
-        ? "__Secure-next-auth.callback-url"
-        : "next-auth.callback-url",
-      options: {
-        httpOnly: true,
-        sameSite: "lax",
-        path: "/",
-        secure: process.env.NODE_ENV === "production",
-      },
-    },
-  },
   callbacks: {
     async signIn({ user }) {
       return testSignInCallback({ user })
