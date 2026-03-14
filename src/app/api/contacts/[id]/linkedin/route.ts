@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { db as prisma } from '@/lib/db';
+import { resolveTenantDb } from '@/lib/tenant';
 import { auth } from '@/lib/auth';
 import { z } from 'zod';
+import { unauthorized } from '@/lib/api-errors';
 
 const LinkedInPasteSchema = z.object({
   linkedinText: z.string().min(10).max(50000),
@@ -12,13 +13,12 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const session = await auth();
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
+  if (!session?.user?.id) return unauthorized();
+  const db = resolveTenantDb(session as any);
 
   const { id } = await params;
 
-  const contact = await prisma.contact.findUnique({
+  const contact = await db.contact.findUnique({
     where: { id },
     select: { id: true, accountId: true },
   });
@@ -33,7 +33,7 @@ export async function POST(
     return NextResponse.json({ error: 'Invalid input', details: parsed.error.issues }, { status: 400 });
   }
 
-  await prisma.contact.update({
+  await db.contact.update({
     where: { id },
     data: { linkedinData: { rawText: parsed.data.linkedinText, pastedAt: new Date().toISOString() } },
   });

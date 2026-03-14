@@ -96,7 +96,22 @@ export function useRevokeInvitation() {
   return useMutation({
     mutationKey: ['settings', 'revokeInvite'],
     mutationFn: (id: string) => api.settings.revokeInvite(id),
-    onSuccess: () => {
+    onMutate: async (id) => {
+      await qc.cancelQueries({ queryKey: settingsKeys.invitations() });
+      const previousInvitations = qc.getQueryData(settingsKeys.invitations());
+      qc.setQueryData(settingsKeys.invitations(), (old: any) => {
+        if (!old?.data) return old;
+        return {
+          ...old,
+          data: old.data.filter((inv: any) => inv.id !== id),
+        };
+      });
+      return { previousInvitations };
+    },
+    onError: (_err, _vars, context) => {
+      if (context?.previousInvitations) qc.setQueryData(settingsKeys.invitations(), context.previousInvitations);
+    },
+    onSettled: () => {
       qc.invalidateQueries({ queryKey: settingsKeys.invitations() });
     },
   });
@@ -109,7 +124,24 @@ export function useUpdateTeamMember() {
     mutationKey: ['settings', 'updateUser'],
     mutationFn: ({ id, data }: { id: string; data: { role?: string; isActive?: boolean } }) =>
       api.settings.updateUser(id, data),
-    onSuccess: () => {
+    onMutate: async ({ id, data }) => {
+      await qc.cancelQueries({ queryKey: settingsKeys.team() });
+      const previousTeam = qc.getQueryData(settingsKeys.team());
+      qc.setQueryData(settingsKeys.team(), (old: any) => {
+        if (!old?.data) return old;
+        return {
+          ...old,
+          data: old.data.map((member: any) =>
+            member.id === id ? { ...member, ...data } : member
+          ),
+        };
+      });
+      return { previousTeam };
+    },
+    onError: (_err, _vars, context) => {
+      if (context?.previousTeam) qc.setQueryData(settingsKeys.team(), context.previousTeam);
+    },
+    onSettled: () => {
       qc.invalidateQueries({ queryKey: settingsKeys.team() });
     },
   });

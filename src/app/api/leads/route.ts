@@ -1,13 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { AccountType, LeadStage, OppStage } from '@prisma/client';
-import { db } from '@/lib/db';
+import { resolveTenantDb } from '@/lib/tenant';
+import { auth } from '@/lib/auth';
 import { adaptLead } from '@/lib/adapters';
 import { withHandler } from '@/lib/api-handler';
 import { leadActionSchema } from '@/lib/schemas/leads';
-import { notFound, badRequest, conflict } from '@/lib/api-errors';
+import { notFound, badRequest, conflict, unauthorized } from '@/lib/api-errors';
 import { parsePagination, paginate } from '@/lib/schemas/pagination';
 
 export async function GET(req: NextRequest) {
+  const session = await auth();
+  if (!session?.user?.id) return unauthorized();
+  const db = resolveTenantDb(session as any);
+
   const pagination = parsePagination(req);
 
   const leads = await db.lead.findMany({
@@ -23,6 +28,7 @@ export async function GET(req: NextRequest) {
 }
 
 export const POST = withHandler(leadActionSchema, async (req, ctx) => {
+  const db = resolveTenantDb(ctx.session as any);
   const body = ctx.body;
   const session = ctx.session;
 

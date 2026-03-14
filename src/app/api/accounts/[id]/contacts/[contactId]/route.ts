@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { db } from '@/lib/db';
+import { resolveTenantDb } from '@/lib/tenant';
 import { auth } from '@/lib/auth';
 import { unauthorized, notFound, zodError } from '@/lib/api-errors';
 import { adaptContact } from '@/lib/adapters';
@@ -23,6 +23,7 @@ type RouteCtx = { params: Promise<{ id: string; contactId: string }> };
 export async function PATCH(req: NextRequest, { params }: RouteCtx) {
   const session = await auth();
   if (!session?.user?.id) return unauthorized();
+  const db = resolveTenantDb(session as any);
 
   const { id: accountId, contactId } = await params;
 
@@ -48,6 +49,7 @@ export async function PATCH(req: NextRequest, { params }: RouteCtx) {
 export async function DELETE(_req: NextRequest, { params }: RouteCtx) {
   const session = await auth();
   if (!session?.user?.id) return unauthorized();
+  const db = resolveTenantDb(session as any);
 
   const { id: accountId, contactId } = await params;
 

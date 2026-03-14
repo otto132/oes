@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { auth } from '@/lib/auth';
-import { db } from '@/lib/db';
+import { resolveTenantDb } from '@/lib/tenant';
 import { unauthorized, zodError } from '@/lib/api-errors';
 
 const DEFAULT_PREFS = { emailAlerts: true, queueAlerts: true };
@@ -19,6 +19,7 @@ const profileSelect = {
 export async function GET() {
   const session = await auth();
   if (!session?.user?.id) return unauthorized();
+  const db = resolveTenantDb(session as any);
 
   const user = await db.user.findUnique({
     where: { id: session.user.id },
@@ -49,6 +50,7 @@ const updateProfileSchema = z.object({
 export async function PATCH(req: NextRequest) {
   const session = await auth();
   if (!session?.user?.id) return unauthorized();
+  const db = resolveTenantDb(session as any);
 
   const raw = await req.json();
   const parsed = updateProfileSchema.safeParse(raw);

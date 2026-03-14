@@ -1,8 +1,14 @@
 // src/app/api/badge-counts/route.ts
 import { NextResponse } from 'next/server';
-import { db } from '@/lib/db';
+import { resolveTenantDb } from '@/lib/tenant';
+import { auth } from '@/lib/auth';
+import { unauthorized } from '@/lib/api-errors';
 
 export async function GET() {
+  const session = await auth();
+  if (!session?.user?.id) return unauthorized();
+  const db = resolveTenantDb(session as any);
+
   const [pendingQueue, newSignals, newLeads, unreadEmails, overdueTasks] = await Promise.all([
     db.queueItem.count({ where: { status: 'pending' } }),
     db.signal.count({ where: { status: 'new_signal' } }),

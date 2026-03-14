@@ -1,11 +1,12 @@
 import { NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
-import { db } from '@/lib/db';
+import { resolveTenantDb } from '@/lib/tenant';
 import { unauthorized } from '@/lib/api-errors';
 
 export async function GET() {
   const session = await auth();
   if (!session?.user?.id) return unauthorized();
+  const db = resolveTenantDb(session as any);
 
   const users = await db.user.findMany({
     select: {

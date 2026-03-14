@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { db } from '@/lib/db';
+import { resolveTenantDb } from '@/lib/tenant';
 import { auth } from '@/lib/auth';
 import { unauthorized } from '@/lib/api-errors';
 
@@ -79,6 +79,7 @@ const DEFAULT_AGENTS = [
 export async function GET() {
   const session = await auth();
   if (!session?.user?.id) return unauthorized();
+  const db = resolveTenantDb(session as any);
 
   const count = await db.agentConfig.count();
   if (count === 0) {

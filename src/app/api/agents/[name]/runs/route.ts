@@ -1,20 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { db as prisma } from '@/lib/db';
+import { resolveTenantDb } from '@/lib/tenant';
 import { auth } from '@/lib/auth';
+import { unauthorized } from '@/lib/api-errors';
 import { parsePagination } from '@/lib/schemas/pagination';
 
 type RouteContext = { params: Promise<{ name: string }> };
 
 export async function GET(req: NextRequest, ctx: RouteContext) {
   const session = await auth();
-  if (!session?.user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
+  if (!session?.user?.id) return unauthorized();
+  const db = resolveTenantDb(session as any);
 
   const { name } = await ctx.params;
   const { cursor, limit } = parsePagination(req);
 
-  const runs = await prisma.agentRun.findMany({
+  const runs = await db.agentRun.findMany({
     where: { agentName: name },
     orderBy: { startedAt: 'desc' },
     take: limit + 1,

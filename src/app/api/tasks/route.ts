@@ -1,13 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { Prisma, OppStage } from '@prisma/client';
 import type { Task } from '@prisma/client';
-import { db } from '@/lib/db';
+import { resolveTenantDb } from '@/lib/tenant';
+import { auth } from '@/lib/auth';
+import { unauthorized } from '@/lib/api-errors';
 import { adaptTask, adaptGoal, adaptTaskComment } from '@/lib/adapters';
 import { withHandler } from '@/lib/api-handler';
 import { taskActionSchema } from '@/lib/schemas/tasks';
 import { parsePagination, paginate } from '@/lib/schemas/pagination';
 
 export async function GET(req: NextRequest) {
+  const session = await auth();
+  if (!session?.user?.id) return unauthorized();
+  const db = resolveTenantDb(session as any);
+
   const includeCompleted = req.nextUrl.searchParams.get('completed') === 'true';
   const where: Prisma.TaskWhereInput = {};
   if (!includeCompleted) where.status = { not: 'Done' };
@@ -42,6 +48,7 @@ export async function GET(req: NextRequest) {
 }
 
 export const POST = withHandler(taskActionSchema, async (req, ctx) => {
+  const db = resolveTenantDb(ctx.session as any);
   const body = ctx.body;
   const session = ctx.session;
 

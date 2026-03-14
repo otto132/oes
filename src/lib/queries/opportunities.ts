@@ -55,6 +55,17 @@ export function useCreateOpportunity() {
     onError: (_err, _vars, context) => {
       context?.previous.forEach(([key, data]) => qc.setQueryData(key, data));
     },
+    onSuccess: (serverResponse) => {
+      qc.setQueriesData({ queryKey: oppKeys.all }, (old: any) => {
+        if (!old) return old;
+        return {
+          ...old,
+          data: old.data.map((item: any) =>
+            item.id?.startsWith('temp-') ? serverResponse.data : item
+          ),
+        };
+      });
+    },
     onSettled: () => {
       qc.invalidateQueries({ queryKey: oppKeys.all });
     },
@@ -147,9 +158,36 @@ export function useUpdateOpportunity() {
     mutationKey: ['opportunities', 'update'],
     mutationFn: ({ id, data }: { id: string; data: Record<string, unknown> }) =>
       api.opportunities.update(id, data),
-    onSuccess: (_data, vars) => {
-      qc.invalidateQueries({ queryKey: oppKeys.detail(vars.id) });
+    onMutate: async ({ id, data }) => {
+      await qc.cancelQueries({ queryKey: oppKeys.all });
+      await qc.cancelQueries({ queryKey: oppKeys.detail(id) });
+      const queries = qc.getQueriesData({ queryKey: oppKeys.all });
+      const previous = queries.map(([key, d]) => [key, d] as const);
+      const previousDetail = qc.getQueryData(oppKeys.detail(id));
+      qc.setQueriesData({ queryKey: oppKeys.all }, (old: any) => {
+        if (!old) return old;
+        return {
+          ...old,
+          data: old.data.map((opp: any) =>
+            opp.id === id ? { ...opp, ...data } : opp
+          ),
+        };
+      });
+      qc.setQueryData(oppKeys.detail(id), (old: any) => {
+        if (!old) return old;
+        return { ...old, ...data };
+      });
+      return { previous, previousDetail, id };
+    },
+    onError: (_err, _vars, context) => {
+      context?.previous.forEach(([key, data]) => qc.setQueryData(key, data));
+      if (context?.previousDetail !== undefined) {
+        qc.setQueryData(oppKeys.detail(context.id), context.previousDetail);
+      }
+    },
+    onSettled: (_data, _err, vars) => {
       qc.invalidateQueries({ queryKey: oppKeys.all });
+      qc.invalidateQueries({ queryKey: oppKeys.detail(vars.id) });
     },
   });
 }

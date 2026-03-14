@@ -49,6 +49,30 @@ export function useCommentOnTask() {
     mutationKey: ['tasks', 'comment'],
     mutationFn: ({ id, text }: { id: string; text: string }) =>
       api.tasks.comment(id, text),
+    onMutate: async ({ id, text }) => {
+      await qc.cancelQueries({ queryKey: taskKeys.all });
+      const queries = qc.getQueriesData({ queryKey: taskKeys.all });
+      const previous = queries.map(([key, data]) => [key, data] as const);
+      // Append temp comment to task in cache
+      qc.setQueriesData({ queryKey: taskKeys.all }, (old: any) => {
+        if (!old?.data) return old;
+        return {
+          ...old,
+          data: {
+            ...old.data,
+            tasks: old.data.tasks?.map((t: any) =>
+              t.id === id
+                ? { ...t, comments: [...(t.comments || []), { id: `temp-${Date.now()}`, text, author: 'You', createdAt: new Date().toISOString() }] }
+                : t
+            ),
+          },
+        };
+      });
+      return { previous };
+    },
+    onError: (_err, _vars, context) => {
+      context?.previous.forEach(([key, data]) => qc.setQueryData(key, data));
+    },
     onSettled: () => {
       qc.invalidateQueries({ queryKey: taskKeys.all });
     },
@@ -61,6 +85,27 @@ export function useUpdateTask() {
     mutationKey: ['tasks', 'update'],
     mutationFn: ({ id, data }: { id: string; data: Record<string, unknown> }) =>
       api.tasks.update(id, data),
+    onMutate: async ({ id, data }) => {
+      await qc.cancelQueries({ queryKey: taskKeys.all });
+      const queries = qc.getQueriesData({ queryKey: taskKeys.all });
+      const previous = queries.map(([key, d]) => [key, d] as const);
+      qc.setQueriesData({ queryKey: taskKeys.all }, (old: any) => {
+        if (!old?.data) return old;
+        const updateTasks = (tasks: any[]) =>
+          tasks?.map((t: any) => (t.id === id ? { ...t, ...data } : t));
+        if (Array.isArray(old.data)) {
+          return { ...old, data: updateTasks(old.data) };
+        }
+        return {
+          ...old,
+          data: { ...old.data, tasks: updateTasks(old.data.tasks || []) },
+        };
+      });
+      return { previous };
+    },
+    onError: (_err, _vars, context) => {
+      context?.previous.forEach(([key, data]) => qc.setQueryData(key, data));
+    },
     onSettled: () => {
       qc.invalidateQueries({ queryKey: taskKeys.all });
     },
@@ -86,6 +131,17 @@ export function useCreateTask() {
     },
     onError: (_err, _vars, context) => {
       context?.previous.forEach(([key, data]) => qc.setQueryData(key, data));
+    },
+    onSuccess: (serverResponse) => {
+      qc.setQueriesData({ queryKey: taskKeys.all }, (old: any) => {
+        if (!old?.data) return old;
+        const replaceTasks = (tasks: any[]) =>
+          tasks?.map((t: any) => t.id?.startsWith('temp-') ? serverResponse.data : t);
+        if (Array.isArray(old.data)) {
+          return { ...old, data: replaceTasks(old.data) };
+        }
+        return { ...old, data: { ...old.data, tasks: replaceTasks(old.data.tasks || []) } };
+      });
     },
     onSettled: () => {
       qc.invalidateQueries({ queryKey: taskKeys.all });

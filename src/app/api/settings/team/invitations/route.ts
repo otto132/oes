@@ -1,11 +1,12 @@
 import { NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
-import { db } from '@/lib/db';
+import { resolveTenantDb } from '@/lib/tenant';
 import { unauthorized, forbidden } from '@/lib/api-errors';
 
 export async function GET() {
   const session = await auth();
   if (!session?.user?.id) return unauthorized();
+  const db = resolveTenantDb(session as any);
 
   const dbUser = await db.user.findUnique({ where: { id: session.user.id } });
   if (!dbUser || dbUser.role !== 'ADMIN') return forbidden('Admin access required');

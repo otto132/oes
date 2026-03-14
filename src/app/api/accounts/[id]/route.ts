@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { Prisma } from '@prisma/client';
-import { db } from '@/lib/db';
+import { resolveTenantDb } from '@/lib/tenant';
 import { auth } from '@/lib/auth';
 import { adaptAccount } from '@/lib/adapters';
 import { patchAccountSchema } from '@/lib/schemas/accounts';
@@ -17,6 +17,7 @@ export async function PATCH(
 ) {
   const session = await auth();
   if (!session?.user?.id) return unauthorized();
+  const db = resolveTenantDb(session as any);
 
   const { id } = await params;
 

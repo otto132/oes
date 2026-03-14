@@ -1,14 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { Prisma, AccountType } from '@prisma/client';
-import { db } from '@/lib/db';
+import { resolveTenantDb } from '@/lib/tenant';
 import { adaptAccount, adaptOpportunity, adaptActivity, adaptTask, adaptGoal } from '@/lib/adapters';
 import { withHandler } from '@/lib/api-handler';
 import { createAccountSchema } from '@/lib/schemas/accounts';
-import { notFound, badRequest, conflict } from '@/lib/api-errors';
+import { notFound, badRequest, conflict, unauthorized } from '@/lib/api-errors';
 import { parsePagination, paginate } from '@/lib/schemas/pagination';
 import { auth } from '@/lib/auth';
 
 export async function GET(req: NextRequest) {
+  const session = await auth();
+  if (!session?.user?.id) return unauthorized();
+  const db = resolveTenantDb(session as any);
+
   const search = req.nextUrl.searchParams.get('q');
   const type = req.nextUrl.searchParams.get('type');
   const id = req.nextUrl.searchParams.get('id');
@@ -79,10 +83,7 @@ export async function GET(req: NextRequest) {
 
   const ownerParam = req.nextUrl.searchParams.get('owner');
   if (ownerParam === 'me') {
-    const session = await auth();
-    if (session?.user?.id) {
-      where.ownerId = session.user.id;
-    }
+    where.ownerId = session.user.id;
   }
 
   const accounts = await db.account.findMany({
@@ -98,6 +99,7 @@ export async function GET(req: NextRequest) {
 }
 
 export const POST = withHandler(createAccountSchema, async (req, ctx) => {
+  const db = resolveTenantDb(ctx.session as any);
   const body = ctx.body;
   const { name, type, country, notes } = body;
   const ownerId = body.ownerId || ctx.session.user.id;

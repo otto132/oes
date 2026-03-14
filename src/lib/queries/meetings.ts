@@ -54,6 +54,17 @@ export function useCreateMeeting() {
     onError: (_err, _vars, context) => {
       context?.previous.forEach(([key, data]) => qc.setQueryData(key, data));
     },
+    onSuccess: (serverResponse) => {
+      qc.setQueriesData({ queryKey: meetingKeys.all }, (old: any) => {
+        if (!old?.data) return old;
+        return {
+          ...old,
+          data: old.data.map((item: any) =>
+            item.id?.startsWith('temp-') ? serverResponse.data : item
+          ),
+        };
+      });
+    },
     onSettled: () => {
       qc.invalidateQueries({ queryKey: meetingKeys.all });
       qc.invalidateQueries({ queryKey: homeKeys.all });

@@ -1,12 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/db';
+import { resolveTenantDb } from '@/lib/tenant';
+import { auth } from '@/lib/auth';
 import { adaptEmail } from '@/lib/adapters';
 import { withHandler } from '@/lib/api-handler';
 import { inboxActionSchema } from '@/lib/schemas/inbox';
-import { notFound } from '@/lib/api-errors';
+import { notFound, unauthorized } from '@/lib/api-errors';
 import { parsePagination, paginate } from '@/lib/schemas/pagination';
 
 export async function GET(req: NextRequest) {
+  const session = await auth();
+  if (!session?.user?.id) return unauthorized();
+  const db = resolveTenantDb(session as any);
+
   const pagination = parsePagination(req);
 
   const totalCount = await db.inboxEmail.count({ where: { isArchived: false } });
@@ -22,6 +27,7 @@ export async function GET(req: NextRequest) {
 }
 
 export const POST = withHandler(inboxActionSchema, async (req, ctx) => {
+  const db = resolveTenantDb(ctx.session as any);
   const body = ctx.body;
   const { action, id } = body;
   const session = ctx.session;

@@ -1,14 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { Prisma, AccountType, type SignalType } from '@prisma/client';
-import { db } from '@/lib/db';
+import { resolveTenantDb } from '@/lib/tenant';
+import { auth } from '@/lib/auth';
 import { adaptSignal } from '@/lib/adapters';
 import { withHandler } from '@/lib/api-handler';
 import { signalActionSchema } from '@/lib/schemas/signals';
-import { conflict, badRequest } from '@/lib/api-errors';
+import { conflict, badRequest, unauthorized } from '@/lib/api-errors';
 import { parsePagination, paginate } from '@/lib/schemas/pagination';
 
 // ── GET /api/signals ─────────────────────────────
 export async function GET(req: NextRequest) {
+  const session = await auth();
+  if (!session?.user?.id) return unauthorized();
+  const db = resolveTenantDb(session as any);
+
   const filter = req.nextUrl.searchParams.get('type');
   const where: Prisma.SignalWhereInput = { status: { not: 'dismissed' } };
   if (filter && filter !== 'all') where.type = filter as SignalType;
@@ -28,6 +33,7 @@ export async function GET(req: NextRequest) {
 
 // ── POST /api/signals (dismiss, convert) ─────────
 export const POST = withHandler(signalActionSchema, async (req, ctx) => {
+  const db = resolveTenantDb(ctx.session as any);
   const body = ctx.body;
 
   if (body.action === 'dismiss') {

@@ -1,14 +1,14 @@
 import { NextResponse } from 'next/server';
-import { db as prisma } from '@/lib/db';
+import { resolveTenantDb } from '@/lib/tenant';
 import { auth } from '@/lib/auth';
+import { unauthorized } from '@/lib/api-errors';
 
 export async function GET() {
   const session = await auth();
-  if (!session?.user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
+  if (!session?.user?.id) return unauthorized();
+  const db = resolveTenantDb(session as any);
 
-  const events = await prisma.agentEvent.findMany({
+  const events = await db.agentEvent.findMany({
     orderBy: { createdAt: 'desc' },
     take: 50,
   });

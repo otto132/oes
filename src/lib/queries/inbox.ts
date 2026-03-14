@@ -86,6 +86,24 @@ export function useCreateAccountFromEmail() {
   return useMutation({
     mutationKey: ['inbox', 'createAccount'],
     mutationFn: (id: string) => api.inbox.createAccount(id),
+    onMutate: async (id) => {
+      await qc.cancelQueries({ queryKey: inboxKeys.all });
+      const queries = qc.getQueriesData({ queryKey: inboxKeys.all });
+      const previous = queries.map(([key, data]) => [key, data] as const);
+      qc.setQueriesData({ queryKey: inboxKeys.all }, (old: any) => {
+        if (!old) return old;
+        return {
+          ...old,
+          data: old.data.map((email: any) =>
+            email.id === id ? { ...email, processing: true } : email
+          ),
+        };
+      });
+      return { previous };
+    },
+    onError: (_err, _vars, context) => {
+      context?.previous.forEach(([key, data]) => qc.setQueryData(key, data));
+    },
     onSettled: () => {
       qc.invalidateQueries({ queryKey: inboxKeys.all });
       qc.invalidateQueries({ queryKey: accountKeys.all });

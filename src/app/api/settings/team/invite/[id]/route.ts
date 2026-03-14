@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { auth } from '@/lib/auth';
-import { db } from '@/lib/db';
+import { resolveTenantDb } from '@/lib/tenant';
 import { unauthorized, forbidden, notFound, badRequest, zodError } from '@/lib/api-errors';
 
 const revokeSchema = z.object({
@@ -14,6 +14,7 @@ export async function PATCH(
 ) {
   const session = await auth();
   if (!session?.user?.id) return unauthorized();
+  const db = resolveTenantDb(session as any);
 
   const dbUser = await db.user.findUnique({ where: { id: session.user.id } });
   if (!dbUser || dbUser.role !== 'ADMIN') return forbidden('Admin access required');

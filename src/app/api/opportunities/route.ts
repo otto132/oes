@@ -1,15 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { Prisma, OppStage } from '@prisma/client';
-import { db } from '@/lib/db';
+import { resolveTenantDb } from '@/lib/tenant';
+import { auth } from '@/lib/auth';
 import { adaptOpportunity, adaptActivity, adaptContact } from '@/lib/adapters';
 import { withHandler } from '@/lib/api-handler';
 import { opportunityActionSchema } from '@/lib/schemas/opportunities';
-import { notFound } from '@/lib/api-errors';
+import { notFound, unauthorized } from '@/lib/api-errors';
 import { parsePagination, paginate } from '@/lib/schemas/pagination';
 
 const PROB: Record<string, number> = { Identified: 5, Contacted: 10, Discovery: 20, Qualified: 35, SolutionFit: 50, Proposal: 65, Negotiation: 80, VerbalCommit: 90, ClosedWon: 100, ClosedLost: 0 };
 
 export async function GET(req: NextRequest) {
+  const session = await auth();
+  if (!session?.user?.id) return unauthorized();
+  const db = resolveTenantDb(session as any);
+
   const id = req.nextUrl.searchParams.get('id');
 
   if (id) {
@@ -53,6 +58,7 @@ export async function GET(req: NextRequest) {
 }
 
 export const POST = withHandler(opportunityActionSchema, async (req, ctx) => {
+  const db = resolveTenantDb(ctx.session as any);
   const body = ctx.body;
   const session = ctx.session;
 

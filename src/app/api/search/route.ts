@@ -1,7 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/db';
+import { resolveTenantDb } from '@/lib/tenant';
+import { auth } from '@/lib/auth';
+import { unauthorized } from '@/lib/api-errors';
 
 export async function GET(req: NextRequest) {
+  const session = await auth();
+  if (!session?.user?.id) return unauthorized();
+  const db = resolveTenantDb(session as any);
+
   const q = req.nextUrl.searchParams.get('q');
   if (!q || q.length < 2) return NextResponse.json({ data: { accounts: [], opportunities: [], leads: [], signals: [] } });
 

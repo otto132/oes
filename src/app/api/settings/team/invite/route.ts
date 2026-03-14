@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { db } from '@/lib/db';
+import { resolveTenantDb } from '@/lib/tenant';
 import { auth } from '@/lib/auth';
 import { unauthorized, forbidden, conflict, zodError, badRequest } from '@/lib/api-errors';
 
@@ -12,6 +12,7 @@ const inviteSchema = z.object({
 export async function POST(req: NextRequest) {
   const session = await auth();
   if (!session?.user?.id) return unauthorized();
+  const db = resolveTenantDb(session as any);
 
   const dbUser = await db.user.findUnique({ where: { id: session.user.id } });
   if (!dbUser || dbUser.role !== 'ADMIN') return forbidden('Admin access required');

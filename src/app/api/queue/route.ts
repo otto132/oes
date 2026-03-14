@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { Prisma, SignalType, AccountType, LeadStage, TaskPriority } from '@prisma/client';
 import type { QueueItemType } from '@prisma/client';
-import { db } from '@/lib/db';
+import { resolveTenantDb } from '@/lib/tenant';
 import { adaptQueueItem } from '@/lib/adapters';
 import { withHandler } from '@/lib/api-handler';
 import { queueActionSchema } from '@/lib/schemas/queue';
-import { notFound, badRequest } from '@/lib/api-errors';
+import { notFound, badRequest, unauthorized } from '@/lib/api-errors';
+import { auth } from '@/lib/auth';
 import { handleApproval } from '@/lib/agents/chain';
 
 /** Typed payload interfaces for queue item side-effects */
@@ -52,6 +53,10 @@ interface OutreachDraftPayload {
  */
 
 export async function GET(req: NextRequest) {
+  const session = await auth();
+  if (!session?.user?.id) return unauthorized();
+  const db = resolveTenantDb(session as any);
+
   const status = req.nextUrl.searchParams.get('status') || 'pending';
   const type = req.nextUrl.searchParams.get('type');
 
@@ -85,6 +90,7 @@ export async function GET(req: NextRequest) {
 }
 
 export const POST = withHandler(queueActionSchema, async (req, ctx) => {
+  const db = resolveTenantDb(ctx.session as any);
   const body = ctx.body;
   const userId = ctx.session.user.id;
 

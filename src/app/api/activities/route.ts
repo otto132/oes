@@ -1,11 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { Prisma, ActivityType } from '@prisma/client';
-import { db } from '@/lib/db';
+import { resolveTenantDb } from '@/lib/tenant';
+import { auth } from '@/lib/auth';
+import { unauthorized } from '@/lib/api-errors';
 import { withHandler } from '@/lib/api-handler';
 import { createActivitySchema } from '@/lib/schemas/activities';
 import { parsePagination, paginate } from '@/lib/schemas/pagination';
 
 export async function GET(req: NextRequest) {
+  const session = await auth();
+  if (!session?.user?.id) return unauthorized();
+  const db = resolveTenantDb(session as any);
+
   const accountId = req.nextUrl.searchParams.get('accountId');
   const where: Prisma.ActivityWhereInput = {};
   if (accountId) where.accountId = accountId;
@@ -25,6 +31,7 @@ export async function GET(req: NextRequest) {
 }
 
 export const POST = withHandler(createActivitySchema, async (req, ctx) => {
+  const db = resolveTenantDb(ctx.session as any);
   const body = ctx.body;
   const { type, summary, detail, source, noteType, accountId } = body;
   const authorId = body.authorId || ctx.session.user.id;

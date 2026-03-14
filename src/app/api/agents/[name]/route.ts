@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { db as prisma } from '@/lib/db';
+import { resolveTenantDb } from '@/lib/tenant';
 import type { Prisma } from '@prisma/client';
 import { auth } from '@/lib/auth';
+import { unauthorized } from '@/lib/api-errors';
 import { updateAgentConfigSchema } from '@/lib/schemas/agents';
 import { getAgent } from '@/lib/agents/registry';
 import { runAgent } from '@/lib/agents/runner';
@@ -10,16 +11,15 @@ type RouteContext = { params: Promise<{ name: string }> };
 
 export async function GET(_req: NextRequest, ctx: RouteContext) {
   const session = await auth();
-  if (!session?.user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
+  if (!session?.user?.id) return unauthorized();
+  const db = resolveTenantDb(session as any);
 
   const { name } = await ctx.params;
-  const config = await prisma.agentConfig.findUnique({ where: { name } });
+  const config = await db.agentConfig.findUnique({ where: { name } });
   if (!config) {
     return NextResponse.json({ error: { code: 'NOT_FOUND', message: 'Agent not found' } }, { status: 404 });
   }
-  const recentRuns = await prisma.agentRun.findMany({
+  const recentRuns = await db.agentRun.findMany({
     where: { agentName: name },
     orderBy: { startedAt: 'desc' },
     take: 10,
@@ -29,9 +29,8 @@ export async function GET(_req: NextRequest, ctx: RouteContext) {
 
 export async function PATCH(req: NextRequest, ctx: RouteContext) {
   const session = await auth();
-  if (!session?.user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
+  if (!session?.user?.id) return unauthorized();
+  const db = resolveTenantDb(session as any);
 
   const { name } = await ctx.params;
   const body = await req.json();
@@ -48,7 +47,7 @@ export async function PATCH(req: NextRequest, ctx: RouteContext) {
       parameters: parsed.data.parameters as Prisma.InputJsonValue,
     }),
   };
-  const updated = await prisma.agentConfig.update({
+  const updated = await db.agentConfig.update({
     where: { name },
     data: updateData,
   });
@@ -57,9 +56,7 @@ export async function PATCH(req: NextRequest, ctx: RouteContext) {
 
 export async function POST(_req: NextRequest, ctx: RouteContext) {
   const session = await auth();
-  if (!session?.user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
+  if (!session?.user?.id) return unauthorized();
 
   const { name } = await ctx.params;
   const agent = getAgent(name);

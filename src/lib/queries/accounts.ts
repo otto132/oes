@@ -53,6 +53,17 @@ export function useCreateAccount() {
     onError: (_err, _vars, context) => {
       context?.previous.forEach(([key, data]) => qc.setQueryData(key, data));
     },
+    onSuccess: (serverResponse) => {
+      qc.setQueriesData({ queryKey: accountKeys.all }, (old: any) => {
+        if (!old) return old;
+        return {
+          ...old,
+          data: old.data.map((item: any) =>
+            item.id?.startsWith('temp-') ? serverResponse.data : item
+          ),
+        };
+      });
+    },
     onSettled: () => {
       qc.invalidateQueries({ queryKey: accountKeys.all });
     },
@@ -138,6 +149,17 @@ export function useCreateContact(accountId: string) {
       if (context?.previousDetail !== undefined) {
         qc.setQueryData(accountKeys.detail(accountId), context.previousDetail);
       }
+    },
+    onSuccess: (serverResponse) => {
+      qc.setQueryData(accountKeys.detail(accountId), (old: any) => {
+        if (!old) return old;
+        return {
+          ...old,
+          contacts: (old.contacts || []).map((c: any) =>
+            c.id?.startsWith('temp-') ? serverResponse.data : c
+          ),
+        };
+      });
     },
     onSettled: () => {
       qc.invalidateQueries({ queryKey: accountKeys.detail(accountId) });

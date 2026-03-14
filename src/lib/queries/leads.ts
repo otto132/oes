@@ -107,6 +107,38 @@ export function useCreateLead() {
     mutationKey: ['leads', 'create'],
     mutationFn: (data: { company: string; type?: string; country?: string; pain?: string }) =>
       api.leads.create(data),
+    onMutate: async (vars) => {
+      await qc.cancelQueries({ queryKey: leadKeys.all });
+      const queries = qc.getQueriesData({ queryKey: leadKeys.all });
+      const previous = queries.map(([key, data]) => [key, data] as const);
+      const tempLead = {
+        id: `temp-${Date.now()}`,
+        company: vars.company,
+        type: vars.type || '',
+        country: vars.country || '',
+        stage: 'New',
+        pain: vars.pain || '',
+      };
+      qc.setQueriesData({ queryKey: leadKeys.all }, (old: any) => {
+        if (!old) return old;
+        return { ...old, data: [tempLead, ...old.data] };
+      });
+      return { previous };
+    },
+    onError: (_err, _vars, context) => {
+      context?.previous.forEach(([key, data]) => qc.setQueryData(key, data));
+    },
+    onSuccess: (serverResponse) => {
+      qc.setQueriesData({ queryKey: leadKeys.all }, (old: any) => {
+        if (!old) return old;
+        return {
+          ...old,
+          data: old.data.map((item: any) =>
+            item.id?.startsWith('temp-') ? serverResponse.data : item
+          ),
+        };
+      });
+    },
     onSettled: () => {
       qc.invalidateQueries({ queryKey: leadKeys.all });
     },

@@ -1,14 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { db as prisma } from '@/lib/db';
+import { resolveTenantDb } from '@/lib/tenant';
 import { auth } from '@/lib/auth';
+import { unauthorized } from '@/lib/api-errors';
 
 type RouteContext = { params: Promise<{ name: string }> };
 
 export async function GET(req: NextRequest, ctx: RouteContext) {
   const session = await auth();
-  if (!session?.user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
+  if (!session?.user?.id) return unauthorized();
+  const db = resolveTenantDb(session as any);
 
   const { name } = await ctx.params;
   const period = req.nextUrl.searchParams.get('period') || '30d';
@@ -16,11 +16,11 @@ export async function GET(req: NextRequest, ctx: RouteContext) {
   const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
 
   const [runs, items] = await Promise.all([
-    prisma.agentRun.findMany({
+    db.agentRun.findMany({
       where: { agentName: name, startedAt: { gte: since } },
       orderBy: { startedAt: 'desc' },
     }),
-    prisma.queueItem.findMany({
+    db.queueItem.findMany({
       where: { agent: name, createdAt: { gte: since } },
       select: { status: true, createdAt: true, reviewedAt: true, rejReason: true },
     }),
