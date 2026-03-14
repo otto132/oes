@@ -600,7 +600,7 @@ function TasksPageInner() {
     const isPending = pendingIds.has(t.id);
     const failedInfo = failedMutations.get(t.id);
     return (
-      <div className={cn('flex items-center gap-2.5 px-3.5 py-2.5 rounded-lg bg-[var(--elevated)] border border-[var(--border)] hover:bg-[var(--hover)] transition-colors relative', done && 'opacity-50', isPending && 'opacity-60 animate-pulse', failedInfo && 'border-l-2 border-l-red-500')}>
+      <div className={cn('flex items-center gap-2.5 px-3.5 py-3 sm:py-2.5 rounded-lg bg-[var(--elevated)] border border-[var(--border)] hover:bg-[var(--hover)] transition-colors relative min-h-[52px] sm:min-h-0', done && 'opacity-50', isPending && 'opacity-60 animate-pulse', failedInfo && 'border-l-2 border-l-red-500')}>
         {failedInfo && (
           <button
             onClick={e => { e.stopPropagation(); completeTask.mutate(failedInfo.variables as any); }}
@@ -611,7 +611,7 @@ function TasksPageInner() {
           </button>
         )}
         <div
-          className={cn('w-4 h-4 rounded border-[1.5px] flex-shrink-0 flex items-center justify-center cursor-pointer', done ? 'border-brand bg-brand-dim text-brand text-[9px]' : od ? 'border-danger' : 'border-[var(--border-strong)]')}
+          className={cn('w-5 h-5 sm:w-4 sm:h-4 rounded border-[1.5px] flex-shrink-0 flex items-center justify-center cursor-pointer touch-manipulation', done ? 'border-brand bg-brand-dim text-brand text-[9px]' : od ? 'border-danger' : 'border-[var(--border-strong)]')}
           onClick={e => { e.stopPropagation(); if (!done) openCompleteDrawer(t); }}
         >{done ? '✓' : ''}</div>
         <div className="flex-1 min-w-0 cursor-pointer" onClick={() => openTaskDetail(t)}>
@@ -632,7 +632,7 @@ function TasksPageInner() {
 
   return (
     <div className="max-w-[900px] page-enter">
-      <div className="flex items-center justify-between mb-3.5">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3.5">
         <div>
           <h1 className="text-[18px] font-semibold tracking-tight">Tasks</h1>
           <p className="text-[12.5px] text-sub mt-0.5">
@@ -642,7 +642,7 @@ function TasksPageInner() {
         </div>
         <button
           onClick={openNewTaskDrawer}
-          className="px-3 py-1.5 text-[12px] font-medium rounded-md bg-brand text-[#09090b] hover:brightness-110 transition-colors flex items-center gap-1"
+          className="px-3 py-1.5 text-[12px] font-medium rounded-md bg-brand text-[#09090b] hover:brightness-110 transition-colors flex items-center gap-1 self-start sm:self-auto"
         >
           + New Task
         </button>
@@ -656,7 +656,7 @@ function TasksPageInner() {
           { k: 'all' as const, l: 'All', ct: all.filter(t => t.status !== 'Done').length },
         ]).map(t => (
           <button key={t.k} onClick={() => setTab(t.k)} className={cn(
-            'px-3.5 py-2 text-[12.5px] border-b-2 -mb-px transition-colors whitespace-nowrap',
+            'px-3 sm:px-3.5 py-2.5 sm:py-2 text-[12.5px] border-b-2 -mb-px transition-colors whitespace-nowrap',
             tab === t.k ? 'text-[var(--text)] border-brand font-medium' : 'text-sub border-transparent hover:text-[var(--text)]'
           )}>
             {t.l}
@@ -666,10 +666,10 @@ function TasksPageInner() {
       </div>
 
       {/* Search + completed toggle */}
-      <div className="flex items-center gap-2 mb-2.5">
-        <SearchInput value={search} onChange={setSearch} placeholder="Search tasks..." className="max-w-[240px]" />
-        <label className="flex items-center gap-1 text-[11px] text-sub cursor-pointer">
-          <input type="checkbox" checked={showCompleted} onChange={e => setShowCompleted(e.target.checked)} /> Show completed
+      <div className="flex flex-col sm:flex-row sm:items-center gap-2 mb-2.5">
+        <SearchInput value={search} onChange={setSearch} placeholder="Search tasks..." className="w-full sm:max-w-[240px]" />
+        <label className="flex items-center gap-1.5 text-[11px] text-sub cursor-pointer min-h-[44px] sm:min-h-0">
+          <input type="checkbox" className="w-4 h-4 sm:w-3.5 sm:h-3.5" checked={showCompleted} onChange={e => setShowCompleted(e.target.checked)} /> Show completed
         </label>
       </div>
 
@@ -689,7 +689,7 @@ function TasksPageInner() {
                 <div className="flex items-center gap-2 px-3.5 py-2.5 bg-[var(--surface)] border-b border-[var(--border)]">
                   <span className="text-[10px]">🎯</span>
                   <span className="text-[12px] font-semibold flex-1">{g.title}</span>
-                  <div className="w-20 h-[3px] rounded-full bg-[var(--surface)] overflow-hidden"><div className="h-full rounded-full bg-brand transition-all" style={{ width: `${pct}%` }} /></div>
+                  <div className="w-14 sm:w-20 h-[3px] rounded-full bg-[var(--surface)] overflow-hidden"><div className="h-full rounded-full bg-brand transition-all" style={{ width: `${pct}%` }} /></div>
                   <span className="text-[10px] text-muted">{done}/{total}</span>
                   {g.accountName && <Badge variant="neutral" className="!text-[8px]">{g.accountName}</Badge>}
                 </div>
