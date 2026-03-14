@@ -123,7 +123,7 @@ export const POST = withHandler(createAccountSchema, async (req, ctx) => {
   const account = await db.account.create({
     data: {
       name,
-      type: (type || 'Unknown') as AccountType,
+      type: (type && Object.values(AccountType).includes(type as AccountType) ? type : 'Unknown') as AccountType,
       country: country || '',
       status: 'Prospect',
       ownerId,
