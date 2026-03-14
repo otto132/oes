@@ -1,6 +1,6 @@
 'use client';
 import { useStore } from '@/lib/store';
-import { useLeadsQuery, useAdvanceLead, useDisqualifyLead, useConvertLead } from '@/lib/queries/leads';
+import { useLeadsQuery, useCreateLead, useAdvanceLead, useDisqualifyLead, useConvertLead } from '@/lib/queries/leads';
 import { Badge, Avatar, FIUACBars, ScorePill, EmptyState, Skeleton, SkeletonCard, SkeletonText, ErrorState } from '@/components/ui';
 import { compositeScore } from '@/lib/utils';
 import type { Lead } from '@/lib/types';
@@ -41,9 +41,90 @@ export default function LeadsPage() {
   const { data: resp, isLoading, isError, refetch } = useLeadsQuery();
   const { openDrawer, closeDrawer } = useStore();
   const addToast = useStore(s => s.addToast);
+  const createLead = useCreateLead();
   const advance = useAdvanceLead();
   const disqualify = useDisqualifyLead();
   const convertLead = useConvertLead();
+
+  function openCreateLeadDrawer() {
+    const state = { company: '', type: 'Unknown', country: '', pain: '' };
+
+    openDrawer({
+      title: 'New Lead',
+      subtitle: 'Add a lead manually',
+      body: (
+        <div className="flex flex-col gap-3">
+          <label className="flex flex-col gap-1">
+            <span className="text-[10px] font-semibold uppercase tracking-wide text-[var(--muted)]">Company *</span>
+            <input
+              autoFocus
+              defaultValue={state.company}
+              onChange={e => { state.company = e.target.value; }}
+              placeholder="e.g. Ørsted Energy"
+              className="px-2.5 py-1.5 text-[12px] rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] placeholder:text-[var(--muted)] focus:outline-none focus:border-brand/40"
+            />
+          </label>
+          <div className="flex gap-2">
+            <label className="flex flex-col gap-1 flex-1">
+              <span className="text-[10px] font-semibold uppercase tracking-wide text-[var(--muted)]">Type</span>
+              <select
+                defaultValue={state.type}
+                onChange={e => { state.type = e.target.value; }}
+                className="px-2.5 py-1.5 text-[12px] rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] focus:outline-none focus:border-brand/40"
+              >
+                <option value="Unknown">Unknown</option>
+                <option value="Utility">Utility</option>
+                <option value="IPP">IPP</option>
+                <option value="Corporate">Corporate</option>
+                <option value="Trader">Trader</option>
+                <option value="Registry">Registry</option>
+              </select>
+            </label>
+            <label className="flex flex-col gap-1 flex-1">
+              <span className="text-[10px] font-semibold uppercase tracking-wide text-[var(--muted)]">Country</span>
+              <input
+                defaultValue={state.country}
+                onChange={e => { state.country = e.target.value; }}
+                placeholder="e.g. Norway"
+                className="px-2.5 py-1.5 text-[12px] rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] placeholder:text-[var(--muted)] focus:outline-none focus:border-brand/40"
+              />
+            </label>
+          </div>
+          <label className="flex flex-col gap-1">
+            <span className="text-[10px] font-semibold uppercase tracking-wide text-[var(--muted)]">Pain Point</span>
+            <textarea
+              defaultValue={state.pain}
+              onChange={e => { state.pain = e.target.value; }}
+              rows={2}
+              placeholder="What problem does this lead have?"
+              className="px-2.5 py-1.5 text-[12px] rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] placeholder:text-[var(--muted)] focus:outline-none focus:border-brand/40 resize-none"
+            />
+          </label>
+        </div>
+      ),
+      footer: (
+        <>
+          <button className="px-3.5 py-1.5 text-[12px] text-[var(--sub)] bg-[var(--surface)] border border-[var(--border)] rounded-md hover:bg-[var(--hover)] transition-colors" onClick={closeDrawer}>Cancel</button>
+          <button
+            disabled={createLead.isPending}
+            className="px-3.5 py-1.5 text-[12px] font-medium bg-brand text-[#09090b] rounded-md hover:brightness-110 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            onClick={() => {
+              if (!state.company.trim()) { addToast({ type: 'error', message: 'Company name is required' }); return; }
+              createLead.mutate(
+                { company: state.company.trim(), type: state.type || undefined, country: state.country || undefined, pain: state.pain || undefined },
+                {
+                  onSuccess: () => { addToast({ type: 'success', message: `Lead created: ${state.company}` }); closeDrawer(); },
+                  onError: (err) => addToast({ type: 'error', message: err.message }),
+                }
+              );
+            }}
+          >
+            Create Lead
+          </button>
+        </>
+      ),
+    });
+  }
 
   function openConvertDrawer(l: Lead) {
     const state = {
@@ -202,6 +283,12 @@ export default function LeadsPage() {
           <h1 className="text-[18px] font-semibold tracking-tight">Leads</h1>
           <p className="text-[12.5px] text-sub mt-0.5">{leads.length} active leads · signal-sourced and manual</p>
         </div>
+        <button
+          onClick={() => openCreateLeadDrawer()}
+          className="px-3 py-1.5 text-[12px] font-medium bg-brand text-[#09090b] rounded-md hover:brightness-110 transition-colors"
+        >
+          + New Lead
+        </button>
       </div>
 
       {/* Desktop kanban */}
