@@ -45,9 +45,9 @@ export function useCompleteTask() {
 }
 
 export function useCommentOnTask() {
-  return useOptimisticMutation<unknown, { id: string; text: string }>({
+  return useOptimisticMutation<unknown, { id: string; text: string; mentionedUserIds?: string[] }>({
     mutationKey: ['tasks', 'comment'],
-    mutationFn: ({ id, text }) => api.tasks.comment(id, text),
+    mutationFn: ({ id, text, mentionedUserIds }) => api.tasks.comment(id, text, mentionedUserIds),
     queryKey: taskKeys.all,
     updater: (old, { id, text }) => {
       if (!old?.data) return old;

@@ -12,34 +12,31 @@ import { usePendingMutations, useFailedMutations } from '@/hooks/use-mutation-st
 import { RotateCw } from 'lucide-react';
 import { SearchInput } from '@/components/ui/SearchInput';
 import { api } from '@/lib/api-client';
+import { UserMentionInput } from '@/components/ui/UserMentionInput';
 
-function CommentInput({ taskId }: { taskId: string }) {
+function CommentInput({ taskId, teamMembers }: { taskId: string; teamMembers: any[] }) {
   const [text, setText] = useState('');
+  const [mentionedIds, setMentionedIds] = useState<string[]>([]);
   const comment = useCommentOnTask();
 
   const submit = () => {
     const trimmed = text.trim();
     if (!trimmed) return;
     comment.mutate(
-      { id: taskId, text: trimmed },
-      { onSuccess: () => setText('') }
+      { id: taskId, text: trimmed, mentionedUserIds: mentionedIds },
+      { onSuccess: () => { setText(''); setMentionedIds([]); } }
     );
   };
 
   return (
     <div className="mt-3 flex gap-2">
-      <textarea
+      <UserMentionInput
         value={text}
-        onChange={e => setText(e.target.value)}
-        onKeyDown={e => {
-          if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
-            e.preventDefault();
-            submit();
-          }
-        }}
-        rows={2}
-        placeholder="Add a comment... (Cmd+Enter to send)"
-        className="flex-1 px-2.5 py-1.5 text-[12px] rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] placeholder:text-[var(--muted)] focus:outline-none focus:border-brand/40 resize-none"
+        onChange={(newText, ids) => { setText(newText); setMentionedIds(ids); }}
+        onSubmit={submit}
+        users={teamMembers}
+        placeholder="Add a comment... Use @ to mention (Cmd+Enter to send)"
+        className="flex-1"
       />
       <button
         onClick={submit}
@@ -587,10 +584,12 @@ function TasksPageInner() {
             ) : (t.comments || []).map((c, i) => (
               <div key={i} className="py-2 border-b border-[var(--border)] last:border-b-0 text-[11.5px]">
                 <div className="flex items-center gap-1 mb-0.5"><Avatar initials={c.author.initials} color={c.author.color} size="xs" /><span className="text-[10.5px] font-medium">{c.author.name}</span><span className="text-[9px] text-muted">{fR(c.createdAt)}</span></div>
-                <div className="text-sub">{c.text}</div>
+                <div className="text-sub">
+                  {c.mentions?.length ? renderMentionText(c.text, c.mentions, teamMembers) : c.text}
+                </div>
               </div>
             ))}
-            <CommentInput taskId={t.id} />
+            <CommentInput taskId={t.id} teamMembers={teamMembers} />
           </div>
         </div>
       ),
@@ -607,6 +606,22 @@ function TasksPageInner() {
           )}
         </>
       ),
+    });
+  }
+
+  function renderMentionText(text: string, mentions: string[], team: any[]) {
+    const mentionNames = mentions
+      .map(mid => team.find((u: any) => u.id === mid)?.name || mid)
+      .filter(Boolean);
+    if (mentionNames.length === 0) return text;
+    const escaped = mentionNames.map(n => n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
+    const regex = new RegExp(`(@(?:${escaped.join('|')}))`, 'g');
+    const parts = text.split(regex);
+    return parts.map((part, i) => {
+      if (part.startsWith('@') && mentionNames.some(n => part === `@${n}`)) {
+        return <span key={i} className="px-1 py-0.5 rounded bg-brand/10 text-brand font-medium text-[11px]">{part}</span>;
+      }
+      return <span key={i}>{part}</span>;
     });
   }
 
