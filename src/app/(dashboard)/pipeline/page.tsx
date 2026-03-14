@@ -1,7 +1,7 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
-import { useOpportunitiesQuery, useCreateOpportunity } from '@/lib/queries/opportunities';
+import { useOpportunitiesQuery, useCreateOpportunity, useMoveStage } from '@/lib/queries/opportunities';
 import { Avatar, HealthBar, StageBadge, EmptyState, Skeleton, SkeletonCard, ErrorState } from '@/components/ui';
 import { fmt, fDate, isOverdue, cn, displayLabel } from '@/lib/utils';
 import { KANBAN_STAGES, STAGE_PROB, healthAvg } from '@/lib/types';
@@ -191,8 +191,12 @@ function OpportunityCreateForm({
 export default function PipelinePage() {
   const { data, isLoading, error, refetch } = useOpportunitiesQuery();
   const createOpp = useCreateOpportunity();
+  const moveStage = useMoveStage();
   const { openDrawer, closeDrawer, addToast } = useStore();
   const [view, setView] = useState<'kanban' | 'table'>('kanban');
+  const [dragId, setDragId] = useState<string | null>(null);
+  const [dropStage, setDropStage] = useState<string | null>(null);
+  const dragCounter = useRef<Record<string, number>>({});
 
   function openNewOppDrawer(prefilledAccountId?: string, prefilledAccountName?: string) {
     const submitRef = { current: () => {} };
@@ -274,24 +278,81 @@ export default function PipelinePage() {
         </div>
       </div>
 
-      {/* Desktop kanban */}
+      {/* Desktop kanban with drag & drop */}
       {view === 'kanban' && (
         <div className="hidden md:flex gap-2.5 overflow-x-auto pb-4">
           {KANBAN_STAGES.map(stage => {
             const cards = open.filter(o => o.stage === stage);
             const stageAmt = cards.reduce((s, o) => s + o.amount, 0);
+            const isOver = dropStage === stage;
             return (
-              <div key={stage} className="flex-shrink-0 w-[230px]">
+              <div
+                key={stage}
+                className={cn(
+                  'flex-shrink-0 w-[230px] rounded-lg transition-colors',
+                  isOver && 'bg-brand/5 ring-1 ring-brand/20'
+                )}
+                onDragOver={e => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; }}
+                onDragEnter={() => {
+                  dragCounter.current[stage] = (dragCounter.current[stage] || 0) + 1;
+                  setDropStage(stage);
+                }}
+                onDragLeave={() => {
+                  dragCounter.current[stage] = (dragCounter.current[stage] || 0) - 1;
+                  if (dragCounter.current[stage] <= 0) {
+                    dragCounter.current[stage] = 0;
+                    setDropStage(prev => prev === stage ? null : prev);
+                  }
+                }}
+                onDrop={e => {
+                  e.preventDefault();
+                  const id = e.dataTransfer.getData('text/plain');
+                  dragCounter.current = {};
+                  setDropStage(null);
+                  setDragId(null);
+                  if (id) {
+                    const opp = open.find(o => o.id === id);
+                    if (opp && opp.stage !== stage) {
+                      moveStage.mutate(
+                        { id, stage },
+                        { onError: (err) => addToast({ type: 'error', message: err.message }) }
+                      );
+                    }
+                  }
+                }}
+              >
                 <div className="flex items-center justify-between mb-1.5 px-1">
                   <StageBadge stage={stage} />
                   {stageAmt > 0 && <span className="font-mono text-[9px] uppercase text-[var(--muted)]">{fmt(stageAmt)}</span>}
                 </div>
                 <div className="min-h-[50px]">
                   {cards.length === 0 ? (
-                    <div className="h-[50px] rounded-lg border border-dashed border-[var(--border)] flex items-center justify-center text-[10px] text-[var(--muted)]">No items</div>
+                    <div className={cn(
+                      'h-[50px] rounded-lg border border-dashed flex items-center justify-center text-[10px] text-[var(--muted)] transition-colors',
+                      isOver ? 'border-brand/40 bg-brand/5' : 'border-[var(--border)]'
+                    )}>
+                      {isOver ? 'Drop here' : 'No items'}
+                    </div>
                   ) : cards.map(o => (
-                    <Link key={o.id} href={`/pipeline/${o.id}`}>
-                      <div className="rounded-lg p-3 mb-1.5 bg-[var(--elevated)] border border-[var(--border)] cursor-pointer hover:-translate-y-px hover:border-[var(--border-strong)] transition-all" style={{ borderLeft: `2px solid ${riskHex(o.health)}` }}>
+                    <Link key={o.id} href={`/pipeline/${o.id}`} draggable={false}>
+                      <div
+                        draggable
+                        onDragStart={e => {
+                          e.dataTransfer.setData('text/plain', o.id);
+                          e.dataTransfer.effectAllowed = 'move';
+                          requestAnimationFrame(() => setDragId(o.id));
+                        }}
+                        onDragEnd={() => {
+                          setDragId(null);
+                          setDropStage(null);
+                          dragCounter.current = {};
+                        }}
+                        className={cn(
+                          'rounded-lg p-3 mb-1.5 bg-[var(--elevated)] border border-[var(--border)] cursor-grab hover:-translate-y-px hover:border-[var(--border-strong)] transition-all',
+                          dragId === o.id && 'opacity-40 scale-[0.97] shadow-lg rotate-[1deg]'
+                        )}
+                        style={{ borderLeft: `2px solid ${riskHex(o.health)}` }}
+                      >
                         <div className="text-[10px] text-[var(--muted)] mb-0.5">{o.accountName}</div>
                         <div className="text-[11.5px] font-medium leading-tight mb-2 text-[var(--text)]">{o.name}</div>
                         <div className="flex items-center justify-between mb-1">
