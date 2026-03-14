@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { ZodSchema, ZodError } from 'zod';
 import { auth } from '@/lib/auth';
-import { unauthorized, internalError, zodError } from '@/lib/api-errors';
+import { unauthorized, internalError, zodError, notFound } from '@/lib/api-errors';
 import { logger } from '@/lib/logger';
-import { scopedDb, ScopedDb } from '@/lib/scoped-db';
+import { scopedDb, ScopedDb, AccessDeniedError } from '@/lib/scoped-db';
+import { Prisma } from '@prisma/client';
 
 export interface HandlerContext<T> {
   body: T;
@@ -60,6 +61,23 @@ export function withHandler<T = unknown>(
     } catch (err) {
       if (err instanceof ZodError) {
         const resp = zodError(err, requestId);
+        resp.headers.set('x-request-id', requestId);
+        return resp;
+      }
+      // Handle scopedDb ownership check failures
+      if (err instanceof AccessDeniedError) {
+        const resp = notFound('Record not found or access denied');
+        resp.headers.set('x-request-id', requestId);
+        return resp;
+      }
+      // Transform Prisma errors — don't leak schema details
+      if (err instanceof Prisma.PrismaClientKnownRequestError) {
+        logger.error('Prisma error', {
+          requestId,
+          code: err.code,
+          meta: err.meta,
+        });
+        const resp = internalError();
         resp.headers.set('x-request-id', requestId);
         return resp;
       }
