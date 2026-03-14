@@ -46,8 +46,8 @@ function makeRequest(body: Record<string, unknown>) {
 
 const USER_ID = 'user-1';
 
-function mockAuth(userId = USER_ID) {
-  _mockAuthFn.mockResolvedValue({ user: { id: userId } });
+function mockAuth(userId = USER_ID, role = 'MEMBER') {
+  _mockAuthFn.mockResolvedValue({ user: { id: userId, role } });
 }
 
 function makeQueueItem(overrides: Record<string, unknown> = {}) {
