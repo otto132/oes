@@ -5,7 +5,7 @@ import { unauthorized, internalError, zodError } from '@/lib/api-errors';
 
 export interface HandlerContext<T> {
   body: T;
-  session: { user: { id: string; name?: string; role?: string } };
+  session: { user: { id: string; name?: string; role?: string; tenantId?: string } };
   pagination: { cursor?: string; limit: number };
 }
 
@@ -36,6 +36,7 @@ export function withHandler<T = unknown>(
             id: session.user.id,
             name: session.user.name ?? undefined,
             role: (session.user as { role?: string }).role ?? undefined,
+            tenantId: (session.user as { tenantId?: string }).tenantId ?? undefined,
           },
         },
         pagination: { cursor, limit },
