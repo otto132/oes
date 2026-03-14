@@ -213,7 +213,7 @@ export default function HomePage() {
             {todayMeetings.length === 0 ? (
               <div className="p-6 text-center text-muted text-[12px]">No meetings today</div>
             ) : todayMeetings.map((m: UIMeeting) => (
-              <div key={m.id} className="px-4 py-3 border-b border-[var(--border)] hover:bg-[var(--hover)] transition-colors">
+              <Link href={`/meetings/${m.id}`} key={m.id} className="block px-4 py-3 border-b border-[var(--border)] hover:bg-[var(--hover)] transition-colors" style={{ textDecoration: 'none', color: 'inherit' }}>
                 <div className="flex items-center gap-2 mb-0.5">
                   <span className="font-mono text-[11px] text-brand font-semibold">{m.startTime}</span>
                   <span className="text-[10px] text-muted font-mono">{m.duration}</span>
@@ -221,7 +221,7 @@ export default function HomePage() {
                 </div>
                 <div className="text-[12.5px] font-medium">{m.title}</div>
                 <div className="text-[10px] text-muted mt-0.5">{m.attendees.join(', ')}</div>
-              </div>
+              </Link>
             ))}
           </div>
 
