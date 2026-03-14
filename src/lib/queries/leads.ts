@@ -19,6 +19,7 @@ export function useLeadsQuery() {
 export function useAdvanceLead() {
   const qc = useQueryClient();
   return useMutation({
+    mutationKey: ['leads', 'advance'],
     mutationFn: (id: string) => api.leads.advance(id),
     onMutate: async (id) => {
       await qc.cancelQueries({ queryKey: leadKeys.all });
@@ -47,6 +48,7 @@ export function useAdvanceLead() {
 export function useDisqualifyLead() {
   const qc = useQueryClient();
   return useMutation({
+    mutationKey: ['leads', 'disqualify'],
     mutationFn: (id: string) => api.leads.disqualify(id),
     onMutate: async (id) => {
       await qc.cancelQueries({ queryKey: leadKeys.all });
@@ -75,6 +77,7 @@ export function useDisqualifyLead() {
 export function useConvertLead() {
   const qc = useQueryClient();
   return useMutation({
+    mutationKey: ['leads', 'convert'],
     mutationFn: ({ id, ...data }: { id: string; accountName?: string; accountType?: string; oppName?: string; oppAmount?: number; oppStage?: string }) =>
       api.leads.convert(id, data),
     onMutate: async ({ id }) => {
@@ -101,6 +104,7 @@ export function useConvertLead() {
 export function useCreateLead() {
   const qc = useQueryClient();
   return useMutation({
+    mutationKey: ['leads', 'create'],
     mutationFn: (data: { company: string; type?: string; country?: string; pain?: string }) =>
       api.leads.create(data),
     onSettled: () => {

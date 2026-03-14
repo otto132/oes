@@ -26,6 +26,7 @@ export function useAccountDetail(id: string) {
 export function useCreateAccount() {
   const qc = useQueryClient();
   return useMutation({
+    mutationKey: ['accounts', 'create'],
     mutationFn: (data: {
       name: string;
       type?: string;
@@ -61,6 +62,7 @@ export function useCreateAccount() {
 export function useUpdateAccount(id: string) {
   const qc = useQueryClient();
   return useMutation({
+    mutationKey: ['accounts', 'update'],
     mutationFn: (data: Record<string, unknown>) =>
       api.accounts.update(id, data),
     onMutate: async (data) => {
@@ -91,6 +93,7 @@ export function useUpdateAccount(id: string) {
 export function useCreateContact(accountId: string) {
   const qc = useQueryClient();
   return useMutation({
+    mutationKey: ['accounts', 'createContact'],
     mutationFn: async (data: {
       name: string;
       title?: string;
@@ -145,6 +148,7 @@ export function useCreateContact(accountId: string) {
 export function useUpdateContact(accountId: string) {
   const qc = useQueryClient();
   return useMutation({
+    mutationKey: ['accounts', 'updateContact'],
     mutationFn: async ({ contactId, data }: { contactId: string; data: Record<string, unknown> }) => {
       const res = await fetch(`/api/accounts/${accountId}/contacts/${contactId}`, {
         method: 'PATCH',
@@ -166,6 +170,7 @@ export function useUpdateContact(accountId: string) {
 export function useDeleteContact(accountId: string) {
   const qc = useQueryClient();
   return useMutation({
+    mutationKey: ['accounts', 'deleteContact'],
     mutationFn: async (contactId: string) => {
       const res = await fetch(`/api/accounts/${accountId}/contacts/${contactId}`, { method: 'DELETE' });
       if (!res.ok) {

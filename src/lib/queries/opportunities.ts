@@ -26,6 +26,7 @@ export function useOpportunityDetail(id: string) {
 export function useCreateOpportunity() {
   const qc = useQueryClient();
   return useMutation({
+    mutationKey: ['opportunities', 'create'],
     mutationFn: (data: {
       name: string;
       accountId: string;
@@ -63,6 +64,7 @@ export function useCreateOpportunity() {
 export function useMoveStage() {
   const qc = useQueryClient();
   return useMutation({
+    mutationKey: ['opportunities', 'move'],
     mutationFn: ({ id, stage }: { id: string; stage: string }) =>
       api.opportunities.move(id, stage),
     onMutate: async ({ id, stage }) => {
@@ -102,6 +104,7 @@ export function useMoveStage() {
 export function useCloseWon() {
   const qc = useQueryClient();
   return useMutation({
+    mutationKey: ['opportunities', 'closeWon'],
     mutationFn: ({ id, ...data }: { id: string; winNotes?: string; competitorBeaten?: string }) =>
       api.opportunities.closeWon(id, data),
     onMutate: async ({ id }) => {
@@ -141,6 +144,7 @@ export function useCloseWon() {
 export function useUpdateOpportunity() {
   const qc = useQueryClient();
   return useMutation({
+    mutationKey: ['opportunities', 'update'],
     mutationFn: ({ id, data }: { id: string; data: Record<string, unknown> }) =>
       api.opportunities.update(id, data),
     onSuccess: (_data, vars) => {
@@ -153,6 +157,7 @@ export function useUpdateOpportunity() {
 export function useCloseLost() {
   const qc = useQueryClient();
   return useMutation({
+    mutationKey: ['opportunities', 'closeLost'],
     mutationFn: ({ id, ...data }: { id: string; lossReason: string; lossCompetitor?: string; lossNotes?: string }) =>
       api.opportunities.closeLost(id, data),
     onMutate: async ({ id }) => {

@@ -18,6 +18,7 @@ export function useSignalsQuery(type?: string) {
 export function useDismissSignal() {
   const qc = useQueryClient();
   return useMutation({
+    mutationKey: ['signals', 'dismiss'],
     mutationFn: (id: string) => api.signals.dismiss(id),
     onMutate: async (id) => {
       await qc.cancelQueries({ queryKey: signalKeys.all });
@@ -41,6 +42,7 @@ export function useDismissSignal() {
 export function useConvertSignal() {
   const qc = useQueryClient();
   return useMutation({
+    mutationKey: ['signals', 'convert'],
     mutationFn: ({ id, company, type, country }: { id: string; company: string; type?: string; country?: string }) =>
       api.signals.convert(id, company, type, country),
     onMutate: async ({ id }) => {

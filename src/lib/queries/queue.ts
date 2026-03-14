@@ -20,6 +20,7 @@ export function useQueueQuery(status: 'pending' | 'completed', type?: string) {
 export function useApproveQueueItem() {
   const qc = useQueryClient();
   return useMutation({
+    mutationKey: ['queue', 'approve'],
     mutationFn: ({ id, editedPayload }: { id: string; editedPayload?: Record<string, unknown> }) =>
       api.queue.approve(id, editedPayload),
     onMutate: async ({ id }) => {
@@ -44,6 +45,7 @@ export function useApproveQueueItem() {
 export function useRejectQueueItem() {
   const qc = useQueryClient();
   return useMutation({
+    mutationKey: ['queue', 'reject'],
     mutationFn: ({ id, reason }: { id: string; reason: string }) =>
       api.queue.reject(id, reason),
     onMutate: async ({ id }) => {

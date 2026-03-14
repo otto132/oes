@@ -52,6 +52,7 @@ export function useProfileQuery() {
 export function usePatchAgent() {
   const qc = useQueryClient();
   return useMutation({
+    mutationKey: ['settings', 'patchAgent'],
     mutationFn: ({ name, data }: { name: string; data: { status?: string; parameters?: Record<string, string> } }) =>
       api.settings.patchAgent(name, data),
     onMutate: async ({ name, data }) => {
@@ -81,6 +82,7 @@ export function usePatchAgent() {
 export function useInviteUser() {
   const qc = useQueryClient();
   return useMutation({
+    mutationKey: ['settings', 'invite'],
     mutationFn: (data: { email: string; role?: string }) => api.settings.invite(data),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: settingsKeys.invitations() });
@@ -92,6 +94,7 @@ export function useInviteUser() {
 export function useRevokeInvitation() {
   const qc = useQueryClient();
   return useMutation({
+    mutationKey: ['settings', 'revokeInvite'],
     mutationFn: (id: string) => api.settings.revokeInvite(id),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: settingsKeys.invitations() });
@@ -103,6 +106,7 @@ export function useRevokeInvitation() {
 export function useUpdateTeamMember() {
   const qc = useQueryClient();
   return useMutation({
+    mutationKey: ['settings', 'updateUser'],
     mutationFn: ({ id, data }: { id: string; data: { role?: string; isActive?: boolean } }) =>
       api.settings.updateUser(id, data),
     onSuccess: () => {
@@ -115,6 +119,7 @@ export function useUpdateTeamMember() {
 export function useUpdateProfile() {
   const qc = useQueryClient();
   return useMutation({
+    mutationKey: ['settings', 'updateProfile'],
     mutationFn: (data: { name?: string; initials?: string; notificationPrefs?: { emailAlerts: boolean; queueAlerts: boolean } }) =>
       api.settings.updateProfile(data),
     onSuccess: () => {
@@ -127,6 +132,7 @@ export function useUpdateProfile() {
 export function useSyncMutation() {
   const qc = useQueryClient();
   return useMutation({
+    mutationKey: ['settings', 'sync'],
     mutationFn: (type: 'all' | 'emails' | 'calendar') => api.sync.trigger(type),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: settingsKeys.integrations() });

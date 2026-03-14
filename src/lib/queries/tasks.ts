@@ -17,6 +17,7 @@ export function useTasksQuery(includeCompleted = false) {
 export function useCompleteTask() {
   const qc = useQueryClient();
   return useMutation({
+    mutationKey: ['tasks', 'complete'],
     mutationFn: ({ id, data }: { id: string; data?: any }) =>
       api.tasks.complete(id, data),
     onMutate: async ({ id }) => {
@@ -45,6 +46,7 @@ export function useCompleteTask() {
 export function useCommentOnTask() {
   const qc = useQueryClient();
   return useMutation({
+    mutationKey: ['tasks', 'comment'],
     mutationFn: ({ id, text }: { id: string; text: string }) =>
       api.tasks.comment(id, text),
     onSettled: () => {
@@ -56,6 +58,7 @@ export function useCommentOnTask() {
 export function useUpdateTask() {
   const qc = useQueryClient();
   return useMutation({
+    mutationKey: ['tasks', 'update'],
     mutationFn: ({ id, data }: { id: string; data: Record<string, unknown> }) =>
       api.tasks.update(id, data),
     onSettled: () => {
@@ -67,6 +70,7 @@ export function useUpdateTask() {
 export function useCreateTask() {
   const qc = useQueryClient();
   return useMutation({
+    mutationKey: ['tasks', 'create'],
     mutationFn: (data: { title: string; accountId?: string; priority?: string; dueDate?: string; goalId?: string }) =>
       api.tasks.create(data),
     onMutate: async (data) => {

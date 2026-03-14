@@ -19,6 +19,7 @@ export function useInboxQuery() {
 export function useMarkEmailRead() {
   const qc = useQueryClient();
   return useMutation({
+    mutationKey: ['inbox', 'read'],
     mutationFn: (id: string) => api.inbox.markRead(id),
     onMutate: async (id) => {
       await qc.cancelQueries({ queryKey: inboxKeys.all });
@@ -47,6 +48,7 @@ export function useMarkEmailRead() {
 export function useArchiveEmail() {
   const qc = useQueryClient();
   return useMutation({
+    mutationKey: ['inbox', 'archive'],
     mutationFn: (id: string) => api.inbox.archive(id),
     onMutate: async (id) => {
       await qc.cancelQueries({ queryKey: inboxKeys.all });
@@ -70,6 +72,7 @@ export function useArchiveEmail() {
 export function useCreateTaskFromEmail() {
   const qc = useQueryClient();
   return useMutation({
+    mutationKey: ['inbox', 'createTask'],
     mutationFn: (id: string) => api.inbox.createTask(id),
     onSettled: () => {
       qc.invalidateQueries({ queryKey: inboxKeys.all });
@@ -81,6 +84,7 @@ export function useCreateTaskFromEmail() {
 export function useCreateAccountFromEmail() {
   const qc = useQueryClient();
   return useMutation({
+    mutationKey: ['inbox', 'createAccount'],
     mutationFn: (id: string) => api.inbox.createAccount(id),
     onSettled: () => {
       qc.invalidateQueries({ queryKey: inboxKeys.all });

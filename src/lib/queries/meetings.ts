@@ -27,6 +27,7 @@ export function useMeetingDetail(id: string) {
 export function useCreateMeeting() {
   const qc = useQueryClient();
   return useMutation({
+    mutationKey: ['meetings', 'create'],
     mutationFn: (data: { title: string; date: string; startTime: string; duration?: string; attendees?: string[]; accountId?: string }) =>
       api.meetings.create(data),
     onMutate: async (data) => {
@@ -63,6 +64,7 @@ export function useCreateMeeting() {
 export function useUpdateMeeting() {
   const qc = useQueryClient();
   return useMutation({
+    mutationKey: ['meetings', 'update'],
     mutationFn: ({ id, data }: { id: string; data: Record<string, unknown> }) =>
       api.meetings.update(id, data),
     onMutate: async ({ id, data }) => {
