@@ -1,6 +1,5 @@
 import NextAuth from "next-auth"
 import type { NextAuthConfig } from "next-auth"
-import MicrosoftEntraID from "next-auth/providers/microsoft-entra-id"
 import Google from "next-auth/providers/google"
 import Credentials from "next-auth/providers/credentials"
 import { db } from "@/lib/db"
@@ -10,23 +9,13 @@ import { testSignInCallback } from "./auth-callbacks"
 // Build providers array based on which env vars are configured
 const providers: NextAuthConfig["providers"] = []
 
-const { google, microsoft } = availableProviders()
+const { google } = availableProviders()
 
 if (google) {
   providers.push(
     Google({
       clientId: env.GOOGLE_CLIENT_ID!,
       clientSecret: env.GOOGLE_CLIENT_SECRET!,
-    })
-  )
-}
-
-if (microsoft) {
-  providers.push(
-    MicrosoftEntraID({
-      clientId: env.AZURE_AD_CLIENT_ID!,
-      clientSecret: env.AZURE_AD_CLIENT_SECRET!,
-      issuer: `https://login.microsoftonline.com/${env.AZURE_AD_TENANT_ID!}/v2.0`,
     })
   )
 }

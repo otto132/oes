@@ -45,11 +45,6 @@ if (missing.length > 0) {
   );
 }
 
-// --- Azure AD (optional — only needed if using Microsoft login) ---
-const AZURE_AD_CLIENT_ID = getOptionalEnv("AZURE_AD_CLIENT_ID");
-const AZURE_AD_CLIENT_SECRET = getOptionalEnv("AZURE_AD_CLIENT_SECRET");
-const AZURE_AD_TENANT_ID = getOptionalEnv("AZURE_AD_TENANT_ID");
-
 // --- Google (optional — only needed if using Google login) ---
 const GOOGLE_CLIENT_ID = getOptionalEnv("GOOGLE_CLIENT_ID");
 const GOOGLE_CLIENT_SECRET = getOptionalEnv("GOOGLE_CLIENT_SECRET");
@@ -73,11 +68,6 @@ export const env = {
   NEXTAUTH_SECRET,
   NEXTAUTH_URL,
 
-  // Azure AD (optional)
-  AZURE_AD_CLIENT_ID,
-  AZURE_AD_CLIENT_SECRET,
-  AZURE_AD_TENANT_ID,
-
   // Google (optional)
   GOOGLE_CLIENT_ID,
   GOOGLE_CLIENT_SECRET,
@@ -98,9 +88,8 @@ export type Env = typeof env;
 // Provider availability helper
 // ---------------------------------------------------------------------------
 
-export function availableProviders(): { google: boolean; microsoft: boolean } {
+export function availableProviders(): { google: boolean } {
   return {
     google: !!(GOOGLE_CLIENT_ID && GOOGLE_CLIENT_SECRET),
-    microsoft: !!(AZURE_AD_CLIENT_ID && AZURE_AD_CLIENT_SECRET && AZURE_AD_TENANT_ID),
   };
 }
