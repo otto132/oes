@@ -38,7 +38,7 @@ export async function PATCH(
 
   // Handle subtasks in a transaction
   if (body.subtasks !== undefined) {
-    await db.$transaction(async (tx: any) => {
+    await rawDb.$transaction(async (tx: any) => {
       const existingSubtasks = await tx.subtask.findMany({ where: { taskId: id }, select: { id: true } });
       const existingIds = existingSubtasks.map((s: any) => s.id);
       const incomingIds = body.subtasks!.filter(s => s.id).map(s => s.id!);
