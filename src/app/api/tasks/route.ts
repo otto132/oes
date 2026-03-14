@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { Prisma, OppStage } from '@prisma/client';
 import type { Task } from '@prisma/client';
 import { resolveTenantDb } from '@/lib/tenant';
+import { db as rawDb } from '@/lib/db';
 import { scopedDb } from '@/lib/scoped-db';
 import { adaptTask, adaptGoal, adaptTaskComment } from '@/lib/adapters';
 import { withHandler } from '@/lib/api-handler';
@@ -51,7 +52,6 @@ export async function GET(req: NextRequest) {
 }
 
 export const POST = withHandler(taskActionSchema, async (req, ctx) => {
-  const db = resolveTenantDb(ctx.session as any);
   const body = ctx.body;
   const session = ctx.session;
 
@@ -59,7 +59,7 @@ export const POST = withHandler(taskActionSchema, async (req, ctx) => {
     // Create task
     const { title, accountId, priority, due, assigneeIds, reviewerId, goalId } = body;
     const ownerId = ('ownerId' in body && typeof body.ownerId === 'string') ? body.ownerId : session.user.id;
-    const task = await db.task.create({
+    const task = await ctx.db.task.create({
       data: {
         title, priority: priority || 'Medium', due: due ? new Date(due) : new Date(Date.now() + 7 * 864e5),
         source: 'Manual', accountId: accountId || undefined, ownerId,
@@ -68,9 +68,9 @@ export const POST = withHandler(taskActionSchema, async (req, ctx) => {
       },
       include: { owner: true, assignees: true, reviewer: true, account: { select: { id: true, name: true } }, comments: { include: { author: true }, orderBy: { createdAt: 'asc' } } },
     });
-    // Notify assignees
+    // Notify assignees (rawDb used — notifyUsers needs PrismaClient, not ScopedDb)
     const notifyIds = assigneeIds || [ownerId];
-    await notifyUsers(db, notifyIds, session.user.id, {
+    await notifyUsers(rawDb, notifyIds, session.user.id, {
       type: 'TASK_ASSIGNED',
       title: 'Task assigned to you',
       message: title.slice(0, 100),
@@ -83,13 +83,13 @@ export const POST = withHandler(taskActionSchema, async (req, ctx) => {
   if (body.action === 'complete') {
     const { id, outcome, notes, followUpTasks } = body;
     const userId = session.user.id;
-    const task = await db.task.update({
+    const task = await ctx.db.task.update({
       where: { id },
       data: { status: 'Done', completedAt: new Date() },
       include: { owner: true, assignees: true, reviewer: true, account: { select: { id: true, name: true } }, comments: { include: { author: true }, orderBy: { createdAt: 'asc' } } },
     });
     // Log activity
-    await db.activity.create({
+    await ctx.db.activity.create({
       data: {
         type: 'Note', summary: 'Task completed: ' + task.title.slice(0, 60),
         detail: (outcome !== 'done' ? 'Outcome: ' + outcome + '. ' : '') + (notes || ''),
@@ -98,12 +98,12 @@ export const POST = withHandler(taskActionSchema, async (req, ctx) => {
     });
     // Bump engagement health
     if (task.accountId) {
-      await db.account.update({ where: { id: task.accountId }, data: { lastActivityAt: new Date() } });
-      const opp = await db.opportunity.findFirst({
+      await ctx.db.account.update({ where: { id: task.accountId }, data: { lastActivityAt: new Date() } });
+      const opp = await ctx.db.opportunity.findFirst({
         where: { accountId: task.accountId, stage: { notIn: [OppStage.ClosedWon, OppStage.ClosedLost] } },
       });
       if (opp) {
-        await db.opportunity.update({
+        await ctx.db.opportunity.update({
           where: { id: opp.id },
           data: { healthEngagement: Math.min(100, opp.healthEngagement + 10) },
         });
@@ -113,7 +113,7 @@ export const POST = withHandler(taskActionSchema, async (req, ctx) => {
     const created: Task[] = [];
     if (followUpTasks) {
       for (const ft of followUpTasks) {
-        const t = await db.task.create({
+        const t = await ctx.db.task.create({
           data: {
             title: ft.title, priority: 'Medium', source: ft.source === 'ai_suggested' ? 'AI Suggested' : 'Follow-up',
             due: new Date(Date.now() + 3 * 864e5), accountId: task.accountId || undefined,
@@ -130,18 +130,18 @@ export const POST = withHandler(taskActionSchema, async (req, ctx) => {
     const { id, text } = body;
     const userId = session.user.id;
     const mentions = (text.match(/@(\w+)/g) || []).map((m: string) => m.slice(1));
-    const comment = await db.taskComment.create({
+    const comment = await ctx.db.taskComment.create({
       data: { text, taskId: id, authorId: userId, mentions },
       include: { author: true },
     });
-    // Notify mentioned users
+    // Notify mentioned users (rawDb used — notifyUsers needs PrismaClient, not ScopedDb)
     if (mentions.length > 0) {
-      const mentionedUsers = await db.user.findMany({
+      const mentionedUsers = await rawDb.user.findMany({
         where: { name: { in: mentions, mode: 'insensitive' } },
         select: { id: true },
       });
       const mentionedIds = mentionedUsers.map((u) => u.id);
-      await notifyUsers(db, mentionedIds, userId, {
+      await notifyUsers(rawDb, mentionedIds, userId, {
         type: 'MENTION',
         title: 'You were mentioned',
         message: text.slice(0, 100),
@@ -154,7 +154,7 @@ export const POST = withHandler(taskActionSchema, async (req, ctx) => {
 
   if (body.action === 'send_for_review') {
     const { id } = body;
-    const task = await db.task.update({
+    const task = await ctx.db.task.update({
       where: { id },
       data: { status: 'InReview' },
       include: { owner: true, assignees: true, reviewer: true, account: { select: { id: true, name: true } }, comments: { include: { author: true }, orderBy: { createdAt: 'asc' } } },

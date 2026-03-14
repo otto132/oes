@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { Prisma, AccountType } from '@prisma/client';
 import { resolveTenantDb } from '@/lib/tenant';
+import { db as rawDb } from '@/lib/db';
 import { scopedDb } from '@/lib/scoped-db';
 import { adaptAccount, adaptOpportunity, adaptActivity, adaptTask, adaptGoal } from '@/lib/adapters';
 import { withHandler } from '@/lib/api-handler';
@@ -110,17 +111,16 @@ export async function GET(req: NextRequest) {
 }
 
 export const POST = withHandler(createAccountSchema, async (req, ctx) => {
-  const db = resolveTenantDb(ctx.session as any);
   const body = ctx.body;
   const { name, type, country, notes } = body;
   const ownerId = body.ownerId || ctx.session.user.id;
   if (!name) return badRequest('Name required');
 
-  // Dedup
-  const dup = await db.account.findFirst({ where: { name: { equals: name, mode: 'insensitive' } } });
+  // Cross-user duplicate check uses raw unscoped db
+  const dup = await rawDb.account.findFirst({ where: { name: { equals: name, mode: 'insensitive' } } });
   if (dup) return conflict(`Account "${dup.name}" already exists`);
 
-  const account = await db.account.create({
+  const account = await ctx.db.account.create({
     data: {
       name,
       type: (type && Object.values(AccountType).includes(type as AccountType) ? type : 'Unknown') as AccountType,

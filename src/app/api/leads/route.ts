@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { AccountType, LeadStage, OppStage } from '@prisma/client';
-import { resolveTenantDb } from '@/lib/tenant';
+import { db as rawDb } from '@/lib/db';
 import { scopedDb } from '@/lib/scoped-db';
 import { adaptLead } from '@/lib/adapters';
 import { withHandler } from '@/lib/api-handler';
@@ -13,7 +13,6 @@ import { STAGE_PROB } from '@/lib/types';
 export async function GET(req: NextRequest) {
   const session = await auth();
   if (!session?.user?.id) return unauthorized();
-  const db = resolveTenantDb(session as any);
   const scoped = scopedDb(session.user.id, (session.user as any).role ?? 'VIEWER');
 
   const pagination = parsePagination(req);
@@ -31,7 +30,6 @@ export async function GET(req: NextRequest) {
 }
 
 export const POST = withHandler(leadActionSchema, async (req, ctx) => {
-  const db = resolveTenantDb(ctx.session as any);
   const body = ctx.body;
   const session = ctx.session;
 
@@ -39,9 +37,10 @@ export const POST = withHandler(leadActionSchema, async (req, ctx) => {
     const { company, type, country, pain } = body;
     const ownerId = body.ownerId || session.user.id;
     if (!company) return badRequest('Company required');
-    const dup = await db.lead.findFirst({ where: { company: { equals: company, mode: 'insensitive' } } });
+    // Cross-user duplicate check uses raw unscoped db
+    const dup = await rawDb.lead.findFirst({ where: { company: { equals: company, mode: 'insensitive' } } });
     if (dup) return conflict(`Lead "${dup.company}" already exists`);
-    const lead = await db.lead.create({
+    const lead = await ctx.db.lead.create({
       data: { company, source: 'Manual', type: (type || 'Unknown') as AccountType, country: country || '', pain: pain || '', ownerId },
       include: { owner: true },
     });
@@ -50,29 +49,29 @@ export const POST = withHandler(leadActionSchema, async (req, ctx) => {
 
   if (body.action === 'advance') {
     const { id } = body;
-    const lead = await db.lead.findUnique({ where: { id } });
+    const lead = await ctx.db.lead.findUnique({ where: { id } });
     if (!lead) return notFound('Lead not found');
     const next: Record<string, LeadStage> = { New: LeadStage.Researching, Researching: LeadStage.Qualified };
     if (!next[lead.stage]) return badRequest('Cannot advance');
-    const updated = await db.lead.update({ where: { id }, data: { stage: next[lead.stage] }, include: { owner: true } });
+    const updated = await ctx.db.lead.update({ where: { id }, data: { stage: next[lead.stage] }, include: { owner: true } });
     return NextResponse.json({ data: adaptLead(updated) });
   }
 
   if (body.action === 'disqualify') {
     const { id } = body;
-    const updated = await db.lead.update({ where: { id }, data: { stage: 'Disqualified' }, include: { owner: true } });
+    const updated = await ctx.db.lead.update({ where: { id }, data: { stage: 'Disqualified' }, include: { owner: true } });
     return NextResponse.json({ data: adaptLead(updated) });
   }
 
   if (body.action === 'convert') {
     const { id, accountName, accountType, oppName, oppAmount, oppStage } = body;
-    const lead = await db.lead.findUnique({ where: { id } });
+    const lead = await ctx.db.lead.findUnique({ where: { id } });
     if (!lead) return notFound('Lead not found');
     const ownerId = body.ownerId || session.user.id;
 
     const resolvedName = accountName || lead.company;
 
-    const result = await db.$transaction(async (tx: any) => {
+    const result = await ctx.db.$transaction(async (tx: any) => {
       await tx.lead.update({ where: { id }, data: { stage: 'Converted' } });
 
       // Check for existing account with same name (case-insensitive)

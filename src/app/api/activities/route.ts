@@ -31,16 +31,15 @@ export async function GET(req: NextRequest) {
 }
 
 export const POST = withHandler(createActivitySchema, async (req, ctx) => {
-  const db = resolveTenantDb(ctx.session as any);
   const body = ctx.body;
   const { type, summary, detail, source, noteType, accountId } = body;
   const authorId = ctx.session.user.id;
 
-  const activity = await db.activity.create({
+  const activity = await ctx.db.activity.create({
     data: { type: (type || 'Note') as ActivityType, summary, detail: detail || '', source: source || 'Manual', noteType, accountId: accountId || undefined, authorId },
   });
   if (accountId) {
-    await db.account.update({ where: { id: accountId }, data: { lastActivityAt: new Date() } });
+    await ctx.db.account.update({ where: { id: accountId }, data: { lastActivityAt: new Date() } });
   }
   return NextResponse.json({ data: activity }, { status: 201 });
 });

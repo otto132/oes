@@ -59,7 +59,6 @@ export async function GET(req: NextRequest) {
 }
 
 export const POST = withHandler(opportunityActionSchema, async (req, ctx) => {
-  const db = resolveTenantDb(ctx.session as any);
   const body = ctx.body;
   const session = ctx.session;
 
@@ -67,7 +66,7 @@ export const POST = withHandler(opportunityActionSchema, async (req, ctx) => {
   if (body.action === 'create') {
     const { name, accountId, stage, amount, closeDate } = body;
     const ownerId = body.ownerId || session.user.id;
-    const opp = await db.opportunity.create({
+    const opp = await ctx.db.opportunity.create({
       data: {
         name, accountId, stage: (stage || 'Contacted') as OppStage,
         amount: amount || 0, probability: STAGE_PROB[stage || 'Contacted'] || 10,
@@ -82,31 +81,31 @@ export const POST = withHandler(opportunityActionSchema, async (req, ctx) => {
   // Move stage
   if (body.action === 'move') {
     const { id, stage } = body;
-    const opp = await db.opportunity.update({
+    const opp = await ctx.db.opportunity.update({
       where: { id },
       data: { stage: stage as OppStage, probability: STAGE_PROB[stage] || 0 },
       include: { owner: true, account: { select: { id: true, name: true } } },
     });
-    await db.activity.create({
+    await ctx.db.activity.create({
       data: {
         type: 'Note', summary: `Stage → ${stage}`, detail: `${opp.name} moved`,
         source: 'Pipeline', accountId: opp.accountId, authorId: session.user.id,
       },
     });
-    await db.account.update({ where: { id: opp.accountId }, data: { lastActivityAt: new Date() } });
+    await ctx.db.account.update({ where: { id: opp.accountId }, data: { lastActivityAt: new Date() } });
     return NextResponse.json({ data: adaptOpportunity(opp) });
   }
 
   // Close Won
   if (body.action === 'close_won') {
     const { id, winNotes, competitorBeaten, keyStakeholders, lessonsLearned } = body;
-    const opp = await db.opportunity.update({
+    const opp = await ctx.db.opportunity.update({
       where: { id },
       data: { stage: 'ClosedWon', probability: 100, winNotes, competitorBeaten, keyStakeholders, lessonsLearned },
       include: { owner: true, account: { select: { id: true, name: true } } },
     });
-    await db.account.update({ where: { id: opp.accountId }, data: { status: 'Active', lastActivityAt: new Date() } });
-    await db.activity.create({
+    await ctx.db.account.update({ where: { id: opp.accountId }, data: { status: 'Active', lastActivityAt: new Date() } });
+    await ctx.db.activity.create({
       data: {
         type: 'Note', summary: `WON: ${opp.name}`,
         detail: `${winNotes || ''}${competitorBeaten ? ' · Beat: ' + competitorBeaten : ''}`,
@@ -119,12 +118,12 @@ export const POST = withHandler(opportunityActionSchema, async (req, ctx) => {
   // Close Lost
   if (body.action === 'close_lost') {
     const { id, lossReason, lossCompetitor, lossNotes, lessonsLearned } = body;
-    const opp = await db.opportunity.update({
+    const opp = await ctx.db.opportunity.update({
       where: { id },
       data: { stage: 'ClosedLost', probability: 0, lossReason, lossCompetitor, lossNotes, lessonsLearned },
       include: { owner: true, account: { select: { id: true, name: true } } },
     });
-    await db.activity.create({
+    await ctx.db.activity.create({
       data: {
         type: 'Note', summary: `Lost: ${opp.name} — ${lossReason}`,
         detail: `${lossNotes || ''}${lossCompetitor ? ' · Won by: ' + lossCompetitor : ''}`,
