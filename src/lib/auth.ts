@@ -88,6 +88,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         if (dbUser) {
           token.userId = dbUser.id
           token.role = dbUser.role
+          token.tenantId = dbUser.tenantId
         }
       }
       return token
@@ -95,6 +96,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     async session({ session, token }) {
       if (token.userId) session.user.id = token.userId
       if (token.role) session.user.role = token.role
+      if (token.tenantId) session.user.tenantId = token.tenantId
       return session
     },
   },
