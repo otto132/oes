@@ -393,6 +393,9 @@ function TasksPageInner() {
       title: t.title,
       priority: t.priority,
       dueDate: t.dueDate ? t.dueDate.split('T')[0] : '',
+      notes: t.notes ?? '',
+      assigneeIds: t.assignees?.map((a: any) => a.id) ?? [],
+      reviewerId: t.reviewer?.id ?? null as string | null,
     };
 
     openDrawer({
@@ -432,22 +435,47 @@ function TasksPageInner() {
               />
             </label>
           </div>
-          {(t.assignees && t.assignees.length > 0) && (
-            <div className="flex flex-col gap-1">
-              <span className="text-[10px] font-semibold uppercase tracking-wide text-muted">Assignees</span>
-              <div className="px-2.5 py-1.5 text-[12px] rounded-md bg-[var(--surface)] border border-[var(--border)] text-sub">
-                {t.assignees.map(u => u.name).join(', ')}
-              </div>
+          <label className="flex flex-col gap-1">
+            <span className="text-[10px] font-semibold uppercase tracking-wide text-muted">Notes</span>
+            <textarea
+              defaultValue={state.notes}
+              onChange={e => { state.notes = e.target.value; }}
+              rows={3}
+              placeholder="Add context or details..."
+              className="px-2.5 py-1.5 text-[12px] rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] placeholder:text-[var(--muted)] focus:outline-none focus:border-brand/40 resize-y"
+            />
+          </label>
+          <label className="flex flex-col gap-1">
+            <span className="text-[10px] font-semibold uppercase tracking-wide text-muted">Assignees</span>
+            <div className="flex flex-col gap-1 max-h-[120px] overflow-y-auto">
+              {teamMembers.map((m: any) => (
+                <label key={m.id} className="flex items-center gap-2 px-2 py-1 rounded hover:bg-[var(--hover)] cursor-pointer text-[12px]">
+                  <input
+                    type="checkbox"
+                    defaultChecked={state.assigneeIds.includes(m.id)}
+                    onChange={e => {
+                      if (e.target.checked) state.assigneeIds = [...state.assigneeIds, m.id];
+                      else state.assigneeIds = state.assigneeIds.filter((id: string) => id !== m.id);
+                    }}
+                  />
+                  {m.name}
+                </label>
+              ))}
             </div>
-          )}
-          {t.reviewer && (
-            <div className="flex flex-col gap-1">
-              <span className="text-[10px] font-semibold uppercase tracking-wide text-muted">Reviewer</span>
-              <div className="px-2.5 py-1.5 text-[12px] rounded-md bg-[var(--surface)] border border-[var(--border)] text-sub">
-                {t.reviewer.name}
-              </div>
-            </div>
-          )}
+          </label>
+          <label className="flex flex-col gap-1">
+            <span className="text-[10px] font-semibold uppercase tracking-wide text-muted">Reviewer</span>
+            <select
+              defaultValue={state.reviewerId ?? ''}
+              onChange={e => { state.reviewerId = e.target.value || null; }}
+              className="px-2.5 py-1.5 text-[12px] rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] focus:outline-none focus:border-brand/40"
+            >
+              <option value="">None</option>
+              {teamMembers.map((m: any) => (
+                <option key={m.id} value={m.id}>{m.name}</option>
+              ))}
+            </select>
+          </label>
         </div>
       ),
       footer: (
@@ -472,7 +500,10 @@ function TasksPageInner() {
                   data: {
                     title: state.title.trim(),
                     priority: state.priority,
-                    ...(state.dueDate ? { dueDate: state.dueDate } : {}),
+                    due: state.dueDate || undefined,
+                    notes: state.notes,
+                    assigneeIds: state.assigneeIds,
+                    reviewerId: state.reviewerId,
                   },
                 },
                 {
