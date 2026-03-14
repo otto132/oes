@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/db';
+import { resolveTenantDb } from '@/lib/tenant';
 import { auth } from '@/lib/auth';
 import { meetingOutcomeSchema } from '@/lib/schemas/outcome';
 import { adaptActivity } from '@/lib/adapters';
@@ -12,6 +12,7 @@ export async function POST(
   const session = await auth();
   if (!session?.user?.id) return unauthorized();
 
+  const db = resolveTenantDb(session as any);
   const { id } = await params;
 
   const meeting = await db.meeting.findUnique({ where: { id } });

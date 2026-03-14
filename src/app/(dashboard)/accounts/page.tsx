@@ -2,7 +2,7 @@
 import { Suspense, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
-import { useAccountsQuery, useCreateAccount } from '@/lib/queries/accounts';
+import { useAccountsQuery, useCreateAccount, useImportAccounts } from '@/lib/queries/accounts';
 import { useStore } from '@/lib/store';
 import { compositeScore } from '@/lib/types';
 import type { Account } from '@/lib/types';
@@ -52,12 +52,21 @@ function AccountsPageInner() {
   const { data: resp, isLoading, isError, refetch } = useAccountsQuery(search || undefined, typeFilter !== 'all' ? typeFilter : undefined, ownerFilter === 'me' ? 'me' : undefined);
   const searchParams = useSearchParams();
   const createAccount = useCreateAccount();
+  const importAccounts = useImportAccounts();
   const { openDrawer, closeDrawer, addToast } = useStore();
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const autoCreateFired = useRef(false);
   const pendingIds = usePendingMutations(['accounts']);
   const failedMutations = useFailedMutations(['accounts']);
 
-  const ACCOUNT_TYPES = ['Unknown', 'PPA Buyer', 'Certificate Trader', 'Corporate Offtaker'];
+  const ACCOUNT_TYPES: { value: string; label: string }[] = [
+    { value: 'Unknown', label: 'Unknown' },
+    { value: 'Utility', label: 'Utility' },
+    { value: 'Trader', label: 'Trader' },
+    { value: 'Retailer', label: 'Retailer' },
+    { value: 'Industrial', label: 'Industrial' },
+    { value: 'Developer', label: 'Developer' },
+  ];
   const COUNTRIES = ['Finland', 'Denmark', 'Sweden', 'Norway', 'Germany', 'Netherlands', 'UK', 'US'];
 
   function openNewAccountDrawer() {
@@ -89,7 +98,7 @@ function AccountsPageInner() {
                 onChange={e => { state.type = e.target.value; }}
                 className="px-2.5 py-1.5 text-[12px] rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] focus:outline-none focus:border-brand/40"
               >
-                {ACCOUNT_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
+                {ACCOUNT_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
               </select>
             </label>
             <label className="flex flex-col gap-1 flex-1">
@@ -145,6 +154,43 @@ function AccountsPageInner() {
     });
   }
 
+  function handleImportFile(file: File) {
+    importAccounts.mutate(
+      { file },
+      {
+        onSuccess: (res: any) => {
+          const d = res.data;
+          const parts: string[] = [];
+          if (d.created) parts.push(`${d.created} created`);
+          if (d.skipped) parts.push(`${d.skipped} skipped`);
+          if (d.errors) parts.push(`${d.errors} errors`);
+          addToast({ type: d.created > 0 ? 'success' : 'info', message: `Import: ${parts.join(', ')}` });
+          // Show detailed results in drawer if there were issues
+          if (d.skipped > 0 || d.errors > 0) {
+            const issues = (d.results || []).filter((r: any) => r.status !== 'created');
+            openDrawer({
+              title: 'Import Results',
+              subtitle: `${d.created} created, ${d.skipped} skipped, ${d.errors} errors`,
+              body: (
+                <div className="flex flex-col gap-1.5 max-h-[400px] overflow-y-auto">
+                  {issues.map((r: any, i: number) => (
+                    <div key={i} className={cn('px-2.5 py-1.5 rounded-md text-[11.5px] border', r.status === 'skipped' ? 'bg-yellow-500/5 border-yellow-500/20 text-yellow-600' : 'bg-red-500/5 border-red-500/20 text-red-500')}>
+                      <span className="font-medium">Row {r.row}: {r.name || 'Unknown'}</span> — {r.error}
+                    </div>
+                  ))}
+                </div>
+              ),
+              footer: (
+                <button className="px-3.5 py-1.5 text-[12px] font-medium bg-brand text-[#09090b] rounded-md hover:brightness-110 transition-colors" onClick={closeDrawer}>Done</button>
+              ),
+            });
+          }
+        },
+        onError: (err) => addToast({ type: 'error', message: err.message }),
+      },
+    );
+  }
+
   // Auto-open create drawer when navigated with ?create=1 (from command palette)
   useEffect(() => {
     if (searchParams.get('create') === '1' && !autoCreateFired.current) {
@@ -168,12 +214,32 @@ function AccountsPageInner() {
           <h1 className="text-[18px] font-semibold tracking-tight">Accounts</h1>
           <p className="text-[12px] text-[var(--sub)] mt-0.5">{sorted.length} account{sorted.length !== 1 ? 's' : ''}</p>
         </div>
-        <button
-          onClick={openNewAccountDrawer}
-          className="px-3 py-1.5 text-[12px] font-medium bg-brand text-[#09090b] rounded-md hover:brightness-110 transition-colors"
-        >
-          + New Account
-        </button>
+        <div className="flex items-center gap-2">
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".csv"
+            className="hidden"
+            onChange={e => {
+              const file = e.target.files?.[0];
+              if (file) handleImportFile(file);
+              e.target.value = '';
+            }}
+          />
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            disabled={importAccounts.isPending}
+            className="px-3 py-1.5 text-[12px] font-medium bg-[var(--surface)] text-[var(--sub)] border border-[var(--border)] rounded-md hover:bg-[var(--hover)] transition-colors disabled:opacity-50"
+          >
+            {importAccounts.isPending ? 'Importing...' : 'Import CSV'}
+          </button>
+          <button
+            onClick={openNewAccountDrawer}
+            className="px-3 py-1.5 text-[12px] font-medium bg-brand text-[#09090b] rounded-md hover:brightness-110 transition-colors"
+          >
+            + New Account
+          </button>
+        </div>
       </div>
 
       <div className="flex items-center gap-1.5 mb-2.5 flex-wrap">

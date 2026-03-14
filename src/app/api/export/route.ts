@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import { db } from '@/lib/db';
+import { resolveTenantDb } from '@/lib/tenant';
 import { requireRole } from '@/lib/rbac';
 import { auditLog, AUDIT_ACTIONS } from '@/lib/audit';
 import { logAccess } from '@/lib/access-log';
@@ -13,7 +14,9 @@ export async function GET() {
   const denied = requireRole(session, 'ADMIN');
   if (denied) return denied;
 
-  // Rate limit: check for recent export in last hour (synchronous)
+  const tenantDb = resolveTenantDb(session as any);
+
+  // Rate limit: check for recent export in last hour (uses global db for audit access)
   const recentExport = await db.auditLog.findFirst({
     where: {
       action: AUDIT_ACTIONS.DATA_EXPORTED,
@@ -27,17 +30,17 @@ export async function GET() {
     );
   }
 
-  // Fetch all data
+  // Fetch all data (tenant-scoped)
   const [accounts, leads, tasks] = await Promise.all([
-    db.account.findMany({
+    tenantDb.account.findMany({
       include: {
         contacts: true,
         opportunities: true,
         activities: { orderBy: { createdAt: 'desc' }, take: 100 },
       },
     }),
-    db.lead.findMany(),
-    db.task.findMany(),
+    tenantDb.lead.findMany(),
+    tenantDb.task.findMany(),
   ]);
 
   const exportData = {

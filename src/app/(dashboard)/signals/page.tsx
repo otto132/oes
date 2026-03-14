@@ -8,6 +8,7 @@ import { signalLabel, signalColor, fR, cn } from '@/lib/utils';
 import { Zap, Check, RotateCw } from 'lucide-react';
 import type { Signal } from '@/lib/types';
 import { usePendingMutations, useFailedMutations } from '@/hooks/use-mutation-state';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 
 const FILTERS = [
   { k: 'all', l: 'All' }, { k: 'ppa_announcement', l: 'PPA' }, { k: 'renewable_target', l: 'Target' },
@@ -48,6 +49,7 @@ export default function SignalsPage() {
   const addToast = useStore(s => s.addToast);
   const pendingIds = usePendingMutations(['signals']);
   const failedMutations = useFailedMutations(['signals']);
+  const [confirmDismiss, setConfirmDismiss] = useState<string | null>(null);
 
   if (isLoading) return <SignalsSkeleton />;
   if (isError) return <ErrorState onRetry={() => refetch()} />;
@@ -233,10 +235,7 @@ export default function SignalsPage() {
                     className="px-1.5 py-1 text-[11px] text-[var(--sub)] hover:bg-[var(--hover)] rounded-md transition-colors"
                     onClick={e => {
                       e.stopPropagation();
-                      dismiss.mutate(s.id, {
-                        onSuccess: () => addToast({ type: 'info', message: 'Signal dismissed' }),
-                        onError: (err) => addToast({ type: 'error', message: err.message }),
-                      });
+                      setConfirmDismiss(s.id);
                     }}
                   >
                     ✕
@@ -247,6 +246,22 @@ export default function SignalsPage() {
           );
         })}
       </div>
+      <ConfirmDialog
+        open={!!confirmDismiss}
+        title="Dismiss Signal"
+        message="Are you sure you want to dismiss this signal? This action cannot be undone."
+        confirmLabel="Dismiss"
+        onConfirm={() => {
+          if (confirmDismiss) {
+            dismiss.mutate(confirmDismiss, {
+              onSuccess: () => addToast({ type: 'info', message: 'Signal dismissed' }),
+              onError: (err) => addToast({ type: 'error', message: err.message }),
+            });
+          }
+          setConfirmDismiss(null);
+        }}
+        onCancel={() => setConfirmDismiss(null)}
+      />
     </div>
   );
 }

@@ -189,6 +189,18 @@ export function useUpdateContact(accountId: string) {
   });
 }
 
+export function useImportAccounts() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationKey: ['accounts', 'import'],
+    mutationFn: (args: { file: File; fieldMap?: Record<string, string> }) =>
+      api.accounts.import(args.file, args.fieldMap),
+    onSettled: () => {
+      qc.invalidateQueries({ queryKey: accountKeys.all });
+    },
+  });
+}
+
 export function useDeleteContact(accountId: string) {
   const qc = useQueryClient();
   return useMutation({

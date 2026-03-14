@@ -67,29 +67,34 @@ export const POST = withHandler(leadActionSchema, async (req, ctx) => {
     const { id, accountName, accountType, oppName, oppAmount, oppStage } = body;
     const lead = await db.lead.findUnique({ where: { id } });
     if (!lead) return notFound('Lead not found');
-    await db.lead.update({ where: { id }, data: { stage: 'Converted' } });
     const ownerId = body.ownerId || session.user.id;
-    const account = await db.account.create({
-      data: {
-        name: accountName || lead.company, type: (accountType || lead.type) as AccountType, country: lead.country,
-        region: lead.region, status: 'Prospect', ownerId,
-        scoreFit: lead.scoreFit, scoreIntent: lead.scoreIntent, scoreUrgency: lead.scoreUrgency,
-        scoreAccess: lead.scoreAccess, scoreCommercial: lead.scoreCommercial,
-        pain: lead.pain, whyNow: 'Converted from lead', moduleFit: lead.moduleFit,
-        aiConfidence: lead.confidence,
-      },
-    });
-    let opp = null;
-    if (oppName) {
-      const probMap: Record<string, number> = { Contacted: 10, Discovery: 20, Qualified: 35 };
-      opp = await db.opportunity.create({
+
+    const result = await db.$transaction(async (tx: any) => {
+      await tx.lead.update({ where: { id }, data: { stage: 'Converted' } });
+      const account = await tx.account.create({
         data: {
-          name: oppName, accountId: account.id, stage: (oppStage || 'Discovery') as OppStage,
-          amount: oppAmount || 0, probability: probMap[oppStage || 'Discovery'] || 20, ownerId,
+          name: accountName || lead.company, type: (accountType || lead.type) as AccountType, country: lead.country,
+          region: lead.region, status: 'Prospect', ownerId,
+          scoreFit: lead.scoreFit, scoreIntent: lead.scoreIntent, scoreUrgency: lead.scoreUrgency,
+          scoreAccess: lead.scoreAccess, scoreCommercial: lead.scoreCommercial,
+          pain: lead.pain, whyNow: 'Converted from lead', moduleFit: lead.moduleFit,
+          aiConfidence: lead.confidence,
         },
       });
-    }
-    return NextResponse.json({ data: { account, opportunity: opp } }, { status: 201 });
+      let opp = null;
+      if (oppName) {
+        const probMap: Record<string, number> = { Contacted: 10, Discovery: 20, Qualified: 35 };
+        opp = await tx.opportunity.create({
+          data: {
+            name: oppName, accountId: account.id, stage: (oppStage || 'Discovery') as OppStage,
+            amount: oppAmount || 0, probability: probMap[oppStage || 'Discovery'] || 20, ownerId,
+          },
+        });
+      }
+      return { account, opportunity: opp };
+    });
+
+    return NextResponse.json({ data: result }, { status: 201 });
   }
 
   return badRequest('Invalid action');
