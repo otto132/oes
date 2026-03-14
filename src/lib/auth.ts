@@ -1,13 +1,27 @@
 import NextAuth from "next-auth"
+import type { NextAuthConfig } from "next-auth"
+import Google from "next-auth/providers/google"
 import Credentials from "next-auth/providers/credentials"
 import { db } from "@/lib/db"
+import { env, availableProviders } from "@/lib/env"
 import { authConfig } from "./auth.config"
 import { testSignInCallback } from "./auth-callbacks"
 
-// Full auth config — extends the edge-safe base with DB-dependent callbacks.
+// Full auth config — extends the edge-safe base with providers and DB callbacks.
 // The middleware uses authConfig directly (no Prisma in the edge bundle).
 
-const providers = [...authConfig.providers]
+const providers: NextAuthConfig["providers"] = []
+
+const { google } = availableProviders()
+
+if (google) {
+  providers.push(
+    Google({
+      clientId: env.GOOGLE_CLIENT_ID!,
+      clientSecret: env.GOOGLE_CLIENT_SECRET!,
+    })
+  )
+}
 
 // Dev-only credentials provider — auto-signs in as first active user
 if (process.env.NODE_ENV === "development") {
