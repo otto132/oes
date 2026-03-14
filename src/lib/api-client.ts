@@ -253,4 +253,16 @@ export const api = {
   admin: {
     stats: () => get<any>('/admin/stats'),
   },
+
+  // ── Notifications ───────────────────────────────────
+  notifications: {
+    list: (cursor?: string) => {
+      const params = new URLSearchParams();
+      if (cursor) params.set('cursor', cursor);
+      const qs = params.toString();
+      return get<any>(`/notifications${qs ? `?${qs}` : ''}`);
+    },
+    markRead: (ids: string[]) => patch<any>('/notifications/mark-read', { ids }),
+    markAllRead: () => patch<any>('/notifications/mark-read', { all: true }),
+  },
 };
