@@ -10,6 +10,7 @@ import { parsePagination, paginate } from '@/lib/schemas/pagination';
 import { canMutate } from '@/lib/rbac';
 import { auth } from '@/lib/auth';
 import { handleApproval } from '@/lib/agents/chain';
+import { notifyUsers } from '@/lib/notifications';
 
 /** Typed payload interfaces for queue item side-effects */
 interface LeadQualificationPayload {
@@ -257,6 +258,19 @@ export const POST = withHandler(queueActionSchema, async (req, ctx) => {
       }
     }
 
+    // Notify admins of approval
+    const admins = await db.user.findMany({
+      where: { role: 'ADMIN', isActive: true },
+      select: { id: true },
+    });
+    await notifyUsers(db, admins.map(a => a.id), userId, {
+      type: 'QUEUE_ITEM',
+      title: 'Queue item approved',
+      message: item.title.slice(0, 100),
+      entityType: 'QueueItem',
+      entityId: item.id,
+    });
+
     // Log approval activity
     await db.activity.create({
       data: {
@@ -285,10 +299,26 @@ export const POST = withHandler(queueActionSchema, async (req, ctx) => {
 
   if (body.action === 'reject') {
     const { id, reason } = body;
+    const item = await db.queueItem.findUnique({ where: { id } });
+    if (!item) return notFound('Queue item not found');
     const updated = await db.queueItem.update({
       where: { id },
       data: { status: 'rejected', reviewedById: userId, reviewedAt: new Date(), rejReason: reason },
     });
+
+    // Notify admins of rejection
+    const admins = await db.user.findMany({
+      where: { role: 'ADMIN', isActive: true },
+      select: { id: true },
+    });
+    await notifyUsers(db, admins.map(a => a.id), userId, {
+      type: 'QUEUE_ITEM',
+      title: 'Queue item rejected',
+      message: `${item.title.slice(0, 80)}${reason ? ' — ' + reason.slice(0, 50) : ''}`,
+      entityType: 'QueueItem',
+      entityId: item.id,
+    });
+
     const adapted = adaptQueueItem(updated);
     if (updated.reviewedById) {
       const reviewer = await db.user.findUnique({ where: { id: updated.reviewedById }, select: { name: true } });

@@ -79,7 +79,7 @@ Pre-beta blockers and embarrassing bugs. Complete before any other work.
 | **Owner** | Backend |
 | **Required before beta** | Yes |
 | **Value type** | Trust, Speed |
-| **Status** | Done (verified 2026-03-14: already uses `new Date()` dynamically) |
+| **Status** | Open |
 
 ---
 
@@ -133,7 +133,7 @@ Pre-beta blockers and embarrassing bugs. Complete before any other work.
 | **Owner** | Frontend + Backend |
 | **Required before beta** | Yes |
 | **Value type** | Trust, Speed |
-| **Status** | Done (2026-03-14: wired `useArchiveEmail` mutation with optimistic removal, toast, and drawer close) |
+| **Status** | Done |
 
 ---
 
@@ -169,7 +169,7 @@ Pre-beta blockers and embarrassing bugs. Complete before any other work.
 | **Owner** | Backend |
 | **Required before beta** | Yes |
 | **Value type** | Risk reduction |
-| **Status** | Done (verified 2026-03-14: already uses `db.$transaction()`) |
+| **Status** | Done |
 
 ---
 
@@ -187,7 +187,7 @@ Pre-beta blockers and embarrassing bugs. Complete before any other work.
 | **Owner** | Backend |
 | **Required before beta** | Yes |
 | **Value type** | Risk reduction |
-| **Status** | Done (2026-03-14: changed findUnique to findFirst with compound WHERE clauses for account, lead, opportunity, task) |
+| **Status** | Done |
 
 ---
 
@@ -205,7 +205,7 @@ Pre-beta blockers and embarrassing bugs. Complete before any other work.
 | **Owner** | Backend |
 | **Required before beta** | No |
 | **Value type** | Risk reduction |
-| **Status** | Done (2026-03-14: canonical STAGE_PROB in types.ts, removed duplicates from home, leads, opportunities routes) |
+| **Status** | Done |
 
 ---
 
@@ -259,7 +259,7 @@ Pre-beta blockers and embarrassing bugs. Complete before any other work.
 | **Owner** | Backend |
 | **Required before beta** | Yes |
 | **Value type** | Risk reduction |
-| **Status** | Done (2026-03-14: case-insensitive name match, reuses existing account if found, returns linkedExisting flag) |
+| **Status** | Done |
 
 ---
 
@@ -319,7 +319,7 @@ High-leverage builds. Tackle after DO NOW is complete.
 | **Owner** | Backend + Frontend |
 | **Required before beta** | Yes |
 | **Value type** | Speed, Adoption |
-| **Status** | Done (2026-03-14: added cursor pagination to queue endpoint using parsePagination/paginate pattern) |
+| **Status** | Done |
 
 ---
 
@@ -337,7 +337,7 @@ High-leverage builds. Tackle after DO NOW is complete.
 | **Owner** | Backend |
 | **Required before beta** | Yes |
 | **Value type** | Risk reduction, Trust |
-| **Status** | Done (2026-03-14: validates effective payload against type-specific Zod schemas before side-effects) |
+| **Status** | Done |
 
 ---
 
@@ -355,7 +355,7 @@ High-leverage builds. Tackle after DO NOW is complete.
 | **Owner** | Backend |
 | **Required before beta** | No |
 | **Value type** | Risk reduction, Speed |
-| **Status** | Done (2026-03-14: UUID per request, x-request-id header on all responses, requestId in error bodies and logs) |
+| **Status** | Done |
 
 ---
 
@@ -373,7 +373,7 @@ High-leverage builds. Tackle after DO NOW is complete.
 | **Owner** | Backend |
 | **Required before beta** | No |
 | **Value type** | Speed |
-| **Status** | Done (2026-03-14: split into lightweight stats query + limited display queries, removed duplicate PROB map) |
+| **Status** | Done |
 
 ---
 
@@ -391,7 +391,7 @@ High-leverage builds. Tackle after DO NOW is complete.
 | **Owner** | Backend |
 | **Required before beta** | No |
 | **Value type** | Trust, Speed |
-| **Status** | Done (2026-03-14: single batched notification per agent run with count and preview titles) |
+| **Status** | Done |
 
 ---
 
@@ -463,7 +463,7 @@ High-leverage builds. Tackle after DO NOW is complete.
 | **Owner** | Frontend |
 | **Required before beta** | No |
 | **Value type** | Speed (developer velocity) |
-| **Status** | Done (2026-03-14: useOptimisticMutation helper with removeById/updateById, refactored inbox/leads/queue/signals queries) |
+| **Status** | Open |
 
 ---
 
@@ -499,7 +499,7 @@ High-leverage builds. Tackle after DO NOW is complete.
 | **Owner** | Frontend |
 | **Required before beta** | No |
 | **Value type** | Speed |
-| **Status** | Open |
+| **Status** | Done |
 
 ---
 
