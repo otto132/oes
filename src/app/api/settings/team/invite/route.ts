@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { resolveTenantDb } from '@/lib/tenant';
 import { auth } from '@/lib/auth';
 import { unauthorized, forbidden, conflict, zodError, badRequest } from '@/lib/api-errors';
+import { auditLog, AUDIT_ACTIONS } from '@/lib/audit';
 
 const inviteSchema = z.object({
   email: z.string().email('Invalid email address'),
@@ -54,6 +55,14 @@ export async function POST(req: NextRequest) {
       expiresAt,
       tenantId: dbUser.tenantId,
     },
+  });
+
+  auditLog({
+    userId: session.user.id,
+    action: AUDIT_ACTIONS.USER_INVITED,
+    entityType: 'Invitation',
+    entityId: invitation.id,
+    metadata: { email, role },
   });
 
   const inviteLink = `/invite?token=${invitation.token}`;

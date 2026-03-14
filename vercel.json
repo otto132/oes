@@ -8,6 +8,10 @@
     {
       "path": "/api/sync?type=agents",
       "schedule": "0 12 * * *"
+    },
+    {
+      "path": "/api/retention",
+      "schedule": "0 3 * * 0"
     }
   ]
 }

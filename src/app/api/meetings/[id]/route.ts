@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { resolveTenantDb } from '@/lib/tenant';
 import { auth } from '@/lib/auth';
-import { adaptMeeting, adaptAccount, adaptContact, adaptActivity } from '@/lib/adapters';
+import { adaptMeeting, adaptAccount, adaptContact, adaptActivity, adaptOpportunity } from '@/lib/adapters';
 import { patchMeetingSchema } from '@/lib/schemas/meetings';
 import { unauthorized, notFound, zodError } from '@/lib/api-errors';
+import { logAccess } from '@/lib/access-log';
 
 export async function GET(
   _req: NextRequest,
@@ -17,6 +18,14 @@ export async function GET(
 
   const meeting = await db.meeting.findUnique({ where: { id } });
   if (!meeting) return notFound('Meeting not found');
+
+  if (session?.user?.id) {
+    logAccess({
+      userId: session.user.id,
+      entityType: 'Meeting',
+      entityId: id,
+    });
+  }
 
   const result: Record<string, unknown> = { data: adaptMeeting(meeting) };
 
@@ -38,6 +47,16 @@ export async function GET(
       result.contacts = account.contacts.map(adaptContact);
       result.activities = account.activities.map(a =>
         adaptActivity({ ...a, account: { id: account.id, name: account.name } }),
+      );
+      const opportunities = await db.opportunity.findMany({
+        where: {
+          accountId: account.id,
+          stage: { notIn: ['ClosedWon', 'ClosedLost'] },
+        },
+        include: { owner: true },
+      });
+      result.opportunities = opportunities.map(o =>
+        adaptOpportunity({ ...o, account: { id: account.id, name: account.name } }),
       );
     }
   }

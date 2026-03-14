@@ -6,6 +6,7 @@
 
 import { db } from '@/lib/db';
 import { refreshAccessToken } from './microsoft-graph';
+import { decrypt, encrypt } from '@/lib/crypto';
 import type { IntegrationToken, User } from '@prisma/client';
 
 export interface SyncResult {
@@ -36,16 +37,16 @@ export async function runSync({ type, syncFn }: RunSyncOptions): Promise<SyncRes
 
     try {
       // Refresh token if expired
-      let accessToken = tokenRow.accessToken;
+      let accessToken = decrypt(tokenRow.accessToken);
       if (tokenRow.expiresAt < new Date()) {
         try {
-          const refreshed = await refreshAccessToken(tokenRow.refreshToken);
+          const refreshed = await refreshAccessToken(decrypt(tokenRow.refreshToken));
           accessToken = refreshed.access_token;
           await db.integrationToken.update({
             where: { id: tokenRow.id },
             data: {
-              accessToken: refreshed.access_token,
-              refreshToken: refreshed.refresh_token,
+              accessToken: encrypt(refreshed.access_token),
+              refreshToken: encrypt(refreshed.refresh_token),
               expiresAt: new Date(Date.now() + refreshed.expires_in * 1000),
               status: 'active',
             },

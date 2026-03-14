@@ -209,6 +209,14 @@ export const api = {
       post<any>('/meetings', data),
     update: (id: string, data: Record<string, unknown>) =>
       patch<any>(`/meetings/${id}`, data),
+    outcome: (id: string, data: {
+      summary: string;
+      sentiment: 'positive' | 'neutral' | 'negative';
+      nextSteps?: string;
+      createFollowUp?: boolean;
+      followUpTitle?: string;
+      followUpDue?: string;
+    }) => post<any>(`/meetings/${id}/outcome`, data),
   },
 
   // ── Search ─────────────────────────────────────

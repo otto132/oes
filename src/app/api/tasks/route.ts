@@ -2,17 +2,19 @@ import { NextRequest, NextResponse } from 'next/server';
 import { Prisma, OppStage } from '@prisma/client';
 import type { Task } from '@prisma/client';
 import { resolveTenantDb } from '@/lib/tenant';
-import { auth } from '@/lib/auth';
-import { unauthorized } from '@/lib/api-errors';
+import { scopedDb } from '@/lib/scoped-db';
 import { adaptTask, adaptGoal, adaptTaskComment } from '@/lib/adapters';
 import { withHandler } from '@/lib/api-handler';
 import { taskActionSchema } from '@/lib/schemas/tasks';
 import { parsePagination, paginate } from '@/lib/schemas/pagination';
+import { auth } from '@/lib/auth';
+import { unauthorized } from '@/lib/api-errors';
 
 export async function GET(req: NextRequest) {
   const session = await auth();
   if (!session?.user?.id) return unauthorized();
   const db = resolveTenantDb(session as any);
+  const scoped = scopedDb(session.user.id, (session.user as any).role ?? 'VIEWER');
 
   const includeCompleted = req.nextUrl.searchParams.get('completed') === 'true';
   const where: Prisma.TaskWhereInput = {};
@@ -20,13 +22,13 @@ export async function GET(req: NextRequest) {
 
   const pagination = parsePagination(req);
 
-  // Count overdue across all tasks
+  // Count overdue across all tasks (count not scoped in extension, uses db directly)
   const overdueCount = await db.task.count({
     where: { ...where, status: { not: 'Done' }, due: { lt: new Date() } },
   });
 
   // Then paginated query for tasks
-  const tasks = await db.task.findMany({
+  const tasks = await scoped.task.findMany({
     where,
     include: { owner: true, assignees: true, reviewer: true, goal: true, account: { select: { id: true, name: true } }, comments: { include: { author: true }, orderBy: { createdAt: 'asc' } } },
     orderBy: [{ due: 'asc' }],
@@ -34,7 +36,7 @@ export async function GET(req: NextRequest) {
     ...(pagination.cursor ? { cursor: { id: pagination.cursor }, skip: 1 } : {}),
   });
 
-  const goals = await db.goal.findMany({
+  const goals = await scoped.goal.findMany({
     where: { status: 'active' },
     include: { owner: true, account: { select: { id: true, name: true } } },
   });

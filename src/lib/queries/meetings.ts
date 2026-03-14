@@ -104,3 +104,21 @@ export function useUpdateMeeting() {
     },
   });
 }
+
+export function useLogOutcome(meetingId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: {
+      summary: string;
+      sentiment: 'positive' | 'neutral' | 'negative';
+      nextSteps?: string;
+      createFollowUp?: boolean;
+      followUpTitle?: string;
+      followUpDue?: string;
+    }) => api.meetings.outcome(meetingId, data),
+    onSettled: () => {
+      qc.invalidateQueries({ queryKey: meetingKeys.detail(meetingId) });
+      qc.invalidateQueries({ queryKey: homeKeys.all });
+    },
+  });
+}

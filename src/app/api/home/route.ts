@@ -1,31 +1,33 @@
 import { NextResponse } from 'next/server';
 import { resolveTenantDb } from '@/lib/tenant';
+import { scopedDb } from '@/lib/scoped-db';
+import { adaptSignal, adaptMeeting, adaptActivity, adaptOpportunity } from '@/lib/adapters';
 import { auth } from '@/lib/auth';
 import { unauthorized } from '@/lib/api-errors';
-import { adaptSignal, adaptMeeting, adaptActivity, adaptOpportunity } from '@/lib/adapters';
 
 export async function GET() {
   const session = await auth();
   if (!session?.user?.id) return unauthorized();
   const db = resolveTenantDb(session as any);
+  const scoped = scopedDb(session.user.id, (session.user as any).role ?? 'VIEWER');
 
   const now = new Date();
   const startOfDay = new Date(now); startOfDay.setHours(0, 0, 0, 0);
   const endOfDay = new Date(now); endOfDay.setHours(23, 59, 59, 999);
 
   const [opps, pendingQueue, newSignals, overdueTasks, todayMeetings, recentActivity, unreadEmails] = await Promise.all([
-    db.opportunity.findMany({
+    scoped.opportunity.findMany({
       where: { stage: { notIn: ['ClosedWon', 'ClosedLost'] } },
       include: { owner: true, account: { select: { id: true, name: true } } },
     }),
     db.queueItem.findMany({ where: { status: 'pending' }, orderBy: { createdAt: 'asc' }, take: 5 }),
     db.signal.findMany({ where: { status: 'new_signal' }, orderBy: { detectedAt: 'desc' }, take: 5 }),
-    db.task.findMany({
+    scoped.task.findMany({
       where: { status: { not: 'Done' }, due: { lt: now } },
       include: { account: { select: { name: true } } },
       take: 5,
     }),
-    db.meeting.findMany({ where: { date: { gte: startOfDay, lt: endOfDay } }, orderBy: { startTime: 'asc' } }),
+    scoped.meeting.findMany({ where: { date: { gte: startOfDay, lt: endOfDay } }, orderBy: { startTime: 'asc' } }),
     db.activity.findMany({ take: 5, orderBy: { createdAt: 'desc' }, include: { author: true, account: { select: { id: true, name: true } } } }),
     db.inboxEmail.count({ where: { isUnread: true, isArchived: false } }),
   ]);

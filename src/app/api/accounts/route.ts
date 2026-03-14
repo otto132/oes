@@ -1,17 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { Prisma, AccountType } from '@prisma/client';
 import { resolveTenantDb } from '@/lib/tenant';
+import { scopedDb } from '@/lib/scoped-db';
 import { adaptAccount, adaptOpportunity, adaptActivity, adaptTask, adaptGoal } from '@/lib/adapters';
 import { withHandler } from '@/lib/api-handler';
 import { createAccountSchema } from '@/lib/schemas/accounts';
 import { notFound, badRequest, conflict, unauthorized } from '@/lib/api-errors';
 import { parsePagination, paginate } from '@/lib/schemas/pagination';
 import { auth } from '@/lib/auth';
+import { logAccess } from '@/lib/access-log';
 
 export async function GET(req: NextRequest) {
   const session = await auth();
   if (!session?.user?.id) return unauthorized();
   const db = resolveTenantDb(session as any);
+  const scoped = scopedDb(session.user.id, (session.user as any).role ?? 'VIEWER');
 
   const search = req.nextUrl.searchParams.get('q');
   const type = req.nextUrl.searchParams.get('type');
@@ -19,7 +22,7 @@ export async function GET(req: NextRequest) {
 
   // Single account detail
   if (id) {
-    const account = await db.account.findUnique({
+    const account = await scoped.account.findUnique({
       where: { id },
       include: {
         owner: true,
@@ -40,6 +43,14 @@ export async function GET(req: NextRequest) {
       },
     });
     if (!account) return notFound('Account not found');
+
+    if (session.user.id) {
+      logAccess({
+        userId: session.user.id,
+        entityType: 'Account',
+        entityId: id,
+      });
+    }
 
     const adaptedAccount = adaptAccount(account);
 
@@ -86,7 +97,7 @@ export async function GET(req: NextRequest) {
     where.ownerId = session.user.id;
   }
 
-  const accounts = await db.account.findMany({
+  const accounts = await scoped.account.findMany({
     where,
     include: { owner: true, contacts: true },
     orderBy: { scoreFit: 'desc' },

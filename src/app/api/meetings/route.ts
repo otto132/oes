@@ -1,16 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { resolveTenantDb } from '@/lib/tenant';
-import { auth } from '@/lib/auth';
-import { unauthorized } from '@/lib/api-errors';
+import { scopedDb } from '@/lib/scoped-db';
 import { adaptMeeting } from '@/lib/adapters';
 import { withHandler } from '@/lib/api-handler';
 import { createMeetingSchema } from '@/lib/schemas/meetings';
 import { parsePagination, paginate } from '@/lib/schemas/pagination';
+import { auth } from '@/lib/auth';
+import { unauthorized } from '@/lib/api-errors';
 
 export async function GET(req: NextRequest) {
   const session = await auth();
   if (!session?.user?.id) return unauthorized();
   const db = resolveTenantDb(session as any);
+  const scoped = scopedDb(session.user.id, (session.user as any).role ?? 'VIEWER');
 
   const url = req.nextUrl;
   const dateParam = url.searchParams.get('date');
@@ -25,7 +27,7 @@ export async function GET(req: NextRequest) {
 
   const pagination = parsePagination(req);
 
-  const meetings = await db.meeting.findMany({
+  const meetings = await scoped.meeting.findMany({
     where: {
       date: { gte: startDate, lt: endDate },
     },

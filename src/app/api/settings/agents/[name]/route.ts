@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { resolveTenantDb } from '@/lib/tenant';
 import { auth } from '@/lib/auth';
 import { unauthorized, forbidden, notFound, zodError } from '@/lib/api-errors';
+import { auditLog, AUDIT_ACTIONS } from '@/lib/audit';
 
 const patchAgentSchema = z.object({
   status: z.enum(['active', 'paused']).optional(),
@@ -37,6 +38,15 @@ export async function PATCH(
       ...(status !== undefined ? { status } : {}),
       ...(parameters !== undefined ? { parameters } : {}),
     },
+  });
+
+  auditLog({
+    userId: session.user.id,
+    action: AUDIT_ACTIONS.AGENT_CONFIG_UPDATED,
+    entityType: 'AgentConfig',
+    entityId: updated.id,
+    before: { status: existing.status, parameters: existing.parameters },
+    after: { status: updated.status, parameters: updated.parameters },
   });
 
   return NextResponse.json({ data: updated });

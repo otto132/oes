@@ -1,3 +1,4 @@
+import { Prisma } from '@prisma/client';
 import { db as prisma } from '@/lib/db';
 import { getAnthropicClient, MODEL_SONNET } from './ai';
 import { EnrichmentResultSchema } from './schemas';
@@ -59,8 +60,8 @@ export const accountEnricherAgent: Agent = {
         ...accountFilter,
         OR: [
           { updatedAt: { lt: staleCutoff } },
-          { pain: "" },
-          { whyNow: "" },
+          { pain: '' },
+          { whyNow: '' },
         ],
       },
     });
@@ -70,7 +71,7 @@ export const accountEnricherAgent: Agent = {
 
     // Load team LinkedIn data for mutual connection detection
     const teamMembers = await prisma.user.findMany({
-      where: { linkedinConnections: { not: null } },
+      where: { linkedinConnections: { not: Prisma.JsonNull } },
       select: { id: true, name: true, linkedinConnections: true },
     });
 

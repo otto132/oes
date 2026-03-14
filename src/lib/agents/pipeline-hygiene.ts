@@ -110,6 +110,7 @@ ${competitorSignals.map((s) => `- ${s.title}: ${s.summary || ''}`).join('\n') ||
         });
 
         const playbook = response.parsed_output;
+        if (!playbook) throw new Error('No parsed output from AI');
 
         items.push({
           type: 'task_creation',

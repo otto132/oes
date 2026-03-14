@@ -75,7 +75,7 @@ ${previousSentiment ? `\nSentiment history: ${previousSentiment.slice(-5).map((s
           messages: [{ role: 'user', content: userPrompt }],
         });
 
-        for (const classification of response.parsed_output.classifications) {
+        for (const classification of response.parsed_output!.classifications) {
           if (classification.emailIndex >= accountEmails.length) continue;
           const email = accountEmails[classification.emailIndex];
 
@@ -161,7 +161,7 @@ ${previousSentiment ? `\nSentiment history: ${previousSentiment.slice(-5).map((s
 
         // Update sentiment trajectory for linked accounts
         if (account) {
-          const newSentiments = response.parsed_output.classifications
+          const newSentiments = response.parsed_output!.classifications
             .filter((c) => !['auto_reply', 'bounce', 'spam'].includes(c.intent))
             .map((c) => ({ date: new Date().toISOString().slice(0, 10), sentiment: c.sentiment }));
 
