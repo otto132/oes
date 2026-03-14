@@ -6,7 +6,7 @@ import NotificationDropdown from '@/components/layout/NotificationDropdown';
 
 const titles: Record<string, string> = {
   '/': 'Home', '/queue': 'Approval Queue', '/signals': 'Signals', '/leads': 'Leads',
-  '/accounts': 'Accounts', '/pipeline': 'Pipeline', '/inbox': 'Inbox', '/tasks': 'Tasks', '/settings': 'Settings',
+  '/accounts': 'Accounts', '/pipeline': 'Pipeline', '/inbox': 'Inbox', '/tasks': 'Tasks', '/settings': 'Settings', '/admin': 'Admin',
 };
 
 export default function TopBar() {

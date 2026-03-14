@@ -6,7 +6,7 @@ import { resolveTenantDb } from '@/lib/tenant';
 export async function GET() {
   const session = await auth();
   if (!session?.user?.id) return unauthorized();
-  if ((session.user as any).role !== 'ADMIN') return forbidden();
+  if (session.user.role !== 'ADMIN') return forbidden();
 
   const db = resolveTenantDb(session as any);
 
