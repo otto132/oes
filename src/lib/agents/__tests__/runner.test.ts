@@ -8,6 +8,9 @@ const mockAgentRunFindFirst = vi.fn();
 const mockAgentConfigUpdate = vi.fn();
 const mockAgentConfigFindUnique = vi.fn();
 const mockQueueItemCreateMany = vi.fn();
+const mockUserFindMany = vi.fn();
+const mockNotificationFindFirst = vi.fn();
+const mockNotificationCreate = vi.fn();
 
 vi.mock('@/lib/db', () => ({
   db: {
@@ -22,6 +25,13 @@ vi.mock('@/lib/db', () => ({
     },
     queueItem: {
       createMany: (...args: unknown[]) => mockQueueItemCreateMany(...args),
+    },
+    user: {
+      findMany: (...args: unknown[]) => mockUserFindMany(...args),
+    },
+    notification: {
+      findFirst: (...args: unknown[]) => mockNotificationFindFirst(...args),
+      create: (...args: unknown[]) => mockNotificationCreate(...args),
     },
   },
 }));
@@ -65,6 +75,9 @@ describe('Agent Runner', () => {
     mockAgentRunUpdate.mockResolvedValue({});
     mockAgentConfigUpdate.mockResolvedValue({});
     mockQueueItemCreateMany.mockResolvedValue({ count: 1 });
+    mockUserFindMany.mockResolvedValue([{ id: 'admin1' }]);
+    mockNotificationFindFirst.mockResolvedValue(null);
+    mockNotificationCreate.mockResolvedValue({ id: 'notif1' });
   });
 
   it('runs an agent and creates queue items', async () => {
