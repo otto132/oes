@@ -661,6 +661,9 @@ function TasksPageInner() {
       footer: (
         <>
           <button className="px-3.5 py-1.5 text-[12.5px] text-sub bg-[var(--surface)] border border-[var(--border)] rounded-md hover:bg-[var(--hover)] transition-colors" onClick={closeDrawer}>Close</button>
+          {t.status !== 'Done' && t.status !== 'InReview' && (
+            <SendForReviewButton task={t} teamMembers={teamMembers} />
+          )}
           {t.status !== 'Done' && (
             <button
               className="px-3.5 py-1.5 text-[12px] font-medium bg-brand text-[#09090b] rounded-md hover:brightness-110 transition-colors"
@@ -734,6 +737,53 @@ function TasksPageInner() {
       }
       return <span key={i}>{part}</span>;
     });
+  }
+
+  function SendForReviewButton({ task, teamMembers: members }: { task: Task; teamMembers: any[] }) {
+    const [showPicker, setShowPicker] = useState(false);
+    const addToastLocal = useStore(s => s.addToast);
+
+    const handleSend = async (reviewerId?: string) => {
+      try {
+        if (reviewerId) {
+          await updateTask.mutateAsync({ id: task.id, data: { reviewerId } });
+        }
+        await api.tasks.sendForReview(task.id);
+        addToastLocal({ type: 'success', message: 'Sent for review' });
+      } catch {
+        addToastLocal({ type: 'error', message: 'Failed to send for review' });
+      }
+    };
+
+    if (!task.reviewer) {
+      return (
+        <div className="relative">
+          <button
+            className="px-2.5 py-1.5 text-[11px] font-medium bg-purple/10 text-purple rounded-md hover:bg-purple/20 transition-colors"
+            onClick={() => setShowPicker(true)}
+          >
+            Send for Review
+          </button>
+          {showPicker && (
+            <UserPicker
+              users={members}
+              onSelect={(u) => { handleSend(u.id); setShowPicker(false); }}
+              onClose={() => setShowPicker(false)}
+              className="bottom-full mb-1 right-0"
+            />
+          )}
+        </div>
+      );
+    }
+
+    return (
+      <button
+        className="px-2.5 py-1.5 text-[11px] font-medium bg-purple/10 text-purple rounded-md hover:bg-purple/20 transition-colors"
+        onClick={() => handleSend()}
+      >
+        Send for Review
+      </button>
+    );
   }
 
   function dueDateLabel(dueDate: string): { label: string; variant: 'err' | 'warn' | 'neutral' } | null {
