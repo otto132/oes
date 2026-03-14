@@ -148,7 +148,7 @@ export default function QueuePage() {
                     handleApproveSuccess(q);
                     closeDrawer();
                   },
-                  onError: (err) => addToast({ type: 'error', message: `Approve failed: ${err.message}` }),
+                  onError: (err: any) => addToast({ type: 'error', message: `Approve failed: ${err.message}` }),
                 }
               );
             }}
@@ -287,7 +287,7 @@ export default function QueuePage() {
                           { id: q.id, reason: r },
                           {
                             onSuccess: () => addToast({ type: 'info', message: `Rejected — ${r}` }),
-                            onError: (err) => addToast({ type: 'error', message: `Reject failed: ${err.message}` }),
+                            onError: (err: any) => addToast({ type: 'error', message: `Reject failed: ${err.message}` }),
                           }
                         );
                         setRejectOpen(null);
@@ -313,7 +313,7 @@ export default function QueuePage() {
                   { id: q.id },
                   {
                     onSuccess: () => handleApproveSuccess(q),
-                    onError: (err) => addToast({ type: 'error', message: `Approve failed: ${err.message}` }),
+                    onError: (err: any) => addToast({ type: 'error', message: `Approve failed: ${err.message}` }),
                   }
                 )
               }

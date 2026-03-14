@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tansta
 import { api } from '@/lib/api-client';
 import { accountKeys } from './accounts';
 import { oppKeys } from './opportunities';
+import { useOptimisticMutation, removeById, updateById } from './helpers';
 
 export const leadKeys = {
   all: ['leads'] as const,
@@ -17,87 +18,32 @@ export function useLeadsQuery() {
 }
 
 export function useAdvanceLead() {
-  const qc = useQueryClient();
-  return useMutation({
+  return useOptimisticMutation<unknown, { id: string }>({
     mutationKey: ['leads', 'advance'],
-    mutationFn: (id: string) => api.leads.advance(id),
-    onMutate: async (id) => {
-      await qc.cancelQueries({ queryKey: leadKeys.all });
-      const queries = qc.getQueriesData({ queryKey: leadKeys.all });
-      const previous = queries.map(([key, data]) => [key, data] as const);
-      qc.setQueriesData({ queryKey: leadKeys.all }, (old: any) => {
-        if (!old) return old;
-        return {
-          ...old,
-          data: old.data.map((lead: any) =>
-            lead.id === id ? { ...lead, stage: getNextStage(lead.stage) } : lead
-          ),
-        };
-      });
-      return { previous };
-    },
-    onError: (_err, _vars, context) => {
-      context?.previous.forEach(([key, data]) => qc.setQueryData(key, data));
-    },
-    onSettled: () => {
-      qc.invalidateQueries({ queryKey: leadKeys.all });
-    },
+    mutationFn: ({ id }) => api.leads.advance(id),
+    queryKey: leadKeys.all,
+    updater: updateById((lead) => ({ ...lead, stage: getNextStage(lead.stage) })),
   });
 }
 
 export function useDisqualifyLead() {
-  const qc = useQueryClient();
-  return useMutation({
+  return useOptimisticMutation<unknown, { id: string }>({
     mutationKey: ['leads', 'disqualify'],
-    mutationFn: (id: string) => api.leads.disqualify(id),
-    onMutate: async (id) => {
-      await qc.cancelQueries({ queryKey: leadKeys.all });
-      const queries = qc.getQueriesData({ queryKey: leadKeys.all });
-      const previous = queries.map(([key, data]) => [key, data] as const);
-      qc.setQueriesData({ queryKey: leadKeys.all }, (old: any) => {
-        if (!old) return old;
-        return {
-          ...old,
-          data: old.data.map((lead: any) =>
-            lead.id === id ? { ...lead, stage: 'Disqualified' } : lead
-          ),
-        };
-      });
-      return { previous };
-    },
-    onError: (_err, _vars, context) => {
-      context?.previous.forEach(([key, data]) => qc.setQueryData(key, data));
-    },
-    onSettled: () => {
-      qc.invalidateQueries({ queryKey: leadKeys.all });
-    },
+    mutationFn: ({ id }) => api.leads.disqualify(id),
+    queryKey: leadKeys.all,
+    updater: updateById((lead) => ({ ...lead, stage: 'Disqualified' })),
   });
 }
 
+const removeLeadById = removeById();
+
 export function useConvertLead() {
-  const qc = useQueryClient();
-  return useMutation({
+  return useOptimisticMutation<unknown, { id: string; accountName?: string; accountType?: string; oppName?: string; oppAmount?: number; oppStage?: string }>({
     mutationKey: ['leads', 'convert'],
-    mutationFn: ({ id, ...data }: { id: string; accountName?: string; accountType?: string; oppName?: string; oppAmount?: number; oppStage?: string }) =>
-      api.leads.convert(id, data),
-    onMutate: async ({ id }) => {
-      await qc.cancelQueries({ queryKey: leadKeys.all });
-      const queries = qc.getQueriesData({ queryKey: leadKeys.all });
-      const previous = queries.map(([key, data]) => [key, data] as const);
-      qc.setQueriesData({ queryKey: leadKeys.all }, (old: any) => {
-        if (!old) return old;
-        return { ...old, data: old.data.filter((lead: any) => lead.id !== id) };
-      });
-      return { previous };
-    },
-    onError: (_err, _vars, context) => {
-      context?.previous.forEach(([key, data]) => qc.setQueryData(key, data));
-    },
-    onSettled: () => {
-      qc.invalidateQueries({ queryKey: leadKeys.all });
-      qc.invalidateQueries({ queryKey: accountKeys.all });
-      qc.invalidateQueries({ queryKey: oppKeys.all });
-    },
+    mutationFn: ({ id, ...data }) => api.leads.convert(id, data),
+    queryKey: leadKeys.all,
+    updater: (old, vars) => removeLeadById(old, vars.id),
+    invalidateKeys: [accountKeys.all, oppKeys.all],
   });
 }
 

@@ -1,6 +1,6 @@
 'use client';
 import { useStore } from '@/lib/store';
-import { useInboxQuery, useCreateTaskFromEmail, useCreateAccountFromEmail, useMarkEmailRead } from '@/lib/queries/inbox';
+import { useInboxQuery, useCreateTaskFromEmail, useCreateAccountFromEmail, useMarkEmailRead, useArchiveEmail } from '@/lib/queries/inbox';
 import { Badge, ConfBadge, AgentTag, EmptyState, Skeleton, SkeletonCard, SkeletonText, ErrorState } from '@/components/ui';
 import { fR, clsLabel, cn } from '@/lib/utils';
 import type { Email } from '@/lib/types';
@@ -44,6 +44,7 @@ export default function InboxPage() {
   const createTaskFromEmail = useCreateTaskFromEmail();
   const createAccountFromEmail = useCreateAccountFromEmail();
   const markRead = useMarkEmailRead();
+  const archiveEmail = useArchiveEmail();
   const pendingIds = usePendingMutations(['inbox']);
   const failedMutations = useFailedMutations(['inbox']);
 
@@ -123,7 +124,20 @@ export default function InboxPage() {
                 });
               }}
             >Create Task</button>
-            <button className="px-2.5 py-1.5 text-[11.5px] text-sub bg-[var(--surface)] border border-[var(--border)] rounded-md hover:bg-[var(--hover)] transition-colors" onClick={closeDrawer}>Archive</button>
+            <button
+              className="px-2.5 py-1.5 text-[11.5px] text-sub bg-[var(--surface)] border border-[var(--border)] rounded-md hover:bg-[var(--hover)] transition-colors disabled:opacity-50"
+              disabled={archiveEmail.isPending}
+              onClick={(ev) => {
+                ev.stopPropagation();
+                archiveEmail.mutate(e.id, {
+                  onSuccess: () => {
+                    addToast({ type: 'success', message: 'Email archived' });
+                    closeDrawer();
+                  },
+                  onError: () => addToast({ type: 'error', message: 'Failed to archive email' }),
+                });
+              }}
+            >Archive</button>
             {e.accountId && <button className="px-2.5 py-1.5 text-[11.5px] text-sub bg-[var(--surface)] border border-[var(--border)] rounded-md hover:bg-[var(--hover)] transition-colors col-span-2" onClick={() => { closeDrawer(); window.location.href = `/accounts/${e.accountId}`; }}>View Account</button>}
           </div>
         </div>

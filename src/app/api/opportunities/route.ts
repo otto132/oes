@@ -8,8 +8,7 @@ import { opportunityActionSchema } from '@/lib/schemas/opportunities';
 import { notFound, unauthorized } from '@/lib/api-errors';
 import { parsePagination, paginate } from '@/lib/schemas/pagination';
 import { auth } from '@/lib/auth';
-
-const PROB: Record<string, number> = { Identified: 5, Contacted: 10, Discovery: 20, Qualified: 35, SolutionFit: 50, Proposal: 65, Negotiation: 80, VerbalCommit: 90, ClosedWon: 100, ClosedLost: 0 };
+import { STAGE_PROB } from '@/lib/types';
 
 export async function GET(req: NextRequest) {
   const session = await auth();
@@ -46,7 +45,7 @@ export async function GET(req: NextRequest) {
   // Aggregates across ALL records
   const allOpps = await scoped.opportunity.findMany({ where, select: { amount: true, stage: true } });
   const total = allOpps.reduce((s, o) => s + o.amount, 0);
-  const weighted = allOpps.reduce((s, o) => s + Math.round(o.amount * (PROB[o.stage] || 0) / 100), 0);
+  const weighted = allOpps.reduce((s, o) => s + Math.round(o.amount * (STAGE_PROB[o.stage] || 0) / 100), 0);
 
   // Then paginated query
   const opps = await scoped.opportunity.findMany({
@@ -71,7 +70,7 @@ export const POST = withHandler(opportunityActionSchema, async (req, ctx) => {
     const opp = await db.opportunity.create({
       data: {
         name, accountId, stage: (stage || 'Contacted') as OppStage,
-        amount: amount || 0, probability: PROB[stage || 'Contacted'] || 10,
+        amount: amount || 0, probability: STAGE_PROB[stage || 'Contacted'] || 10,
         closeDate: closeDate ? new Date(closeDate) : undefined,
         ownerId,
       },
@@ -85,7 +84,7 @@ export const POST = withHandler(opportunityActionSchema, async (req, ctx) => {
     const { id, stage } = body;
     const opp = await db.opportunity.update({
       where: { id },
-      data: { stage: stage as OppStage, probability: PROB[stage] || 0 },
+      data: { stage: stage as OppStage, probability: STAGE_PROB[stage] || 0 },
       include: { owner: true, account: { select: { id: true, name: true } } },
     });
     await db.activity.create({

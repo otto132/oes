@@ -263,7 +263,7 @@ export default function LeadsPage() {
                     addToast({ type: 'success', message: `Account created: ${state.accountName}` });
                     closeDrawer();
                   },
-                  onError: (err) => addToast({ type: 'error', message: err.message }),
+                  onError: (err: any) => addToast({ type: 'error', message: err.message }),
                 }
               );
             }}
@@ -346,9 +346,9 @@ export default function LeadsPage() {
                       ) : (
                         <button
                           disabled={advance.isPending}
-                          onClick={() => advance.mutate(l.id, {
+                          onClick={() => advance.mutate({ id: l.id }, {
                             onSuccess: (data: any) => addToast({ type: 'success', message: `Lead advanced to ${data?.data?.stage || 'next stage'}` }),
-                            onError: (err: Error) => addToast({ type: 'error', message: err.message }),
+                            onError: (err: any) => addToast({ type: 'error', message: err.message }),
                           })}
                           className="flex-1 px-2 py-1 text-[10px] font-medium rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] hover:bg-[var(--hover)] transition-colors disabled:opacity-50"
                         >
@@ -396,9 +396,9 @@ export default function LeadsPage() {
               ) : (
                 <button
                   disabled={advance.isPending}
-                  onClick={() => advance.mutate(l.id, {
+                  onClick={() => advance.mutate({ id: l.id }, {
                     onSuccess: (data: any) => addToast({ type: 'success', message: `Lead advanced to ${data?.data?.stage || 'next stage'}` }),
-                    onError: (err: Error) => addToast({ type: 'error', message: err.message }),
+                    onError: (err: any) => addToast({ type: 'error', message: err.message }),
                   })}
                   className="flex-1 px-2 py-1 text-[10px] font-medium rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] hover:bg-[var(--hover)] transition-colors disabled:opacity-50"
                 >
@@ -423,9 +423,9 @@ export default function LeadsPage() {
         confirmLabel="Disqualify"
         onConfirm={() => {
           if (confirmDisqualify) {
-            disqualify.mutate(confirmDisqualify, {
+            disqualify.mutate({ id: confirmDisqualify }, {
               onSuccess: () => addToast({ type: 'info', message: 'Lead disqualified' }),
-              onError: (err: Error) => addToast({ type: 'error', message: err.message }),
+              onError: (err: any) => addToast({ type: 'error', message: err.message }),
             });
           }
           setConfirmDisqualify(null);

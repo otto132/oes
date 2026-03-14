@@ -121,7 +121,7 @@ export default function SignalsPage() {
                     });
                     closeDrawer();
                   },
-                  onError: (err) => {
+                  onError: (err: any) => {
                     if (err instanceof ApiError && err.status === 409) {
                       addToast({ type: 'error', message: `Lead or account already exists for ${state.company}` });
                     } else {
@@ -255,7 +255,7 @@ export default function SignalsPage() {
           if (confirmDismiss) {
             dismiss.mutate(confirmDismiss, {
               onSuccess: () => addToast({ type: 'info', message: 'Signal dismissed' }),
-              onError: (err) => addToast({ type: 'error', message: err.message }),
+              onError: (err: any) => addToast({ type: 'error', message: err.message }),
             });
           }
           setConfirmDismiss(null);

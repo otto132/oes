@@ -6,6 +6,7 @@ import { adaptQueueItem } from '@/lib/adapters';
 import { withHandler } from '@/lib/api-handler';
 import { queueActionSchema } from '@/lib/schemas/queue';
 import { notFound, badRequest, unauthorized, forbidden } from '@/lib/api-errors';
+import { parsePagination, paginate } from '@/lib/schemas/pagination';
 import { canMutate } from '@/lib/rbac';
 import { auth } from '@/lib/auth';
 import { handleApproval } from '@/lib/agents/chain';
@@ -100,6 +101,7 @@ export async function GET(req: NextRequest) {
   if (!session?.user?.id) return unauthorized();
   const db = resolveTenantDb(session as any);
 
+  const pagination = parsePagination(req);
   const status = req.nextUrl.searchParams.get('status') || 'pending';
   const type = req.nextUrl.searchParams.get('type');
 
@@ -109,7 +111,11 @@ export async function GET(req: NextRequest) {
   const items = await db.queueItem.findMany({
     where,
     orderBy: [{ priority: 'asc' }, { createdAt: 'asc' }],
+    take: pagination.limit + 1,
+    ...(pagination.cursor ? { cursor: { id: pagination.cursor }, skip: 1 } : {}),
   });
+
+  const { data, meta } = paginate(items, pagination.limit);
 
   const pendingCount = await db.queueItem.count({ where: { status: 'pending' } });
   const completedCount = await db.queueItem.count({ where: { status: { not: 'pending' } } });
@@ -127,8 +133,8 @@ export async function GET(req: NextRequest) {
   }
 
   return NextResponse.json({
-    data: items.map(adaptQueueItem),
-    meta: { pendingCount, completedCount, typeCounts },
+    data: data.map(adaptQueueItem),
+    meta: { ...meta, pendingCount, completedCount, typeCounts },
   });
 }
 
@@ -168,9 +174,19 @@ export const POST = withHandler(queueActionSchema, async (req, ctx) => {
       },
     });
 
+    // Validate the effective payload before applying side-effects
+    const effectivePayload = editedPayload || item.payload;
+    const typeSchema = payloadSchemas[item.type];
+    if (typeSchema) {
+      const validation = typeSchema.safeParse(effectivePayload);
+      if (!validation.success) {
+        return badRequest(`Invalid payload for ${item.type}: ${validation.error.issues.map(i => i.message).join(', ')}`);
+      }
+    }
+
     // Apply side-effects based on type
     if (item.type === 'lead_qualification') {
-      const payload = item.payload as unknown as LeadQualificationPayload;
+      const payload = (effectivePayload ?? item.payload) as unknown as LeadQualificationPayload;
       await db.lead.create({
         data: {
           company: payload.company,
@@ -189,7 +205,7 @@ export const POST = withHandler(queueActionSchema, async (req, ctx) => {
         },
       });
     } else if (item.type === 'enrichment' && item.accId) {
-      const payload = item.payload as unknown as EnrichmentPayload;
+      const payload = (effectivePayload ?? item.payload) as unknown as EnrichmentPayload;
       if (payload.field) {
         await db.account.update({
           where: { id: item.accId },
@@ -197,7 +213,7 @@ export const POST = withHandler(queueActionSchema, async (req, ctx) => {
         });
       }
     } else if (item.type === 'task_creation') {
-      const payload = item.payload as unknown as TaskCreationPayload;
+      const payload = (effectivePayload ?? item.payload) as unknown as TaskCreationPayload;
       await db.task.create({
         data: {
           title: payload.task,
@@ -210,7 +226,7 @@ export const POST = withHandler(queueActionSchema, async (req, ctx) => {
         },
       });
     } else if (item.type === 'signal_review') {
-      const payload = item.payload as unknown as SignalReviewPayload;
+      const payload = (effectivePayload ?? item.payload) as unknown as SignalReviewPayload;
       await db.signal.create({
         data: {
           type: (payload.signalType || 'market_entry') as SignalType,
@@ -225,7 +241,7 @@ export const POST = withHandler(queueActionSchema, async (req, ctx) => {
         },
       });
     } else if (item.type === 'outreach_draft') {
-      const payload = item.payload as unknown as OutreachDraftPayload;
+      const payload = (effectivePayload ?? item.payload) as unknown as OutreachDraftPayload;
       await db.activity.create({
         data: {
           type: 'Email',
