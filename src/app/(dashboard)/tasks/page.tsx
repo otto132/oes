@@ -11,6 +11,7 @@ import type { Task, TaskPriority, Goal } from '@/lib/types';
 import { usePendingMutations, useFailedMutations } from '@/hooks/use-mutation-state';
 import { RotateCw } from 'lucide-react';
 import { SearchInput } from '@/components/ui/SearchInput';
+import { api } from '@/lib/api-client';
 
 function CommentInput({ taskId }: { taskId: string }) {
   const [text, setText] = useState('');
@@ -102,6 +103,14 @@ function TasksPageInner() {
   const { data: teamResp } = useTeamQuery();
   const teamMembers = teamResp?.data ?? [];
   const autoCreateFired = useRef(false);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined' && !sessionStorage.getItem('check-due-fired')) {
+      sessionStorage.setItem('check-due-fired', '1');
+      api.tasks.checkDue().catch(() => {});
+    }
+  }, []);
+
   const pendingIds = usePendingMutations(['tasks']);
   const failedMutations = useFailedMutations(['tasks']);
 
@@ -601,6 +610,23 @@ function TasksPageInner() {
     });
   }
 
+  function dueDateLabel(dueDate: string): { label: string; variant: 'err' | 'warn' | 'neutral' } | null {
+    if (!dueDate) return null;
+    const due = new Date(dueDate);
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const tomorrow = new Date(today.getTime() + 86400000);
+    const dayAfterTomorrow = new Date(today.getTime() + 2 * 86400000);
+
+    if (due < today) {
+      const daysOverdue = Math.floor((today.getTime() - due.getTime()) / 86400000);
+      return { label: daysOverdue === 1 ? 'Overdue' : `${daysOverdue}d overdue`, variant: 'err' };
+    }
+    if (due < tomorrow) return { label: 'Today', variant: 'warn' };
+    if (due < dayAfterTomorrow) return { label: 'Tomorrow', variant: 'neutral' };
+    return null;
+  }
+
   function TaskRow({ t }: { t: Task }) {
     const od = t.status !== 'Done' && isOverdue(t.dueDate);
     const done = t.status === 'Done';
@@ -631,7 +657,14 @@ function TasksPageInner() {
           </div>
         </div>
         <Badge variant={t.priority === 'High' ? 'err' : t.priority === 'Low' ? 'neutral' : 'warn'} className="!text-[9px]">{t.priority}</Badge>
-        {!done && <span className={cn('font-mono text-[10.5px] flex-shrink-0', od ? 'text-danger' : 'text-sub')}>{od ? '⚠ ' : ''}{fDate(t.dueDate)}</span>}
+        {!done && t.dueDate && (() => {
+          const urgency = dueDateLabel(t.dueDate);
+          return urgency ? (
+            <Badge variant={urgency.variant} className="!text-[9px]">{urgency.label}</Badge>
+          ) : (
+            <span className="font-mono text-[10.5px] flex-shrink-0 text-sub">{fDate(t.dueDate)}</span>
+          );
+        })()}
         <Avatar initials={(t.assignees?.[0] || t.owner).initials} color={(t.assignees?.[0] || t.owner).color} size="xs" />
       </div>
     );
