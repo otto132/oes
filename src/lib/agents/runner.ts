@@ -3,6 +3,7 @@ import type { AgentRun, Prisma } from '@prisma/client';
 import type { Agent, AgentEventData } from './types';
 import { consumePendingEvents, markProcessed, expireOldEvents } from './events';
 import { getAgentsByTrigger } from './registry';
+import { notifyUsers } from '@/lib/notifications';
 
 const STALE_RUN_TIMEOUT_MS = 10 * 60 * 1000; // 10 minutes
 
@@ -78,6 +79,21 @@ export async function runAgent(
           priority: item.priority,
         })),
       });
+      // Notify all admins of new queue items
+      const admins = await prisma.user.findMany({
+        where: { role: 'ADMIN', isActive: true },
+        select: { id: true },
+      });
+      const adminIds = admins.map((a) => a.id);
+      for (const item of result.items) {
+        await notifyUsers(prisma, adminIds, undefined, {
+          type: 'QUEUE_ITEM',
+          title: 'New queue item',
+          message: item.title.slice(0, 100),
+          entityType: 'QueueItem',
+          entityId: item.title,
+        });
+      }
     }
 
     // 6. Update run record
