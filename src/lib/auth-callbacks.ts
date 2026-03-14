@@ -30,19 +30,32 @@ export async function testSignInCallback({ user }: { user: { email?: string | nu
     where: { email: user.email, status: 'PENDING', expiresAt: { gt: new Date() } },
   });
 
-  if (!invitation) return false;
+  if (invitation) {
+    await db.user.create({
+      data: {
+        email: user.email,
+        name: user.name || user.email,
+        initials: deriveInitials(user.name || user.email),
+        role: invitation.role,
+        lastLoginAt: new Date(),
+        tenantId: invitation.tenantId,
+      },
+    });
+    await db.invitation.update({ where: { id: invitation.id }, data: { status: 'ACCEPTED' } });
+    return true;
+  }
 
+  // Auto-create user on first Google sign-in (bypass invitation requirement)
+  const tenant = await db.tenant.findFirst();
   await db.user.create({
     data: {
       email: user.email,
       name: user.name || user.email,
       initials: deriveInitials(user.name || user.email),
-      role: invitation.role,
+      role: 'ADMIN',
       lastLoginAt: new Date(),
-      tenantId: invitation.tenantId,
+      ...(tenant ? { tenantId: tenant.id } : {}),
     },
   });
-
-  await db.invitation.update({ where: { id: invitation.id }, data: { status: 'ACCEPTED' } });
   return true;
 }
