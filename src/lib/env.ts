@@ -35,14 +35,18 @@ const NEXTAUTH_URL = collectRequired(
 );
 
 if (missing.length > 0) {
-  throw new Error(
-    [
-      "Environment validation failed. The following required variables are missing:",
-      ...missing,
-      "",
-      "Check your .env or deployment configuration.",
-    ].join("\n")
-  );
+  const msg = [
+    "Environment validation failed. The following required variables are missing:",
+    ...missing,
+    "",
+    "Check your .env or deployment configuration.",
+  ].join("\n");
+
+  // Warn instead of crash — the app will fail at the point of use if vars
+  // are truly absent.  This avoids breaking `next build` on Vercel (where
+  // runtime secrets aren't available during the build step) and edge
+  // middleware compilation.
+  console.warn(`[env] ${msg}`);
 }
 
 // --- Google (optional — only needed if using Google login) ---
