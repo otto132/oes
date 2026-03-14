@@ -29,9 +29,10 @@ export function apiError(
   code: ApiErrorCode,
   message: string,
   status?: number,
+  requestId?: string,
 ): NextResponse {
   return NextResponse.json(
-    { error: { code, message } },
+    { error: { code, message, ...(requestId && { requestId }) } },
     { status: status ?? DEFAULT_STATUS[code] },
   );
 }
@@ -62,13 +63,14 @@ export function internalError(message = 'Internal server error') {
   return apiError('INTERNAL_ERROR', message);
 }
 
-export function zodError(err: ZodError) {
+export function zodError(err: ZodError, requestId?: string) {
   return NextResponse.json(
     {
       error: {
         code: 'VALIDATION_ERROR' as const,
         message: 'Validation failed',
         details: err.flatten().fieldErrors,
+        ...(requestId && { requestId }),
       },
     },
     { status: 400 },

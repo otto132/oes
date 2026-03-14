@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import { api } from '@/lib/api-client';
+import { useOptimisticMutation, removeById, updateById } from './helpers';
 import { accountKeys } from './accounts';
 import { taskKeys } from './tasks';
 
@@ -17,55 +18,20 @@ export function useInboxQuery() {
 }
 
 export function useMarkEmailRead() {
-  const qc = useQueryClient();
-  return useMutation({
+  return useOptimisticMutation<unknown, string>({
     mutationKey: ['inbox', 'read'],
-    mutationFn: (id: string) => api.inbox.markRead(id),
-    onMutate: async (id) => {
-      await qc.cancelQueries({ queryKey: inboxKeys.all });
-      const queries = qc.getQueriesData({ queryKey: inboxKeys.all });
-      const previous = queries.map(([key, data]) => [key, data] as const);
-      qc.setQueriesData({ queryKey: inboxKeys.all }, (old: any) => {
-        if (!old) return old;
-        return {
-          ...old,
-          data: old.data.map((email: any) =>
-            email.id === id ? { ...email, read: true } : email
-          ),
-        };
-      });
-      return { previous };
-    },
-    onError: (_err, _vars, context) => {
-      context?.previous.forEach(([key, data]) => qc.setQueryData(key, data));
-    },
-    onSettled: () => {
-      qc.invalidateQueries({ queryKey: inboxKeys.all });
-    },
+    mutationFn: (id) => api.inbox.markRead(id),
+    queryKey: inboxKeys.all,
+    updater: updateById((item) => ({ ...item, read: true })),
   });
 }
 
 export function useArchiveEmail() {
-  const qc = useQueryClient();
-  return useMutation({
+  return useOptimisticMutation<unknown, string>({
     mutationKey: ['inbox', 'archive'],
-    mutationFn: (id: string) => api.inbox.archive(id),
-    onMutate: async (id) => {
-      await qc.cancelQueries({ queryKey: inboxKeys.all });
-      const queries = qc.getQueriesData({ queryKey: inboxKeys.all });
-      const previous = queries.map(([key, data]) => [key, data] as const);
-      qc.setQueriesData({ queryKey: inboxKeys.all }, (old: any) => {
-        if (!old) return old;
-        return { ...old, data: old.data.filter((email: any) => email.id !== id) };
-      });
-      return { previous };
-    },
-    onError: (_err, _vars, context) => {
-      context?.previous.forEach(([key, data]) => qc.setQueryData(key, data));
-    },
-    onSettled: () => {
-      qc.invalidateQueries({ queryKey: inboxKeys.all });
-    },
+    mutationFn: (id) => api.inbox.archive(id),
+    queryKey: inboxKeys.all,
+    updater: removeById(),
   });
 }
 
@@ -82,31 +48,11 @@ export function useCreateTaskFromEmail() {
 }
 
 export function useCreateAccountFromEmail() {
-  const qc = useQueryClient();
-  return useMutation({
+  return useOptimisticMutation<unknown, string>({
     mutationKey: ['inbox', 'createAccount'],
-    mutationFn: (id: string) => api.inbox.createAccount(id),
-    onMutate: async (id) => {
-      await qc.cancelQueries({ queryKey: inboxKeys.all });
-      const queries = qc.getQueriesData({ queryKey: inboxKeys.all });
-      const previous = queries.map(([key, data]) => [key, data] as const);
-      qc.setQueriesData({ queryKey: inboxKeys.all }, (old: any) => {
-        if (!old) return old;
-        return {
-          ...old,
-          data: old.data.map((email: any) =>
-            email.id === id ? { ...email, processing: true } : email
-          ),
-        };
-      });
-      return { previous };
-    },
-    onError: (_err, _vars, context) => {
-      context?.previous.forEach(([key, data]) => qc.setQueryData(key, data));
-    },
-    onSettled: () => {
-      qc.invalidateQueries({ queryKey: inboxKeys.all });
-      qc.invalidateQueries({ queryKey: accountKeys.all });
-    },
+    mutationFn: (id) => api.inbox.createAccount(id),
+    queryKey: inboxKeys.all,
+    updater: updateById((item) => ({ ...item, processing: true })),
+    invalidateKeys: [accountKeys.all],
   });
 }

@@ -23,10 +23,9 @@ export function scopedDb(userId: string, role: string) {
           args.where = { ...args.where, ownerId: userId };
           return query(args);
         },
-        async findUnique({ args, query }) {
-          const result = await query(args);
-          if (result && result.ownerId !== userId) return null;
-          return result;
+        async findUnique({ args }) {
+          const id = args.where.id;
+          return db.account.findFirst({ ...args, where: { id, ownerId: userId } });
         },
       },
       lead: {
@@ -38,10 +37,9 @@ export function scopedDb(userId: string, role: string) {
           args.where = { ...args.where, ownerId: userId };
           return query(args);
         },
-        async findUnique({ args, query }) {
-          const result = await query(args);
-          if (result && result.ownerId !== userId) return null;
-          return result;
+        async findUnique({ args }) {
+          const id = args.where.id;
+          return db.lead.findFirst({ ...args, where: { id, ownerId: userId } });
         },
       },
       opportunity: {
@@ -53,10 +51,9 @@ export function scopedDb(userId: string, role: string) {
           args.where = { ...args.where, ownerId: userId };
           return query(args);
         },
-        async findUnique({ args, query }) {
-          const result = await query(args);
-          if (result && result.ownerId !== userId) return null;
-          return result;
+        async findUnique({ args }) {
+          const id = args.where.id;
+          return db.opportunity.findFirst({ ...args, where: { id, ownerId: userId } });
         },
       },
       task: {
@@ -80,14 +77,18 @@ export function scopedDb(userId: string, role: string) {
           };
           return query(args);
         },
-        async findUnique({ args, query }) {
-          const result = await query(args) as any;
-          if (!result) return null;
-          if (result.ownerId === userId) return result;
-          const asAssignee = await db.task.findFirst({
-            where: { id: result.id, assignees: { some: { id: userId } } },
+        async findUnique({ args }) {
+          const id = args.where.id;
+          return db.task.findFirst({
+            ...args,
+            where: {
+              id,
+              OR: [
+                { ownerId: userId },
+                { assignees: { some: { id: userId } } },
+              ],
+            },
           });
-          return asAssignee ? result : null;
         },
       },
       goal: {

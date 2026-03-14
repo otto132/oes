@@ -8,6 +8,7 @@ import { leadActionSchema } from '@/lib/schemas/leads';
 import { notFound, badRequest, conflict, unauthorized } from '@/lib/api-errors';
 import { parsePagination, paginate } from '@/lib/schemas/pagination';
 import { auth } from '@/lib/auth';
+import { STAGE_PROB } from '@/lib/types';
 
 export async function GET(req: NextRequest) {
   const session = await auth();
@@ -69,11 +70,19 @@ export const POST = withHandler(leadActionSchema, async (req, ctx) => {
     if (!lead) return notFound('Lead not found');
     const ownerId = body.ownerId || session.user.id;
 
+    const resolvedName = accountName || lead.company;
+
     const result = await db.$transaction(async (tx: any) => {
       await tx.lead.update({ where: { id }, data: { stage: 'Converted' } });
-      const account = await tx.account.create({
+
+      // Check for existing account with same name (case-insensitive)
+      const existingAccount = await tx.account.findFirst({
+        where: { name: { equals: resolvedName, mode: 'insensitive' } },
+      });
+
+      const account = existingAccount ?? await tx.account.create({
         data: {
-          name: accountName || lead.company, type: (accountType || lead.type) as AccountType, country: lead.country,
+          name: resolvedName, type: (accountType || lead.type) as AccountType, country: lead.country,
           region: lead.region, status: 'Prospect', ownerId,
           scoreFit: lead.scoreFit, scoreIntent: lead.scoreIntent, scoreUrgency: lead.scoreUrgency,
           scoreAccess: lead.scoreAccess, scoreCommercial: lead.scoreCommercial,
@@ -81,17 +90,17 @@ export const POST = withHandler(leadActionSchema, async (req, ctx) => {
           aiConfidence: lead.confidence,
         },
       });
+
       let opp = null;
       if (oppName) {
-        const probMap: Record<string, number> = { Contacted: 10, Discovery: 20, Qualified: 35 };
         opp = await tx.opportunity.create({
           data: {
             name: oppName, accountId: account.id, stage: (oppStage || 'Discovery') as OppStage,
-            amount: oppAmount || 0, probability: probMap[oppStage || 'Discovery'] || 20, ownerId,
+            amount: oppAmount || 0, probability: STAGE_PROB[oppStage || 'Discovery'] || 20, ownerId,
           },
         });
       }
-      return { account, opportunity: opp };
+      return { account, opportunity: opp, linkedExisting: !!existingAccount };
     });
 
     return NextResponse.json({ data: result }, { status: 201 });

@@ -79,21 +79,20 @@ export async function runAgent(
           priority: item.priority,
         })),
       });
-      // Notify all admins of new queue items
+      // Notify all admins of new queue items (batched)
       const admins = await prisma.user.findMany({
         where: { role: 'ADMIN', isActive: true },
         select: { id: true },
       });
       const adminIds = admins.map((a) => a.id);
-      for (const item of result.items) {
-        await notifyUsers(prisma, adminIds, undefined, {
-          type: 'QUEUE_ITEM',
-          title: 'New queue item',
-          message: item.title.slice(0, 100),
-          entityType: 'QueueItem',
-          entityId: item.title,
-        });
-      }
+      const count = result.items.length;
+      await notifyUsers(prisma, adminIds, undefined, {
+        type: 'QUEUE_ITEM',
+        title: `${count} new queue item${count > 1 ? 's' : ''} pending review`,
+        message: result.items.map(i => i.title).slice(0, 3).join(', ') + (count > 3 ? ` (+${count - 3} more)` : ''),
+        entityType: 'QueueItem',
+        entityId: run.id,
+      });
     }
 
     // 6. Update run record

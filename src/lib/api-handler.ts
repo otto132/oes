@@ -17,9 +17,14 @@ export function withHandler<T = unknown>(
   handler: (req: NextRequest, ctx: HandlerContext<T>) => Promise<NextResponse>,
 ) {
   return async (req: NextRequest) => {
+    const requestId = crypto.randomUUID();
     try {
       const session = await auth();
-      if (!session?.user?.id) return unauthorized();
+      if (!session?.user?.id) {
+        const resp = unauthorized();
+        resp.headers.set('x-request-id', requestId);
+        return resp;
+      }
 
       const scopedClient = scopedDb(
         session.user.id,
@@ -37,7 +42,7 @@ export function withHandler<T = unknown>(
         body = schema.parse(raw);
       }
 
-      return await handler(req, {
+      const response = await handler(req, {
         body,
         session: {
           user: {
@@ -50,14 +55,21 @@ export function withHandler<T = unknown>(
         pagination: { cursor, limit },
         db: scopedClient,
       });
+      response.headers.set('x-request-id', requestId);
+      return response;
     } catch (err) {
       if (err instanceof ZodError) {
-        return zodError(err);
+        const resp = zodError(err, requestId);
+        resp.headers.set('x-request-id', requestId);
+        return resp;
       }
       logger.error('API handler error', {
+        requestId,
         error: err instanceof Error ? err.message : String(err),
       });
-      return internalError();
+      const resp = internalError();
+      resp.headers.set('x-request-id', requestId);
+      return resp;
     }
   };
 }
