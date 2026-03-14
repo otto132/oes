@@ -25,3 +25,4 @@ export { getAgent, getAllAgents, getAgentsByTrigger } from './registry';
 export { runAgent, runDueAgents } from './runner';
 export { emitEvent } from './events';
 export { handleApproval } from './chain';
+export { analyzeWinLoss } from './win-loss';
