@@ -54,6 +54,22 @@ function shouldLog(level: LogLevel): boolean {
   return LEVEL_PRIORITY[level] >= LEVEL_PRIORITY[minLevel()];
 }
 
+const REDACT_KEYS = /token|secret|password|authorization|cookie|refresh|access.?token|api.?key/i;
+
+export function redact(obj: Record<string, unknown>): Record<string, unknown> {
+  const result: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(obj)) {
+    if (REDACT_KEYS.test(key)) {
+      result[key] = '[REDACTED]';
+    } else if (value !== null && typeof value === 'object' && !Array.isArray(value)) {
+      result[key] = redact(value as Record<string, unknown>);
+    } else {
+      result[key] = value;
+    }
+  }
+  return result;
+}
+
 function emit(level: LogLevel, message: string, meta?: Record<string, unknown>): void {
   if (!shouldLog(level)) return;
 
@@ -61,7 +77,7 @@ function emit(level: LogLevel, message: string, meta?: Record<string, unknown>):
     timestamp: new Date().toISOString(),
     level,
     message,
-    ...meta,
+    ...(meta ? redact(meta) : {}),
   };
 
   const line = JSON.stringify(entry);

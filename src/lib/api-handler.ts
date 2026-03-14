@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { ZodSchema, ZodError } from 'zod';
 import { auth } from '@/lib/auth';
 import { unauthorized, internalError, zodError } from '@/lib/api-errors';
+import { logger } from '@/lib/logger';
 
 export interface HandlerContext<T> {
   body: T;
@@ -44,7 +45,9 @@ export function withHandler<T = unknown>(
       if (err instanceof ZodError) {
         return zodError(err);
       }
-      console.error('API error:', err);
+      logger.error('API handler error', {
+        error: err instanceof Error ? err.message : String(err),
+      });
       return internalError();
     }
   };
