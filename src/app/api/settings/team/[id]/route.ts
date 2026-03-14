@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { db } from '@/lib/db';
 import { auth } from '@/lib/auth';
 import { unauthorized, forbidden, notFound, badRequest, zodError } from '@/lib/api-errors';
+import { auditLog, AUDIT_ACTIONS } from '@/lib/audit';
 
 const updateUserSchema = z.object({
   role: z.enum(['ADMIN', 'MEMBER', 'VIEWER']).optional(),
@@ -65,6 +66,27 @@ export async function PATCH(
       createdAt: true,
     },
   });
+
+  if (role !== undefined) {
+    auditLog({
+      userId: session.user.id,
+      action: AUDIT_ACTIONS.USER_ROLE_CHANGED,
+      entityType: 'User',
+      entityId: id,
+      before: { role: targetUser.role },
+      after: { role },
+    });
+  }
+  if (isActive !== undefined && isActive !== targetUser.isActive) {
+    auditLog({
+      userId: session.user.id,
+      action: AUDIT_ACTIONS.USER_DEACTIVATED,
+      entityType: 'User',
+      entityId: id,
+      before: { isActive: targetUser.isActive },
+      after: { isActive },
+    });
+  }
 
   return NextResponse.json({ data: updated });
 }

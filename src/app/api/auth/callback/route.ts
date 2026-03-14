@@ -4,6 +4,7 @@ import { db } from '@/lib/db';
 import { exchangeCodeForTokens, getGraphUser } from '@/lib/integrations/microsoft-graph';
 import { encrypt } from '@/lib/crypto';
 import { logger } from '@/lib/logger';
+import { auditLog, AUDIT_ACTIONS } from '@/lib/audit';
 
 export async function GET(req: NextRequest) {
   const code = req.nextUrl.searchParams.get('code');
@@ -50,6 +51,14 @@ export async function GET(req: NextRequest) {
         userEmail: profile.mail,
         userId: session.user.id,
       },
+    });
+
+    auditLog({
+      userId: session.user.id,
+      action: AUDIT_ACTIONS.INTEGRATION_CONNECTED,
+      entityType: 'IntegrationToken',
+      entityId: 'microsoft',
+      metadata: { provider: 'microsoft' },
     });
 
     logger.info('Microsoft Graph connected', { userId: session.user.id, email: profile.mail });
