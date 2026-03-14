@@ -71,7 +71,8 @@ export const POST = withHandler(leadActionSchema, async (req, ctx) => {
 
     const resolvedName = accountName || lead.company;
 
-    const result = await ctx.db.$transaction(async (tx: any) => {
+    // Use rawDb for transaction — lead ownership already verified via ctx.db.findUnique above
+    const result = await rawDb.$transaction(async (tx: any) => {
       await tx.lead.update({ where: { id }, data: { stage: 'Converted' } });
 
       // Check for existing account with same name (case-insensitive)

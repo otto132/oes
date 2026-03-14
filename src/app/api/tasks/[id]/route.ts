@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { db as rawDb } from '@/lib/db';
 import { scopedDb } from '@/lib/scoped-db';
 import { auth } from '@/lib/auth';
 import { adaptTask } from '@/lib/adapters';
@@ -53,7 +54,7 @@ export async function PATCH(
 
   // Notify new assignees if assigneeIds changed
   if (body.assigneeIds !== undefined) {
-    await notifyUsers(db, body.assigneeIds, session.user.id, {
+    await notifyUsers(rawDb, body.assigneeIds, session.user.id, {
       type: 'TASK_ASSIGNED',
       title: 'Task assigned to you',
       message: updated.title.slice(0, 100),
