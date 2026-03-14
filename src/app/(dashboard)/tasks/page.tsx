@@ -3,13 +3,53 @@ import { Suspense, useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { useStore } from '@/lib/store';
-import { useTasksQuery, useCreateTask, useCompleteTask, useUpdateTask } from '@/lib/queries/tasks';
+import { useTasksQuery, useCreateTask, useCompleteTask, useUpdateTask, useCommentOnTask } from '@/lib/queries/tasks';
+import { useTeamQuery } from '@/lib/queries/settings';
 import { Badge, Avatar, AgentTag, EmptyState, Skeleton, SkeletonCard, SkeletonText, ErrorState, Spinner } from '@/components/ui';
 import { fDate, isOverdue, cn, fR, displayLabel } from '@/lib/utils';
 import type { Task, TaskPriority, Goal } from '@/lib/types';
 import { usePendingMutations, useFailedMutations } from '@/hooks/use-mutation-state';
 import { RotateCw } from 'lucide-react';
 import { SearchInput } from '@/components/ui/SearchInput';
+
+function CommentInput({ taskId }: { taskId: string }) {
+  const [text, setText] = useState('');
+  const comment = useCommentOnTask();
+
+  const submit = () => {
+    const trimmed = text.trim();
+    if (!trimmed) return;
+    comment.mutate(
+      { taskId, text: trimmed },
+      { onSuccess: () => setText('') }
+    );
+  };
+
+  return (
+    <div className="mt-3 flex gap-2">
+      <textarea
+        value={text}
+        onChange={e => setText(e.target.value)}
+        onKeyDown={e => {
+          if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
+            e.preventDefault();
+            submit();
+          }
+        }}
+        rows={2}
+        placeholder="Add a comment... (Cmd+Enter to send)"
+        className="flex-1 px-2.5 py-1.5 text-[12px] rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] placeholder:text-[var(--muted)] focus:outline-none focus:border-brand/40 resize-none"
+      />
+      <button
+        onClick={submit}
+        disabled={!text.trim() || comment.isPending}
+        className="self-end px-2.5 py-1.5 text-[12px] font-medium rounded-md bg-brand text-[#09090b] hover:brightness-110 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+      >
+        {comment.isPending ? '...' : 'Send'}
+      </button>
+    </div>
+  );
+}
 
 function TasksSkeleton() {
   return (
@@ -58,6 +98,8 @@ function TasksPageInner() {
   const completeTask = useCompleteTask();
   const updateTask = useUpdateTask();
   const addToast = useStore(s => s.addToast);
+  const { data: teamResp } = useTeamQuery();
+  const teamMembers = teamResp?.data ?? [];
   const autoCreateFired = useRef(false);
   const pendingIds = usePendingMutations(['tasks']);
   const failedMutations = useFailedMutations(['tasks']);
@@ -501,6 +543,7 @@ function TasksPageInner() {
                 <div className="text-sub">{c.text}</div>
               </div>
             ))}
+            <CommentInput taskId={t.id} />
           </div>
         </div>
       ),
