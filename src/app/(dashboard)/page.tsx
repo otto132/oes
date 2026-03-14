@@ -1,11 +1,15 @@
 'use client';
+import { useState, useMemo } from 'react';
 import Link from 'next/link';
-import { Shield, AlertTriangle, TrendingUp, ArrowRight, Zap, Signal, Calendar, Activity } from 'lucide-react';
+import { Shield, AlertTriangle, TrendingUp, ArrowRight, Zap, Signal, Calendar, Activity, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useSession } from 'next-auth/react';
 import { useHomeSummary } from '@/lib/queries/home';
+import { useMeetingsQuery } from '@/lib/queries/meetings';
 import { healthAvg } from '@/lib/types';
 import { fmt, fRelative } from '@/lib/utils';
 import { Badge, HealthBar, AgentTag, Skeleton, SkeletonCard, SkeletonText, ErrorState } from '@/components/ui';
+import { WelcomeBanner } from '@/components/shell/WelcomeBanner';
+import type { Meeting as MeetingType } from '@/lib/types';
 
 import type { Signal as UISignal, Opportunity as UIOpportunity, Meeting as UIMeeting, Activity as UIActivity } from '@/lib/types';
 
@@ -59,9 +63,15 @@ function HomeSkeleton() {
   );
 }
 
+function toDateStr(d: Date) { return d.toISOString().split('T')[0]; }
+
 export default function HomePage() {
   const { data: session } = useSession();
   const { data, isLoading, error, refetch } = useHomeSummary();
+  const [scheduleOffset, setScheduleOffset] = useState(0);
+  const scheduleDate = useMemo(() => { const d = new Date(); d.setDate(d.getDate() + scheduleOffset); return d; }, [scheduleOffset]);
+  const { data: meetingsResp } = useMeetingsQuery(scheduleOffset !== 0 ? toDateStr(scheduleDate) : undefined);
+  const scheduleMeetings: MeetingType[] = scheduleOffset !== 0 ? (meetingsResp?.data ?? []) : [];
 
   const h = new Date().getHours();
   const greeting = h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening';
@@ -113,6 +123,8 @@ export default function HomePage() {
         <h1 className="text-[24px] md:text-[28px] font-semibold tracking-tight">{greeting}, <span className="text-brand">{firstName}</span></h1>
         <p className="text-[12px] text-muted mt-1">{new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' })} · {nextBestActions.length} actions pending</p>
       </div>
+
+      <WelcomeBanner name={firstName} />
 
       <div className="hidden md:grid grid-cols-5 gap-2 mb-4">
         {statCards.map(s => {
@@ -208,21 +220,31 @@ export default function HomePage() {
           <div className="rounded-lg bg-[var(--elevated)] border border-[var(--border)] overflow-hidden">
             <div className="flex items-center gap-2 px-4 py-3 border-b border-[var(--border)]">
               <Calendar className="w-3.5 h-3.5 text-purple" />
-              <span className="text-[13px] font-semibold">Today&apos;s Schedule</span>
+              <span className="text-[13px] font-semibold flex-1">
+                {scheduleOffset === 0 ? "Today\u2019s Schedule" : scheduleDate.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' })}
+              </span>
+              <div className="flex items-center gap-1">
+                <button onClick={() => setScheduleOffset(o => o - 1)} className="p-0.5 rounded hover:bg-[var(--hover)] transition-colors text-muted hover:text-[var(--text)]"><ChevronLeft className="w-3.5 h-3.5" /></button>
+                {scheduleOffset !== 0 && <button onClick={() => setScheduleOffset(0)} className="text-[10px] text-brand hover:underline">Today</button>}
+                <button onClick={() => setScheduleOffset(o => o + 1)} className="p-0.5 rounded hover:bg-[var(--hover)] transition-colors text-muted hover:text-[var(--text)]"><ChevronRight className="w-3.5 h-3.5" /></button>
+              </div>
             </div>
-            {todayMeetings.length === 0 ? (
-              <div className="p-6 text-center text-muted text-[12px]">No meetings today</div>
-            ) : todayMeetings.map((m: UIMeeting) => (
-              <Link href={`/meetings/${m.id}`} key={m.id} className="block px-4 py-3 border-b border-[var(--border)] hover:bg-[var(--hover)] transition-colors" style={{ textDecoration: 'none', color: 'inherit' }}>
-                <div className="flex items-center gap-2 mb-0.5">
-                  <span className="font-mono text-[11px] text-brand font-semibold">{m.startTime}</span>
-                  <span className="text-[10px] text-muted font-mono">{m.duration}</span>
-                  <Badge variant={m.prepStatus === 'ready' ? 'ok' : 'warn'} className="!text-[8px]">{m.prepStatus === 'ready' ? 'Prep ready' : 'Prep needed'}</Badge>
-                </div>
-                <div className="text-[12.5px] font-medium">{m.title}</div>
-                <div className="text-[10px] text-muted mt-0.5">{m.attendees.join(', ')}</div>
-              </Link>
-            ))}
+            {(() => {
+              const meetings = scheduleOffset === 0 ? todayMeetings : scheduleMeetings;
+              return meetings.length === 0 ? (
+                <div className="p-6 text-center text-muted text-[12px]">No meetings {scheduleOffset === 0 ? 'today' : 'on this day'}</div>
+              ) : meetings.map((m: UIMeeting) => (
+                <Link href={`/meetings/${m.id}`} key={m.id} className="block px-4 py-3 border-b border-[var(--border)] hover:bg-[var(--hover)] transition-colors" style={{ textDecoration: 'none', color: 'inherit' }}>
+                  <div className="flex items-center gap-2 mb-0.5">
+                    <span className="font-mono text-[11px] text-brand font-semibold">{m.startTime}</span>
+                    <span className="text-[10px] text-muted font-mono">{m.duration}</span>
+                    <Badge variant={m.prepStatus === 'ready' ? 'ok' : 'warn'} className="!text-[8px]">{m.prepStatus === 'ready' ? 'Prep ready' : 'Prep needed'}</Badge>
+                  </div>
+                  <div className="text-[12.5px] font-medium">{m.title}</div>
+                  <div className="text-[10px] text-muted mt-0.5">{m.attendees.join(', ')}</div>
+                </Link>
+              ));
+            })()}
           </div>
 
           {dealsAtRisk.length > 0 && (

@@ -1,5 +1,6 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
 import { api } from '@/lib/api-client';
+import { useOptimisticMutation, removeById, updateById } from './helpers';
 
 export const settingsKeys = {
   all: ['settings'] as const,
@@ -50,31 +51,16 @@ export function useProfileQuery() {
 }
 
 export function usePatchAgent() {
-  const qc = useQueryClient();
-  return useMutation({
+  return useOptimisticMutation<unknown, { name: string; data: { status?: string; parameters?: Record<string, string> } }>({
     mutationKey: ['settings', 'patchAgent'],
-    mutationFn: ({ name, data }: { name: string; data: { status?: string; parameters?: Record<string, string> } }) =>
-      api.settings.patchAgent(name, data),
-    onMutate: async ({ name, data }) => {
-      await qc.cancelQueries({ queryKey: settingsKeys.agents() });
-      const previousAgents = qc.getQueryData(settingsKeys.agents());
-      qc.setQueryData(settingsKeys.agents(), (old: any) => {
-        if (!old?.data) return old;
-        return {
-          ...old,
-          data: old.data.map((a: any) =>
-            a.name === name ? { ...a, ...data } : a,
-          ),
-        };
-      });
-      return { previousAgents };
-    },
-    onError: (_err, _vars, context) => {
-      if (context?.previousAgents) qc.setQueryData(settingsKeys.agents(), context.previousAgents);
-    },
-    onSettled: () => {
-      qc.invalidateQueries({ queryKey: settingsKeys.agents() });
-    },
+    mutationFn: ({ name, data }) => api.settings.patchAgent(name, data),
+    queryKey: settingsKeys.agents(),
+    updater: (old, { name, data }) => ({
+      ...old,
+      data: old.data.map((a: any) =>
+        a.name === name ? { ...a, ...data } : a,
+      ),
+    }),
   });
 }
 
@@ -92,58 +78,21 @@ export function useInviteUser() {
 
 // Revoke invitation
 export function useRevokeInvitation() {
-  const qc = useQueryClient();
-  return useMutation({
+  return useOptimisticMutation<unknown, string>({
     mutationKey: ['settings', 'revokeInvite'],
-    mutationFn: (id: string) => api.settings.revokeInvite(id),
-    onMutate: async (id) => {
-      await qc.cancelQueries({ queryKey: settingsKeys.invitations() });
-      const previousInvitations = qc.getQueryData(settingsKeys.invitations());
-      qc.setQueryData(settingsKeys.invitations(), (old: any) => {
-        if (!old?.data) return old;
-        return {
-          ...old,
-          data: old.data.filter((inv: any) => inv.id !== id),
-        };
-      });
-      return { previousInvitations };
-    },
-    onError: (_err, _vars, context) => {
-      if (context?.previousInvitations) qc.setQueryData(settingsKeys.invitations(), context.previousInvitations);
-    },
-    onSettled: () => {
-      qc.invalidateQueries({ queryKey: settingsKeys.invitations() });
-    },
+    mutationFn: (id) => api.settings.revokeInvite(id),
+    queryKey: settingsKeys.invitations(),
+    updater: removeById(),
   });
 }
 
 // Update team member (role, isActive)
 export function useUpdateTeamMember() {
-  const qc = useQueryClient();
-  return useMutation({
+  return useOptimisticMutation<unknown, { id: string; data: { role?: string; isActive?: boolean } }>({
     mutationKey: ['settings', 'updateUser'],
-    mutationFn: ({ id, data }: { id: string; data: { role?: string; isActive?: boolean } }) =>
-      api.settings.updateUser(id, data),
-    onMutate: async ({ id, data }) => {
-      await qc.cancelQueries({ queryKey: settingsKeys.team() });
-      const previousTeam = qc.getQueryData(settingsKeys.team());
-      qc.setQueryData(settingsKeys.team(), (old: any) => {
-        if (!old?.data) return old;
-        return {
-          ...old,
-          data: old.data.map((member: any) =>
-            member.id === id ? { ...member, ...data } : member
-          ),
-        };
-      });
-      return { previousTeam };
-    },
-    onError: (_err, _vars, context) => {
-      if (context?.previousTeam) qc.setQueryData(settingsKeys.team(), context.previousTeam);
-    },
-    onSettled: () => {
-      qc.invalidateQueries({ queryKey: settingsKeys.team() });
-    },
+    mutationFn: ({ id, data }) => api.settings.updateUser(id, data),
+    queryKey: settingsKeys.team(),
+    updater: updateById((member, { data }) => ({ ...member, ...data })),
   });
 }
 

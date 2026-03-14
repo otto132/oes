@@ -24,6 +24,7 @@ export function useMeetingDetail(id: string) {
   });
 }
 
+// Complex optimistic logic — see useOptimisticMutation for simpler cases
 export function useCreateMeeting() {
   const qc = useQueryClient();
   return useMutation({
@@ -72,6 +73,7 @@ export function useCreateMeeting() {
   });
 }
 
+// Complex optimistic logic — see useOptimisticMutation for simpler cases
 export function useUpdateMeeting() {
   const qc = useQueryClient();
   return useMutation({

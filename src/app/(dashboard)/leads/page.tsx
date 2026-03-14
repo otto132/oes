@@ -1,7 +1,7 @@
 'use client';
 import { useStore } from '@/lib/store';
 import { useLeadsQuery, useCreateLead, useAdvanceLead, useDisqualifyLead, useConvertLead } from '@/lib/queries/leads';
-import { Badge, Avatar, FIUACBars, ScorePill, EmptyState, Skeleton, SkeletonCard, SkeletonText, ErrorState } from '@/components/ui';
+import { Badge, Avatar, FIUACBars, ScorePill, EmptyState, Skeleton, SkeletonCard, SkeletonText, ErrorState, Spinner } from '@/components/ui';
 import { compositeScore, cn } from '@/lib/utils';
 import type { Lead } from '@/lib/types';
 import { usePendingMutations, useFailedMutations } from '@/hooks/use-mutation-state';
@@ -114,7 +114,7 @@ export default function LeadsPage() {
           <button className="px-3.5 py-1.5 text-[12px] text-[var(--sub)] bg-[var(--surface)] border border-[var(--border)] rounded-md hover:bg-[var(--hover)] transition-colors" onClick={closeDrawer}>Cancel</button>
           <button
             disabled={createLead.isPending}
-            className="px-3.5 py-1.5 text-[12px] font-medium bg-brand text-[#09090b] rounded-md hover:brightness-110 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-[12px] font-medium bg-brand text-[#09090b] rounded-md hover:brightness-110 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             onClick={() => {
               if (!state.company.trim()) { addToast({ type: 'error', message: 'Company name is required' }); return; }
               createLead.mutate(
@@ -126,7 +126,7 @@ export default function LeadsPage() {
               );
             }}
           >
-            Create Lead
+            {createLead.isPending && <Spinner className="h-3 w-3" />}Create Lead
           </button>
         </>
       ),
@@ -237,7 +237,7 @@ export default function LeadsPage() {
           </button>
           <button
             disabled={convertLead.isPending}
-            className="px-3.5 py-1.5 text-[12px] font-medium bg-[var(--brand)] text-[#09090b] rounded-md hover:brightness-110 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-[12px] font-medium bg-[var(--brand)] text-[#09090b] rounded-md hover:brightness-110 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             onClick={() => {
               if (!state.accountName.trim()) {
                 addToast({ type: 'error', message: 'Account name is required' });
@@ -268,7 +268,7 @@ export default function LeadsPage() {
               );
             }}
           >
-            Convert
+            {convertLead.isPending && <Spinner className="h-3 w-3" />}Convert
           </button>
         </>
       ),

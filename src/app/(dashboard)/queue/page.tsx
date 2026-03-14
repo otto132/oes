@@ -7,7 +7,7 @@ import { leadKeys } from '@/lib/queries/leads';
 import { taskKeys } from '@/lib/queries/tasks';
 import { accountKeys } from '@/lib/queries/accounts';
 import { fRelative, queueTypeLabel, cn, displayLabel } from '@/lib/utils';
-import { Badge, ConfBadge, AgentTag, ScorePill, FIUACBars, EmptyState, Skeleton, SkeletonCard, SkeletonText, ErrorState } from '@/components/ui';
+import { Badge, ConfBadge, AgentTag, ScorePill, FIUACBars, EmptyState, Skeleton, SkeletonCard, SkeletonText, ErrorState, Spinner } from '@/components/ui';
 import type { QueueItem } from '@/lib/types';
 import { useStore } from '@/lib/store';
 import { usePendingMutations, useFailedMutations } from '@/hooks/use-mutation-state';
@@ -138,7 +138,7 @@ export default function QueuePage() {
           </button>
           <button
             disabled={approve.isPending}
-            className="px-3 py-1.5 text-[12px] font-medium bg-brand text-[#09090b] rounded-md hover:brightness-110 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-[12px] font-medium bg-brand text-[#09090b] rounded-md hover:brightness-110 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             onClick={() => {
               const editedPayload = { ...q.payload, ...state };
               approve.mutate(
@@ -153,7 +153,7 @@ export default function QueuePage() {
               );
             }}
           >
-            Save & Approve
+            {approve.isPending && <Spinner className="h-3 w-3" />}Save & Approve
           </button>
         </>
       ),
@@ -318,9 +318,9 @@ export default function QueuePage() {
                 )
               }
               disabled={approve.isPending}
-              className="px-2.5 py-1 text-[11px] font-medium rounded-md bg-brand text-[#09090b] hover:brightness-110 ml-auto flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+              className="px-2.5 py-1 text-[11px] font-medium rounded-md bg-brand text-[#09090b] hover:brightness-110 ml-auto inline-flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
             >
-              <Check className="w-3 h-3" /> Approve
+              {approve.isPending ? <Spinner className="h-3 w-3" /> : <Check className="w-3 h-3" />} Approve
             </button>
           </div>
         )}
@@ -369,11 +369,6 @@ export default function QueuePage() {
         </div>
       )}
 
-      <div className="hidden md:flex gap-3 mt-4 text-[10px] text-muted">
-        <span><kbd>j</kbd><kbd className="ml-0.5">k</kbd> nav</span>
-        <span><kbd>a</kbd> approve</span>
-        <span><kbd>r</kbd> reject</span>
-      </div>
     </div>
   );
 }

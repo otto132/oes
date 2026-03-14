@@ -1,7 +1,7 @@
 'use client';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, Shield, Signal, Target, Building2, TrendingUp, Inbox, CheckSquare, Settings, Search, Sun, Moon, LogOut } from 'lucide-react';
+import { Home, Shield, Signal, Target, Building2, TrendingUp, Inbox, CheckSquare, Settings, Search, LogOut } from 'lucide-react';
 import { useSession, signOut } from 'next-auth/react';
 import { useStore } from '@/lib/store';
 import { cn } from '@/lib/utils';
@@ -38,7 +38,6 @@ const sections: { label: string; items: NavItem[] }[] = [
 
 export default function Sidebar() {
   const pathname = usePathname();
-  const { theme, toggleTheme } = useStore();
   const { data: badges } = useBadgeCounts();
   const { data: session } = useSession();
   const me = {
@@ -112,10 +111,6 @@ export default function Sidebar() {
 
       {/* Footer */}
       <div className="p-3 border-t border-border flex flex-col gap-2">
-        <button onClick={toggleTheme} className="flex items-center gap-1.5 w-full px-2.5 py-[5px] rounded-md text-[11px] text-muted hover:text-sub hover:bg-hover transition-colors">
-          {theme === 'dark' ? <Sun className="w-3 h-3" /> : <Moon className="w-3 h-3" />}
-          {theme === 'dark' ? 'Light mode' : 'Dark mode'}
-        </button>
         <button onClick={() => signOut({ callbackUrl: '/login' })} className="flex items-center gap-1.5 w-full px-2.5 py-[5px] rounded-md text-[11px] text-muted hover:text-sub hover:bg-hover transition-colors">
           <LogOut className="w-3 h-3" />
           Sign out

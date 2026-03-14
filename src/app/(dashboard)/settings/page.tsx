@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useSession } from 'next-auth/react';
 import { useStore } from '@/lib/store';
-import { Badge } from '@/components/ui';
+import { Badge, Spinner } from '@/components/ui';
 import {
   useTeamQuery,
   useInvitationsQuery,
@@ -134,7 +134,7 @@ function TeamTab({ isAdmin }: { isAdmin: boolean }) {
           </button>
           <button
             disabled={inviteUser.isPending}
-            className="px-3.5 py-1.5 text-[12px] font-medium bg-brand text-[#09090b] rounded-md hover:brightness-110 transition-colors disabled:opacity-50"
+            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-[12px] font-medium bg-brand text-[#09090b] rounded-md hover:brightness-110 transition-colors disabled:opacity-50"
             onClick={() => {
               if (!state.email.trim()) {
                 addToast({ type: 'error', message: 'Email is required' });
@@ -154,7 +154,7 @@ function TeamTab({ isAdmin }: { isAdmin: boolean }) {
               );
             }}
           >
-            Send Invitation
+            {inviteUser.isPending && <Spinner className="h-3 w-3" />}Send Invitation
           </button>
         </>
       ),
@@ -241,9 +241,9 @@ function TeamTab({ isAdmin }: { isAdmin: boolean }) {
               <button
                 onClick={executeConfirmedAction}
                 disabled={updateMember.isPending}
-                className="px-3 py-1.5 text-[12px] font-medium bg-brand text-[#09090b] rounded-md hover:brightness-110 disabled:opacity-50"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-[12px] font-medium bg-brand text-[#09090b] rounded-md hover:brightness-110 disabled:opacity-50"
               >
-                Confirm
+                {updateMember.isPending && <Spinner className="h-3 w-3" />}Confirm
               </button>
             </div>
           </div>
@@ -377,9 +377,9 @@ function ProfileTab() {
         <button
           onClick={handleSave}
           disabled={updateProfile.isPending}
-          className="mt-2 px-3.5 py-1.5 text-[12px] font-medium bg-brand text-[#09090b] rounded-md hover:brightness-110 transition-colors disabled:opacity-50 self-start"
+          className="inline-flex items-center gap-1.5 mt-2 px-3.5 py-1.5 text-[12px] font-medium bg-brand text-[#09090b] rounded-md hover:brightness-110 transition-colors disabled:opacity-50 self-start"
         >
-          {updateProfile.isPending ? 'Saving...' : 'Save Changes'}
+          {updateProfile.isPending && <Spinner className="h-3 w-3" />}{updateProfile.isPending ? 'Saving...' : 'Save Changes'}
         </button>
       </div>
     </div>
@@ -407,9 +407,9 @@ function IntegrationsTab() {
           <button
             onClick={handleSync}
             disabled={syncMutation.isPending}
-            className="px-3 py-1 text-[10px] font-medium bg-brand text-white rounded-md hover:bg-brand/90 transition-colors disabled:opacity-50"
+            className="inline-flex items-center gap-1.5 px-3 py-1 text-[10px] font-medium bg-brand text-white rounded-md hover:bg-brand/90 transition-colors disabled:opacity-50"
           >
-            {syncMutation.isPending ? 'Syncing...' : 'Sync Now'}
+            {syncMutation.isPending && <Spinner className="h-3 w-3" />}{syncMutation.isPending ? 'Syncing...' : 'Sync Now'}
           </button>
         )}
       </div>

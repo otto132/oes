@@ -1,8 +1,9 @@
 'use client';
 import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useOpportunitiesQuery, useCreateOpportunity, useMoveStage } from '@/lib/queries/opportunities';
-import { Avatar, HealthBar, StageBadge, EmptyState, Skeleton, SkeletonCard, ErrorState } from '@/components/ui';
+import { Avatar, HealthBar, StageBadge, EmptyState, Skeleton, SkeletonCard, ErrorState, Spinner } from '@/components/ui';
 import { fmt, fDate, isOverdue, cn, displayLabel } from '@/lib/utils';
 import { KANBAN_STAGES, STAGE_COLOR, STAGE_PROB, healthAvg } from '@/lib/types';
 import { useStore } from '@/lib/store';
@@ -194,6 +195,7 @@ export default function PipelinePage() {
   const { data, isLoading, error, refetch } = useOpportunitiesQuery();
   const createOpp = useCreateOpportunity();
   const moveStage = useMoveStage();
+  const router = useRouter();
   const { openDrawer, closeDrawer, addToast } = useStore();
   const [view, setView] = useState<'kanban' | 'table'>('kanban');
   const [dragId, setDragId] = useState<string | null>(null);
@@ -231,10 +233,10 @@ export default function PipelinePage() {
           <button className="px-3.5 py-1.5 text-[12px] text-[var(--sub)] bg-[var(--surface)] border border-[var(--border)] rounded-md hover:bg-[var(--hover)] transition-colors" onClick={closeDrawer}>Cancel</button>
           <button
             disabled={createOpp.isPending}
-            className="px-3.5 py-1.5 text-[12px] font-medium bg-brand text-[#09090b] rounded-md hover:brightness-110 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-[12px] font-medium bg-brand text-[#09090b] rounded-md hover:brightness-110 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             onClick={() => submitRef.current()}
           >
-            Create Opportunity
+            {createOpp.isPending && <Spinner className="h-3 w-3" />}Create Opportunity
           </button>
         </>
       ),
@@ -293,8 +295,8 @@ export default function PipelinePage() {
               <div
                 key={stage}
                 className={cn(
-                  'flex-shrink-0 w-[230px] rounded-lg transition-colors',
-                  isOver && 'bg-brand/5 ring-1 ring-brand/20'
+                  'flex-shrink-0 w-[230px] rounded-lg transition-all duration-200',
+                  isOver && 'bg-brand/5 ring-1 ring-brand/20 scale-[1.02]'
                 )}
                 onDragOver={e => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; }}
                 onDragEnter={() => {
@@ -327,6 +329,7 @@ export default function PipelinePage() {
               >
                 <div className="flex items-center justify-between mb-1.5 px-1">
                   <StageBadge stage={stage} />
+                  <span className="text-[9px] text-[var(--muted)] font-mono">{cards.length}</span>
                   {stageAmt > 0 && <span className="font-mono text-[9px] uppercase text-[var(--muted)]">{fmt(stageAmt)}</span>}
                 </div>
                 <div className="min-h-[50px]">
@@ -359,7 +362,7 @@ export default function PipelinePage() {
                         }}
                         className={cn(
                           'stagger-item rounded-lg mb-1.5 bg-[var(--elevated)] border border-[var(--border)] cursor-grab hover:-translate-y-px hover:border-[var(--border-strong)] transition-all overflow-hidden relative',
-                          dragId === o.id && 'opacity-40 scale-[0.97] shadow-lg rotate-[1deg]',
+                          dragId === o.id && 'opacity-40 scale-[0.97] shadow-lg rotate-[1deg] ring-2 ring-brand/30',
                           isPending && 'opacity-60 animate-pulse',
                           failedInfo && 'border-l-2 border-l-red-500'
                         )}
@@ -412,7 +415,7 @@ export default function PipelinePage() {
             </thead>
             <tbody>
               {open.map(o => (
-                <tr key={o.id} className="hover:bg-[var(--hover)] cursor-pointer transition-colors" onClick={() => window.location.href = `/pipeline/${o.id}`}>
+                <tr key={o.id} className="hover:bg-[var(--hover)] cursor-pointer transition-colors" onClick={() => router.push(`/pipeline/${o.id}`)}>
                   <td className="px-3.5 py-2.5 border-b border-[var(--border)]"><div className="font-medium text-[12.5px] text-[var(--text)]">{o.name}</div><div className="text-[10px] text-[var(--muted)]">{o.accountName}</div></td>
                   <td className="px-3.5 py-2.5 border-b border-[var(--border)]"><StageBadge stage={o.stage} /></td>
                   <td className="px-3.5 py-2.5 border-b border-[var(--border)] font-mono font-semibold text-[12px] text-[var(--text)]">{fmt(o.amount)}</td>
