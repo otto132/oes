@@ -116,7 +116,7 @@ export function useCloseWon() {
   const qc = useQueryClient();
   return useMutation({
     mutationKey: ['opportunities', 'closeWon'],
-    mutationFn: ({ id, ...data }: { id: string; winNotes?: string; competitorBeaten?: string }) =>
+    mutationFn: ({ id, ...data }: { id: string; winNotes?: string; competitorBeaten?: string; keyStakeholders?: string; lessonsLearned?: string }) =>
       api.opportunities.closeWon(id, data),
     onMutate: async ({ id }) => {
       await qc.cancelQueries({ queryKey: oppKeys.all });
@@ -196,7 +196,7 @@ export function useCloseLost() {
   const qc = useQueryClient();
   return useMutation({
     mutationKey: ['opportunities', 'closeLost'],
-    mutationFn: ({ id, ...data }: { id: string; lossReason: string; lossCompetitor?: string; lossNotes?: string }) =>
+    mutationFn: ({ id, ...data }: { id: string; lossReason: string; lossCompetitor?: string; lossNotes?: string; lessonsLearned?: string }) =>
       api.opportunities.closeLost(id, data),
     onMutate: async ({ id }) => {
       await qc.cancelQueries({ queryKey: oppKeys.all });

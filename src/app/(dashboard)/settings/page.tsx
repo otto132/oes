@@ -91,7 +91,7 @@ function TeamTab({ isAdmin }: { isAdmin: boolean }) {
           addToast({ type: 'success', message: confirmAction.field === 'role' ? 'Role updated' : (confirmAction.value ? 'User reactivated' : 'User deactivated') });
           setConfirmAction(null);
         },
-        onError: (err) => addToast({ type: 'error', message: err.message }),
+        onError: (err: any) => addToast({ type: 'error', message: err.message }),
       },
     );
   }
@@ -149,7 +149,7 @@ function TeamTab({ isAdmin }: { isAdmin: boolean }) {
                     addToast({ type: 'success', message: 'Invitation sent! Link copied to clipboard.' });
                     closeDrawer();
                   },
-                  onError: (err) => addToast({ type: 'error', message: err.message }),
+                  onError: (err: any) => addToast({ type: 'error', message: err.message }),
                 },
               );
             }}
@@ -266,7 +266,7 @@ function TeamTab({ isAdmin }: { isAdmin: boolean }) {
                   <button
                     onClick={() => revokeInvite.mutate(inv.id, {
                       onSuccess: () => addToast({ type: 'success', message: 'Invitation revoked' }),
-                      onError: (err) => addToast({ type: 'error', message: err.message }),
+                      onError: (err: any) => addToast({ type: 'error', message: err.message }),
                     })}
                     disabled={revokeInvite.isPending}
                     className="px-2 py-1 text-[10px] font-medium text-red-400 border border-red-500/30 rounded-md hover:bg-red-500/10 transition-colors disabled:opacity-50"
@@ -313,7 +313,7 @@ function ProfileTab() {
       },
       {
         onSuccess: () => addToast({ type: 'success', message: 'Profile updated' }),
-        onError: (err) => addToast({ type: 'error', message: err.message }),
+        onError: (err: any) => addToast({ type: 'error', message: err.message }),
       },
     );
   }

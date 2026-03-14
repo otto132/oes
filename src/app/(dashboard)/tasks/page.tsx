@@ -20,7 +20,7 @@ function CommentInput({ taskId }: { taskId: string }) {
     const trimmed = text.trim();
     if (!trimmed) return;
     comment.mutate(
-      { taskId, text: trimmed },
+      { id: taskId, text: trimmed },
       { onSuccess: () => setText('') }
     );
   };

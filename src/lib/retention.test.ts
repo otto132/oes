@@ -9,6 +9,7 @@ vi.mock('@/lib/db', () => ({
     signal: {
       findMany: vi.fn().mockResolvedValue([{ id: '3' }]),
       deleteMany: vi.fn().mockResolvedValue({ count: 1 }),
+      updateMany: vi.fn().mockResolvedValue({ count: 0 }),
     },
     syncLog: {
       findMany: vi.fn().mockResolvedValue([]),

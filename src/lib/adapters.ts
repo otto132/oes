@@ -251,10 +251,10 @@ export function adaptOpportunity(o: {
     health: adaptHealth(o),
     nextAction: o.nextAction ?? '',
     nextActionDate: o.nextActionDate ? o.nextActionDate.toISOString() : '',
-    ...(o.lossReason ? { lossReason: o.lossReason } : {}),
-    ...(o.lossCompetitor ? { lossCompetitor: o.lossCompetitor } : {}),
-    ...(o.lessonsLearned ? { lessonsLearned: o.lessonsLearned } : {}),
-    ...(o.keyStakeholders ? { keyStakeholders: o.keyStakeholders } : {}),
+    ...(o.lossReason ? { lossReason: o.lossReason as string } : {}),
+    ...(o.lossCompetitor ? { lossCompetitor: o.lossCompetitor as string } : {}),
+    ...(o.lessonsLearned ? { lessonsLearned: o.lessonsLearned as string } : {}),
+    ...(o.keyStakeholders ? { keyStakeholders: o.keyStakeholders as string } : {}),
   };
 }
 
@@ -281,7 +281,7 @@ export function adaptTask(t: {
   due: Date | null;
   source: string;
   completedAt: Date | null;
-  notes: string | null;
+  notes?: string | null;
   account: { id: string; name: string } | null;
   owner: Parameters<typeof adaptUser>[0];
   assignees: Parameters<typeof adaptUser>[0][];
