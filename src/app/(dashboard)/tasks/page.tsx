@@ -488,7 +488,7 @@ function TasksPageInner() {
                 className="px-2.5 py-1.5 text-[11px] rounded-md bg-[var(--surface)] border border-dashed border-[var(--border)] text-[var(--text)] placeholder:text-muted focus:outline-none focus:border-brand/40"
                 onKeyDown={e => {
                   if (e.key === 'Enter' && e.currentTarget.value.trim()) {
-                    state.subtasks.push({ title: e.currentTarget.value.trim(), done: false, position: state.subtasks.length });
+                    state.subtasks.push({ id: `temp-${Date.now()}` as any, title: e.currentTarget.value.trim(), done: false, position: state.subtasks.length });
                     e.currentTarget.value = '';
                     openEditTaskDrawer({ ...t, subtasks: state.subtasks } as any);
                   }
