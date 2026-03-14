@@ -99,10 +99,10 @@ export const POST = withHandler(opportunityActionSchema, async (req, ctx) => {
 
   // Close Won
   if (body.action === 'close_won') {
-    const { id, winNotes, competitorBeaten } = body;
+    const { id, winNotes, competitorBeaten, keyStakeholders, lessonsLearned } = body;
     const opp = await db.opportunity.update({
       where: { id },
-      data: { stage: 'ClosedWon', probability: 100, winNotes, competitorBeaten },
+      data: { stage: 'ClosedWon', probability: 100, winNotes, competitorBeaten, keyStakeholders, lessonsLearned },
       include: { owner: true, account: { select: { id: true, name: true } } },
     });
     await db.account.update({ where: { id: opp.accountId }, data: { status: 'Active', lastActivityAt: new Date() } });
@@ -118,10 +118,10 @@ export const POST = withHandler(opportunityActionSchema, async (req, ctx) => {
 
   // Close Lost
   if (body.action === 'close_lost') {
-    const { id, lossReason, lossCompetitor, lossNotes } = body;
+    const { id, lossReason, lossCompetitor, lossNotes, lessonsLearned } = body;
     const opp = await db.opportunity.update({
       where: { id },
-      data: { stage: 'ClosedLost', probability: 0, lossReason, lossCompetitor, lossNotes },
+      data: { stage: 'ClosedLost', probability: 0, lossReason, lossCompetitor, lossNotes, lessonsLearned },
       include: { owner: true, account: { select: { id: true, name: true } } },
     });
     await db.activity.create({

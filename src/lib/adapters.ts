@@ -253,6 +253,8 @@ export function adaptOpportunity(o: {
     nextActionDate: o.nextActionDate ? o.nextActionDate.toISOString() : '',
     ...(o.lossReason ? { lossReason: o.lossReason } : {}),
     ...(o.lossCompetitor ? { lossCompetitor: o.lossCompetitor } : {}),
+    ...(o.lessonsLearned ? { lessonsLearned: o.lessonsLearned } : {}),
+    ...(o.keyStakeholders ? { keyStakeholders: o.keyStakeholders } : {}),
   };
 }
 
@@ -279,6 +281,7 @@ export function adaptTask(t: {
   due: Date | null;
   source: string;
   completedAt: Date | null;
+  notes: string | null;
   account: { id: string; name: string } | null;
   owner: Parameters<typeof adaptUser>[0];
   assignees: Parameters<typeof adaptUser>[0][];
@@ -302,6 +305,7 @@ export function adaptTask(t: {
     ...(t.reviewer ? { reviewer: adaptUser(t.reviewer) } : {}),
     comments: t.comments.map(adaptTaskComment),
     ...(t.completedAt ? { completedAt: t.completedAt.toISOString() } : {}),
+    ...(t.notes ? { notes: t.notes } : {}),
   };
 }
 

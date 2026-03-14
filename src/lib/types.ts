@@ -86,6 +86,7 @@ export interface Opportunity {
   owner: User; health: DealHealth;
   nextAction: string; nextActionDate: string;
   lossReason?: string; lossCompetitor?: string;
+  lessonsLearned?: string; keyStakeholders?: string;
 }
 
 // ── Queue ────────────────────────────────────────
@@ -115,7 +116,7 @@ export interface Task {
   dueDate: string; owner: User; assignees?: User[];
   priority: TaskPriority; status: TaskStatus; source: string;
   goalId?: ID; reviewer?: User; comments: TaskComment[];
-  completedAt?: string;
+  completedAt?: string; notes?: string;
 }
 
 // ── Goals ────────────────────────────────────────
