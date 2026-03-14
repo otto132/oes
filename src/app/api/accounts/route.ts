@@ -7,6 +7,7 @@ import { createAccountSchema } from '@/lib/schemas/accounts';
 import { notFound, badRequest, conflict } from '@/lib/api-errors';
 import { parsePagination, paginate } from '@/lib/schemas/pagination';
 import { auth } from '@/lib/auth';
+import { logAccess } from '@/lib/access-log';
 
 export async function GET(req: NextRequest) {
   const search = req.nextUrl.searchParams.get('q');
@@ -36,6 +37,15 @@ export async function GET(req: NextRequest) {
       },
     });
     if (!account) return notFound('Account not found');
+
+    const session = await auth();
+    if (session?.user?.id) {
+      logAccess({
+        userId: session.user.id,
+        entityType: 'Account',
+        entityId: id,
+      });
+    }
 
     const adaptedAccount = adaptAccount(account);
 

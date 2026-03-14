@@ -4,15 +4,25 @@ import { auth } from '@/lib/auth';
 import { adaptMeeting, adaptAccount, adaptContact, adaptActivity } from '@/lib/adapters';
 import { patchMeetingSchema } from '@/lib/schemas/meetings';
 import { unauthorized, notFound, zodError } from '@/lib/api-errors';
+import { logAccess } from '@/lib/access-log';
 
 export async function GET(
   _req: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
+  const session = await auth();
   const { id } = await params;
 
   const meeting = await db.meeting.findUnique({ where: { id } });
   if (!meeting) return notFound('Meeting not found');
+
+  if (session?.user?.id) {
+    logAccess({
+      userId: session.user.id,
+      entityType: 'Meeting',
+      entityId: id,
+    });
+  }
 
   const result: Record<string, unknown> = { data: adaptMeeting(meeting) };
 
