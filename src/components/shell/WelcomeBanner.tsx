@@ -23,7 +23,7 @@ export function WelcomeBanner({ name }: { name: string }) {
 
   return (
     <div className="rounded-lg bg-[var(--elevated)] border border-[var(--brand-border)] p-5 mb-4 relative">
-      <button onClick={() => { setDismissed(true); localStorage.setItem(DISMISSED_KEY, 'true'); }} className="absolute top-3 right-3 p-1 rounded-md hover:bg-[var(--hover)] text-[var(--muted)] transition-colors">
+      <button onClick={() => { setDismissed(true); localStorage.setItem(DISMISSED_KEY, 'true'); }} aria-label="Dismiss welcome banner" className="absolute top-3 right-3 p-1 rounded-md hover:bg-[var(--hover)] text-[var(--muted)] transition-colors">
         <X className="w-4 h-4" />
       </button>
       <h2 className="text-[16px] font-semibold mb-1">Welcome to Eco-Insight, <span className="text-brand">{name}</span></h2>

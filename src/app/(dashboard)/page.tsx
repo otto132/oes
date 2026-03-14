@@ -224,9 +224,9 @@ export default function HomePage() {
                 {scheduleOffset === 0 ? "Today\u2019s Schedule" : scheduleDate.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' })}
               </span>
               <div className="flex items-center gap-1">
-                <button onClick={() => setScheduleOffset(o => o - 1)} className="p-0.5 rounded hover:bg-[var(--hover)] transition-colors text-muted hover:text-[var(--text)]"><ChevronLeft className="w-3.5 h-3.5" /></button>
+                <button onClick={() => setScheduleOffset(o => o - 1)} aria-label="Previous day" className="p-0.5 rounded hover:bg-[var(--hover)] transition-colors text-muted hover:text-[var(--text)]"><ChevronLeft className="w-3.5 h-3.5" /></button>
                 {scheduleOffset !== 0 && <button onClick={() => setScheduleOffset(0)} className="text-[10px] text-brand hover:underline">Today</button>}
-                <button onClick={() => setScheduleOffset(o => o + 1)} className="p-0.5 rounded hover:bg-[var(--hover)] transition-colors text-muted hover:text-[var(--text)]"><ChevronRight className="w-3.5 h-3.5" /></button>
+                <button onClick={() => setScheduleOffset(o => o + 1)} aria-label="Next day" className="p-0.5 rounded hover:bg-[var(--hover)] transition-colors text-muted hover:text-[var(--text)]"><ChevronRight className="w-3.5 h-3.5" /></button>
               </div>
             </div>
             {(() => {

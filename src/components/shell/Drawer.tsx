@@ -16,7 +16,7 @@ export default function Drawer() {
             <div className="text-[14px] font-semibold text-[var(--text)]">{drawerContent?.title}</div>
             {drawerContent?.subtitle && <div className="text-[11px] text-sub mt-0.5">{drawerContent.subtitle}</div>}
           </div>
-          <button onClick={closeDrawer} className="w-7 h-7 rounded-md flex items-center justify-center text-muted hover:bg-[var(--hover)] hover:text-sub transition-colors">
+          <button onClick={closeDrawer} aria-label="Close drawer" className="w-7 h-7 rounded-md flex items-center justify-center text-muted hover:bg-[var(--hover)] hover:text-sub transition-colors">
             <X className="w-4 h-4" />
           </button>
         </div>
