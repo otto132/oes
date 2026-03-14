@@ -1,19 +1,25 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { Prisma, OppStage } from '@prisma/client';
 import { db } from '@/lib/db';
+import { scopedDb } from '@/lib/scoped-db';
 import { adaptOpportunity, adaptActivity, adaptContact } from '@/lib/adapters';
 import { withHandler } from '@/lib/api-handler';
 import { opportunityActionSchema } from '@/lib/schemas/opportunities';
-import { notFound } from '@/lib/api-errors';
+import { notFound, unauthorized } from '@/lib/api-errors';
 import { parsePagination, paginate } from '@/lib/schemas/pagination';
+import { auth } from '@/lib/auth';
 
 const PROB: Record<string, number> = { Identified: 5, Contacted: 10, Discovery: 20, Qualified: 35, SolutionFit: 50, Proposal: 65, Negotiation: 80, VerbalCommit: 90, ClosedWon: 100, ClosedLost: 0 };
 
 export async function GET(req: NextRequest) {
+  const session = await auth();
+  if (!session?.user?.id) return unauthorized();
+  const scoped = scopedDb(session.user.id, (session.user as any).role ?? 'VIEWER');
+
   const id = req.nextUrl.searchParams.get('id');
 
   if (id) {
-    const opp = await db.opportunity.findUnique({
+    const opp = await scoped.opportunity.findUnique({
       where: { id },
       include: { owner: true, account: { include: { contacts: true } } },
     });
@@ -37,12 +43,12 @@ export async function GET(req: NextRequest) {
   const where: Prisma.OpportunityWhereInput = { stage: { notIn: [OppStage.ClosedWon, OppStage.ClosedLost] } };
 
   // Aggregates across ALL records
-  const allOpps = await db.opportunity.findMany({ where, select: { amount: true, stage: true } });
+  const allOpps = await scoped.opportunity.findMany({ where, select: { amount: true, stage: true } });
   const total = allOpps.reduce((s, o) => s + o.amount, 0);
   const weighted = allOpps.reduce((s, o) => s + Math.round(o.amount * (PROB[o.stage] || 0) / 100), 0);
 
   // Then paginated query
-  const opps = await db.opportunity.findMany({
+  const opps = await scoped.opportunity.findMany({
     where, include: { owner: true, account: { select: { id: true, name: true } } },
     orderBy: { amount: 'desc' },
     take: pagination.limit + 1,

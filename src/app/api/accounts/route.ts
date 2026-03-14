@@ -1,22 +1,27 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { Prisma, AccountType } from '@prisma/client';
 import { db } from '@/lib/db';
+import { scopedDb } from '@/lib/scoped-db';
 import { adaptAccount, adaptOpportunity, adaptActivity, adaptTask, adaptGoal } from '@/lib/adapters';
 import { withHandler } from '@/lib/api-handler';
 import { createAccountSchema } from '@/lib/schemas/accounts';
-import { notFound, badRequest, conflict } from '@/lib/api-errors';
+import { notFound, badRequest, conflict, unauthorized } from '@/lib/api-errors';
 import { parsePagination, paginate } from '@/lib/schemas/pagination';
 import { auth } from '@/lib/auth';
 import { logAccess } from '@/lib/access-log';
 
 export async function GET(req: NextRequest) {
+  const session = await auth();
+  if (!session?.user?.id) return unauthorized();
+  const scoped = scopedDb(session.user.id, (session.user as any).role ?? 'VIEWER');
+
   const search = req.nextUrl.searchParams.get('q');
   const type = req.nextUrl.searchParams.get('type');
   const id = req.nextUrl.searchParams.get('id');
 
   // Single account detail
   if (id) {
-    const account = await db.account.findUnique({
+    const account = await scoped.account.findUnique({
       where: { id },
       include: {
         owner: true,
@@ -38,8 +43,7 @@ export async function GET(req: NextRequest) {
     });
     if (!account) return notFound('Account not found');
 
-    const session = await auth();
-    if (session?.user?.id) {
+    if (session.user.id) {
       logAccess({
         userId: session.user.id,
         entityType: 'Account',
@@ -89,13 +93,10 @@ export async function GET(req: NextRequest) {
 
   const ownerParam = req.nextUrl.searchParams.get('owner');
   if (ownerParam === 'me') {
-    const session = await auth();
-    if (session?.user?.id) {
-      where.ownerId = session.user.id;
-    }
+    where.ownerId = session.user.id;
   }
 
-  const accounts = await db.account.findMany({
+  const accounts = await scoped.account.findMany({
     where,
     include: { owner: true, contacts: true },
     orderBy: { scoreFit: 'desc' },
