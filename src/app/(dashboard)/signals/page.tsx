@@ -121,7 +121,7 @@ function SignalsPageInner() {
             Cancel
           </button>
           <button
-            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-[12px] font-medium bg-[var(--brand)] text-[#09090b] rounded-md hover:brightness-110 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-[12px] font-medium bg-brand text-[#09090b] rounded-md hover:brightness-110 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             disabled={convert.isPending}
             onClick={() => {
               if (!state.company.trim()) {
@@ -184,7 +184,7 @@ function SignalsPageInner() {
       footer: (
         <>
           <button className="px-3.5 py-1.5 text-[12.5px] text-[var(--sub)] bg-[var(--surface)] border border-[var(--border)] rounded-md hover:bg-[var(--hover)] transition-colors" onClick={closeDrawer}>Close</button>
-          <button className="px-3.5 py-1.5 text-[12.5px] font-medium bg-[var(--brand)] text-[#09090b] rounded-md hover:brightness-110 transition-colors" onClick={() => { closeDrawer(); openConvertDrawer(s); }}>Convert to Lead</button>
+          <button className="px-3.5 py-1.5 text-[12.5px] font-medium bg-brand text-[#09090b] rounded-md hover:brightness-110 transition-colors" onClick={() => { closeDrawer(); openConvertDrawer(s); }}>Convert to Lead</button>
         </>
       ),
     });
@@ -244,7 +244,7 @@ function SignalsPageInner() {
               {!converted && (
                 <div className="flex gap-1 flex-shrink-0 self-start mt-0.5">
                   <button
-                    className="px-2 py-1 text-[11px] font-medium rounded-md bg-[var(--brand)] text-[#09090b] hover:brightness-110 transition-colors"
+                    className="px-2 py-1 text-[11px] font-medium rounded-md bg-brand text-[#09090b] hover:brightness-110 transition-colors"
                     onClick={e => { e.stopPropagation(); openConvertDrawer(s); }}
                   >
                     → Lead

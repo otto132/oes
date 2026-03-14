@@ -362,7 +362,7 @@ export default function PipelinePage() {
                         }}
                         className={cn(
                           'stagger-item rounded-lg mb-1.5 bg-[var(--elevated)] border border-[var(--border)] cursor-grab hover:-translate-y-px hover:border-[var(--border-strong)] transition-all overflow-hidden relative',
-                          dragId === o.id && 'opacity-40 scale-[0.97] shadow-lg rotate-[1deg] ring-2 ring-brand/30',
+                          dragId === o.id && 'opacity-40 scale-[0.97] shadow-lg rotate-[1deg] ring-2 ring-brand/30 !cursor-grabbing',
                           isPending && 'opacity-60 animate-pulse',
                           failedInfo && 'border-l-2 border-l-red-500'
                         )}

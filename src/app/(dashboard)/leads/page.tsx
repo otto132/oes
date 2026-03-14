@@ -237,7 +237,7 @@ export default function LeadsPage() {
           </button>
           <button
             disabled={convertLead.isPending}
-            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-[12px] font-medium bg-[var(--brand)] text-[#09090b] rounded-md hover:brightness-110 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-[12px] font-medium bg-brand text-[#09090b] rounded-md hover:brightness-110 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             onClick={() => {
               if (!state.accountName.trim()) {
                 addToast({ type: 'error', message: 'Account name is required' });
@@ -339,7 +339,7 @@ export default function LeadsPage() {
                         <button
                           disabled={convertLead.isPending}
                           onClick={() => openConvertDrawer(l)}
-                          className="flex-1 px-2 py-1 text-[10px] font-medium rounded-md bg-[var(--brand)] text-[#09090b] hover:brightness-110 transition-colors disabled:opacity-50"
+                          className="flex-1 px-2 py-1 text-[10px] font-medium rounded-md bg-brand text-[#09090b] hover:brightness-110 transition-colors disabled:opacity-50"
                         >
                           Convert
                         </button>
@@ -350,17 +350,17 @@ export default function LeadsPage() {
                             onSuccess: (data: any) => addToast({ type: 'success', message: `Lead advanced to ${data?.data?.stage || 'next stage'}` }),
                             onError: (err: any) => addToast({ type: 'error', message: err.message }),
                           })}
-                          className="flex-1 px-2 py-1 text-[10px] font-medium rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] hover:bg-[var(--hover)] transition-colors disabled:opacity-50"
+                          className="inline-flex items-center justify-center gap-1 flex-1 px-2 py-1 text-[10px] font-medium rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] hover:bg-[var(--hover)] transition-colors disabled:opacity-50"
                         >
-                          Advance
+                          {advance.isPending && <Spinner className="h-3 w-3" />}Advance
                         </button>
                       )}
                       <button
                         disabled={disqualify.isPending}
                         onClick={() => setConfirmDisqualify(l.id)}
-                        className="px-2 py-1 text-[10px] text-danger rounded-md hover:bg-[var(--hover)] transition-colors disabled:opacity-50"
+                        className="inline-flex items-center gap-1 px-2 py-1 text-[10px] text-danger rounded-md hover:bg-[var(--hover)] transition-colors disabled:opacity-50"
                       >
-                        Disqualify
+                        {disqualify.isPending && <Spinner className="h-3 w-3" />}Disqualify
                       </button>
                     </div>
                   </div>
@@ -389,7 +389,7 @@ export default function LeadsPage() {
                 <button
                   disabled={convertLead.isPending}
                   onClick={() => openConvertDrawer(l)}
-                  className="flex-1 px-2 py-1 text-[10px] font-medium rounded-md bg-[var(--brand)] text-[#09090b] hover:brightness-110 transition-colors disabled:opacity-50"
+                  className="flex-1 px-2 py-1 text-[10px] font-medium rounded-md bg-brand text-[#09090b] hover:brightness-110 transition-colors disabled:opacity-50"
                 >
                   Convert
                 </button>
@@ -400,17 +400,17 @@ export default function LeadsPage() {
                     onSuccess: (data: any) => addToast({ type: 'success', message: `Lead advanced to ${data?.data?.stage || 'next stage'}` }),
                     onError: (err: any) => addToast({ type: 'error', message: err.message }),
                   })}
-                  className="flex-1 px-2 py-1 text-[10px] font-medium rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] hover:bg-[var(--hover)] transition-colors disabled:opacity-50"
+                  className="inline-flex items-center justify-center gap-1 flex-1 px-2 py-1 text-[10px] font-medium rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] hover:bg-[var(--hover)] transition-colors disabled:opacity-50"
                 >
-                  Advance
+                  {advance.isPending && <Spinner className="h-3 w-3" />}Advance
                 </button>
               )}
               <button
                 disabled={disqualify.isPending}
                 onClick={() => setConfirmDisqualify(l.id)}
-                className="px-2 py-1 text-[10px] text-danger rounded-md hover:bg-[var(--hover)] transition-colors disabled:opacity-50"
+                className="inline-flex items-center gap-1 px-2 py-1 text-[10px] text-danger rounded-md hover:bg-[var(--hover)] transition-colors disabled:opacity-50"
               >
-                Disqualify
+                {disqualify.isPending && <Spinner className="h-3 w-3" />}Disqualify
               </button>
             </div>
           </div>

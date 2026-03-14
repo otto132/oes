@@ -596,7 +596,7 @@ export default function AccountDetailPage() {
           </button>
           <button
             disabled={deleteContact.isPending}
-            className="px-3.5 py-1.5 text-[12px] font-medium bg-[#ef4444] text-white rounded-md hover:brightness-110 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-[12px] font-medium bg-[#ef4444] text-white rounded-md hover:brightness-110 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             onClick={() => {
               deleteContact.mutate(c.id, {
                 onSuccess: () => { addToast({ type: 'success', message: `Contact deleted: ${c.name}` }); closeDrawer(); },
@@ -604,7 +604,7 @@ export default function AccountDetailPage() {
               });
             }}
           >
-            Delete
+            {deleteContact.isPending && <Spinner className="h-3 w-3" />}Delete
           </button>
         </>
       ),

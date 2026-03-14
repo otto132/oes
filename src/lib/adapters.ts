@@ -417,10 +417,12 @@ export function adaptMeeting(m: {
   accountName: string | null;
   [k: string]: unknown;
 }): UIMeeting {
-  // Format DateTime to "HH:MM" for display
-  const hours = m.startTime.getUTCHours().toString().padStart(2, '0');
-  const mins = m.startTime.getUTCMinutes().toString().padStart(2, '0');
-  const startTime = `${hours}:${mins}`;
+  // Format DateTime in user's local timezone
+  const startTime = m.startTime.toLocaleTimeString(undefined, {
+    hour: 'numeric',
+    minute: '2-digit',
+    hour12: true,
+  });
 
   // Format duration (minutes) to display string
   let duration: string;

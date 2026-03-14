@@ -16,7 +16,6 @@ interface Store {
   drawerContent: { title: string; subtitle: string; body: React.ReactNode; footer: React.ReactNode } | null;
   paletteOpen: boolean;
   toasts: Toast[];
-  toggleTheme: () => void;
   openDrawer: (c: { title: string; subtitle: string; body: React.ReactNode; footer: React.ReactNode }) => void;
   closeDrawer: () => void;
   openPalette: () => void;
@@ -40,14 +39,6 @@ export const useStore = create<Store>((set, get) => ({
   drawerContent: null,
   paletteOpen: false,
   toasts: [],
-  toggleTheme: () => set(s => {
-    const next = s.theme === 'dark' ? 'light' : 'dark';
-    if (typeof document !== 'undefined') {
-      document.documentElement.classList.toggle('dark', next === 'dark');
-      try { localStorage.setItem('eco-theme', next); } catch {}
-    }
-    return { theme: next };
-  }),
   openDrawer: (content) => set({ drawerOpen: true, drawerContent: content }),
   closeDrawer: () => set({ drawerOpen: false }),
   openPalette: () => set({ paletteOpen: true }),

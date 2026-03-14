@@ -127,7 +127,7 @@ export default function InboxPage() {
               }}
             >{createTaskFromEmail.isPending && <Spinner className="h-3 w-3" />}Create Task</button>
             <button
-              className="px-2.5 py-1.5 text-[11.5px] text-sub bg-[var(--surface)] border border-[var(--border)] rounded-md hover:bg-[var(--hover)] transition-colors disabled:opacity-50"
+              className="inline-flex items-center gap-1 px-2.5 py-1.5 text-[11.5px] text-sub bg-[var(--surface)] border border-[var(--border)] rounded-md hover:bg-[var(--hover)] transition-colors disabled:opacity-50"
               disabled={archiveEmail.isPending}
               onClick={(ev) => {
                 ev.stopPropagation();
@@ -139,7 +139,7 @@ export default function InboxPage() {
                   onError: () => addToast({ type: 'error', message: 'Failed to archive email' }),
                 });
               }}
-            >Archive</button>
+            >{archiveEmail.isPending && <Spinner className="h-3 w-3" />}Archive</button>
             {e.accountId && <button className="px-2.5 py-1.5 text-[11.5px] text-sub bg-[var(--surface)] border border-[var(--border)] rounded-md hover:bg-[var(--hover)] transition-colors col-span-2" onClick={() => { closeDrawer(); router.push(`/accounts/${e.accountId}`); }}>View Account</button>}
           </div>
         </div>

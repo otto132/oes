@@ -269,9 +269,9 @@ function TeamTab({ isAdmin }: { isAdmin: boolean }) {
                       onError: (err: any) => addToast({ type: 'error', message: err.message }),
                     })}
                     disabled={revokeInvite.isPending}
-                    className="px-2 py-1 text-[10px] font-medium text-red-400 border border-red-500/30 rounded-md hover:bg-red-500/10 transition-colors disabled:opacity-50"
+                    className="inline-flex items-center gap-1 px-2 py-1 text-[10px] font-medium text-red-400 border border-red-500/30 rounded-md hover:bg-red-500/10 transition-colors disabled:opacity-50"
                   >
-                    Revoke
+                    {revokeInvite.isPending && <Spinner className="h-3 w-3" />}Revoke
                   </button>
                 </div>
               );
@@ -511,7 +511,8 @@ function AgentsTab() {
         <>
           <button className="px-3.5 py-1.5 text-sm text-sub hover:bg-[var(--hover)] rounded-md transition-colors" onClick={closeDrawer}>Close</button>
           <button
-            className="px-3.5 py-1.5 text-sm font-medium bg-[var(--surface)] text-[var(--text)] border border-[var(--border)] rounded-md hover:bg-[var(--hover)] transition-colors"
+            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-sm font-medium bg-[var(--surface)] text-[var(--text)] border border-[var(--border)] rounded-md hover:bg-[var(--hover)] transition-colors disabled:opacity-50"
+            disabled={patchAgent.isPending}
             onClick={() => {
               patchAgent.mutate(
                 { name: agent.name, data: { status: isPaused ? 'active' : 'paused' } },
@@ -519,7 +520,7 @@ function AgentsTab() {
               );
             }}
           >
-            {isPaused ? 'Resume Agent' : 'Pause Agent'}
+            {patchAgent.isPending && <Spinner className="h-3 w-3" />}{isPaused ? 'Resume Agent' : 'Pause Agent'}
           </button>
         </>
       ),

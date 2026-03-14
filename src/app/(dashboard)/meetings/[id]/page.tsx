@@ -116,10 +116,11 @@ export default function MeetingDetailPage({
             </Badge>
             {meeting.prepStatus !== 'ready' && (
               <button
-                className="inline-flex items-center gap-1 text-[11px] font-medium text-brand hover:underline"
+                className="inline-flex items-center gap-1 text-[11px] font-medium text-brand hover:underline disabled:opacity-50"
                 onClick={handleMarkReady}
+                disabled={updateMeeting.isPending}
               >
-                <CheckCircle2 size={14} /> Mark Ready
+                {updateMeeting.isPending ? <Spinner className="h-3 w-3" /> : <CheckCircle2 size={14} />} Mark Ready
               </button>
             )}
           </div>

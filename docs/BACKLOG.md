@@ -61,7 +61,7 @@ Pre-beta blockers and embarrassing bugs. Complete before any other work.
 | **Owner** | Frontend |
 | **Required before beta** | Yes |
 | **Value type** | Trust, Adoption |
-| **Status** | Open |
+| **Status** | Done (2026-03-14: confirmed vars already defined in globals.css) |
 
 ---
 
@@ -79,7 +79,7 @@ Pre-beta blockers and embarrassing bugs. Complete before any other work.
 | **Owner** | Backend |
 | **Required before beta** | Yes |
 | **Value type** | Trust, Speed |
-| **Status** | Open |
+| **Status** | Done (2026-03-14: confirmed route already uses dynamic new Date()) |
 
 ---
 
@@ -97,7 +97,7 @@ Pre-beta blockers and embarrassing bugs. Complete before any other work.
 | **Owner** | Frontend |
 | **Required before beta** | Yes |
 | **Value type** | Trust, Adoption |
-| **Status** | Open |
+| **Status** | Done (2026-03-14: confirmed already wired to useStore.openPalette()) |
 
 ---
 
@@ -115,7 +115,7 @@ Pre-beta blockers and embarrassing bugs. Complete before any other work.
 | **Owner** | Frontend |
 | **Required before beta** | Yes |
 | **Value type** | Speed, Trust |
-| **Status** | Open |
+| **Status** | Done (2026-03-14: confirmed pipeline uses router.push, no window.location.href) |
 
 ---
 
@@ -151,7 +151,7 @@ Pre-beta blockers and embarrassing bugs. Complete before any other work.
 | **Owner** | Frontend |
 | **Required before beta** | Yes |
 | **Value type** | Trust |
-| **Status** | Open |
+| **Status** | Done (2026-03-14: removed orphaned toggleTheme from store, no toggle UI existed) |
 
 ---
 
@@ -223,7 +223,7 @@ Pre-beta blockers and embarrassing bugs. Complete before any other work.
 | **Owner** | Frontend |
 | **Required before beta** | Yes |
 | **Value type** | Trust |
-| **Status** | Open |
+| **Status** | Done (2026-03-14: confirmed no fake shortcut hints in Queue page) |
 
 ---
 
@@ -241,7 +241,7 @@ Pre-beta blockers and embarrassing bugs. Complete before any other work.
 | **Owner** | Frontend |
 | **Required before beta** | No |
 | **Value type** | Trust, Speed |
-| **Status** | Open |
+| **Status** | Done (2026-03-14: added Spinner to 8 mutation buttons across accounts, inbox, leads, meetings, settings) |
 
 ---
 
@@ -277,7 +277,7 @@ Pre-beta blockers and embarrassing bugs. Complete before any other work.
 | **Owner** | Frontend |
 | **Required before beta** | Yes |
 | **Value type** | Trust, Risk reduction |
-| **Status** | Open |
+| **Status** | Done (2026-03-14: replaced getUTCHours with toLocaleTimeString for local timezone) |
 
 ---
 
@@ -427,7 +427,7 @@ High-leverage builds. Tackle after DO NOW is complete.
 | **Owner** | Frontend |
 | **Required before beta** | No |
 | **Value type** | Speed (developer velocity) |
-| **Status** | Open |
+| **Status** | Done (2026-03-14: replaced 6 bg-[var(--brand)] instances with bg-brand in signals + leads) |
 
 ---
 
@@ -481,7 +481,7 @@ High-leverage builds. Tackle after DO NOW is complete.
 | **Owner** | Frontend |
 | **Required before beta** | No (depends on #14) |
 | **Value type** | Trust |
-| **Status** | Open |
+| **Status** | Done (2026-03-14: added !cursor-grabbing during drag; cursor-grab + drop-zone already existed) |
 
 ---
 
