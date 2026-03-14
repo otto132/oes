@@ -202,6 +202,8 @@ model User {
   sentInvitations   Invitation[]       @relation("SentInvitations")
   integrationTokens IntegrationToken[]
   syncLogs          SyncLog[]
+  auditLogs         AuditLog[]         @relation("AuditLogUser")
+  accessLogs        AccessLog[]        @relation("AccessLogUser")
 
   @@map("users")
 }
@@ -584,6 +586,7 @@ model IntegrationToken {
   user         User     @relation(fields: [userId], references: [id])
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
+  tokenVersion Int @default(1)
 
   @@unique([provider, userId])
   @@map("integration_tokens")
@@ -603,6 +606,7 @@ model Meeting {
   attendeeEmails String[]          // email addresses for re-matching
   externalId     String?  @unique  // Microsoft Graph event ID
   prepStatus     MeetingPrepStatus @default(draft)
+  prepNotes  String? @db.Text
   createdAt      DateTime          @default(now())
 
   accountId   String?
@@ -705,4 +709,59 @@ model Invitation {
   @@index([email, status])
   @@index([token])
   @@map("invitations")
+}
+
+// ═══════════════════════════════════════════════════════════════
+// AUDIT LOG
+// ═══════════════════════════════════════════════════════════════
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  userId     String?
+  user       User?    @relation("AuditLogUser", fields: [userId], references: [id])
+  action     String
+  entityType String
+  entityId   String
+  before     Json?
+  after      Json?
+  metadata   Json?
+  createdAt  DateTime @default(now())
+
+  @@index([createdAt(sort: Desc)])
+  @@index([entityType, entityId])
+  @@index([userId, createdAt(sort: Desc)])
+  @@map("audit_logs")
+}
+
+// ═══════════════════════════════════════════════════════════════
+// ACCESS LOG
+// ═══════════════════════════════════════════════════════════════
+
+model AccessLog {
+  id         String   @id @default(cuid())
+  userId     String
+  user       User     @relation("AccessLogUser", fields: [userId], references: [id])
+  entityType String
+  entityId   String
+  createdAt  DateTime @default(now())
+
+  @@index([createdAt(sort: Desc)])
+  @@index([userId, createdAt(sort: Desc)])
+  @@map("access_logs")
+}
+
+// ═══════════════════════════════════════════════════════════════
+// DATA RETENTION
+// ═══════════════════════════════════════════════════════════════
+
+model DataRetentionRun {
+  id               String    @id @default(cuid())
+  archivedEmails   Int       @default(0)
+  dismissedSignals Int       @default(0)
+  syncLogs         Int       @default(0)
+  accessLogs       Int       @default(0)
+  startedAt        DateTime  @default(now())
+  completedAt      DateTime?
+
+  @@map("data_retention_runs")
 }
