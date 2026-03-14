@@ -8,7 +8,6 @@ import {
   OutreachDraftSchema,
   WinLossAnalysisSchema,
   PersonalProfileSchema,
-  ApproachBriefSchema,
 } from '../schemas';
 
 describe('Agent Zod Schemas', () => {

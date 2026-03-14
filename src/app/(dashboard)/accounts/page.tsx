@@ -9,7 +9,6 @@ import type { Account } from '@/lib/types';
 import { fmt, fRelative, cn } from '@/lib/utils';
 import { ScorePill, FIUACBars, Badge, Avatar, Skeleton, SkeletonCard, SkeletonText, ErrorState } from '@/components/ui';
 import { usePendingMutations, useFailedMutations } from '@/hooks/use-mutation-state';
-import { RotateCw } from 'lucide-react';
 
 function AccountsSkeleton() {
   return (
