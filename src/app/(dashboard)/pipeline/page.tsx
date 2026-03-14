@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useOpportunitiesQuery, useCreateOpportunity, useMoveStage } from '@/lib/queries/opportunities';
 import { Avatar, HealthBar, StageBadge, EmptyState, Skeleton, SkeletonCard, ErrorState } from '@/components/ui';
 import { fmt, fDate, isOverdue, cn, displayLabel } from '@/lib/utils';
-import { KANBAN_STAGES, STAGE_PROB, healthAvg } from '@/lib/types';
+import { KANBAN_STAGES, STAGE_COLOR, STAGE_PROB, healthAvg } from '@/lib/types';
 import { useStore } from '@/lib/store';
 import { api } from '@/lib/api-client';
 import type { Opportunity } from '@/lib/types';
@@ -333,7 +333,11 @@ export default function PipelinePage() {
                     )}>
                       {isOver ? 'Drop here' : 'No items'}
                     </div>
-                  ) : cards.map(o => (
+                  ) : cards.map(o => {
+                    const stageIdx = KANBAN_STAGES.indexOf(o.stage);
+                    const progress = ((stageIdx + 1) / KANBAN_STAGES.length) * 100;
+                    const stageColor = STAGE_COLOR[o.stage] || '#3ecf8e';
+                    return (
                     <Link key={o.id} href={`/pipeline/${o.id}`} draggable={false}>
                       <div
                         draggable
@@ -348,22 +352,31 @@ export default function PipelinePage() {
                           dragCounter.current = {};
                         }}
                         className={cn(
-                          'rounded-lg p-3 mb-1.5 bg-[var(--elevated)] border border-[var(--border)] cursor-grab hover:-translate-y-px hover:border-[var(--border-strong)] transition-all',
+                          'stagger-item rounded-lg mb-1.5 bg-[var(--elevated)] border border-[var(--border)] cursor-grab hover:-translate-y-px hover:border-[var(--border-strong)] transition-all overflow-hidden',
                           dragId === o.id && 'opacity-40 scale-[0.97] shadow-lg rotate-[1deg]'
                         )}
                         style={{ borderLeft: `2px solid ${riskHex(o.health)}` }}
                       >
-                        <div className="text-[10px] text-[var(--muted)] mb-0.5">{o.accountName}</div>
-                        <div className="text-[11.5px] font-medium leading-tight mb-2 text-[var(--text)]">{o.name}</div>
-                        <div className="flex items-center justify-between mb-1">
-                          <span className="font-mono font-semibold text-[11px] text-[var(--text)]">{fmt(o.amount)}</span>
-                          <HealthBar health={o.health} />
+                        {/* Stage progress bar */}
+                        <div className="h-[2px] bg-[var(--surface)]">
+                          <div className="h-full rounded-r-full transition-all" style={{ width: `${progress}%`, background: stageColor }} />
                         </div>
-                        <Avatar initials={o.owner.initials} color={o.owner.color} size="xs" />
-                        {o.nextAction && <div className="text-[9.5px] text-[var(--muted)] mt-1.5 leading-tight line-clamp-2">→ {o.nextAction}</div>}
+                        <div className="p-3">
+                          <div className="text-[10px] text-[var(--muted)] mb-0.5">{o.accountName}</div>
+                          <div className="text-[11.5px] font-medium leading-tight mb-2 text-[var(--text)]">{o.name}</div>
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="font-mono font-semibold text-[11px] text-[var(--text)]">{fmt(o.amount)}</span>
+                            <HealthBar health={o.health} />
+                          </div>
+                          <div className="flex items-center justify-between">
+                            <Avatar initials={o.owner.initials} color={o.owner.color} size="xs" />
+                            <span className="text-[9px] text-[var(--muted)] bg-[var(--surface)] px-1.5 py-0.5 rounded">{STAGE_PROB[o.stage]}%</span>
+                          </div>
+                          {o.nextAction && <div className="text-[9.5px] text-[var(--muted)] mt-1.5 leading-tight line-clamp-2">→ {o.nextAction}</div>}
+                        </div>
                       </div>
                     </Link>
-                  ))}
+                  );})}
                 </div>
               </div>
             );

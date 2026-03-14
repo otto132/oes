@@ -13,8 +13,9 @@ import { cn } from '@/lib/utils';
 interface PaletteItem {
   id: string;
   label: string;
+  subtitle?: string;
   icon: React.ElementType;
-  group: 'navigation' | 'actions' | 'recent';
+  group: 'navigation' | 'actions' | 'recent' | 'search';
   keywords?: string;
   onSelect: () => void;
 }
@@ -59,11 +60,12 @@ const iconByHref: Record<string, React.ElementType> = Object.fromEntries(
 
 /* ── Group labels ── */
 const GROUP_LABELS: Record<string, string> = {
+  search: 'Search Results',
   recent: 'Recent',
   navigation: 'Navigation',
   actions: 'Quick Actions',
 };
-const GROUP_ORDER = ['recent', 'navigation', 'actions'] as const;
+const GROUP_ORDER = ['search', 'recent', 'navigation', 'actions'] as const;
 
 /* ── Component ── */
 export default function CommandPalette() {
@@ -73,6 +75,38 @@ export default function CommandPalette() {
   const listRef = useRef<HTMLDivElement>(null);
   const [query, setQuery] = useState('');
   const [activeIdx, setActiveIdx] = useState(0);
+  const [searchResults, setSearchResults] = useState<PaletteItem[]>([]);
+  const abortRef = useRef<AbortController | null>(null);
+
+  /* Debounced search */
+  useEffect(() => {
+    if (query.trim().length < 2) { setSearchResults([]); return; }
+    const timer = setTimeout(async () => {
+      abortRef.current?.abort();
+      const ctrl = new AbortController();
+      abortRef.current = ctrl;
+      try {
+        const res = await fetch(`/api/search?q=${encodeURIComponent(query.trim())}`, { signal: ctrl.signal });
+        const json = await res.json();
+        const d = json.data || {};
+        const results: PaletteItem[] = [];
+        for (const acc of d.accounts || []) {
+          results.push({ id: `s-acc-${acc.id}`, label: acc.name, subtitle: acc.type, icon: Building2, group: 'search', onSelect: () => { router.push(`/accounts/${acc.id}`); closePalette(); } });
+        }
+        for (const opp of d.opportunities || []) {
+          results.push({ id: `s-opp-${opp.id}`, label: opp.name, subtitle: opp.account?.name, icon: TrendingUp, group: 'search', onSelect: () => { router.push(`/pipeline/${opp.id}`); closePalette(); } });
+        }
+        for (const lead of d.leads || []) {
+          results.push({ id: `s-lead-${lead.id}`, label: lead.company, subtitle: lead.stage, icon: Target, group: 'search', onSelect: () => { router.push('/leads'); closePalette(); } });
+        }
+        for (const sig of d.signals || []) {
+          results.push({ id: `s-sig-${sig.id}`, label: sig.title, subtitle: sig.type, icon: Signal, group: 'search', onSelect: () => { router.push('/signals'); closePalette(); } });
+        }
+        if (!ctrl.signal.aborted) setSearchResults(results);
+      } catch { /* aborted or network error */ }
+    }, 200);
+    return () => { clearTimeout(timer); abortRef.current?.abort(); };
+  }, [query, router, closePalette]);
 
   /* Build item list */
   const items = useMemo<PaletteItem[]>(() => {
@@ -112,8 +146,8 @@ export default function CommandPalette() {
       onSelect: () => { router.push(r.href); closePalette(); },
     }));
 
-    return [...recent, ...nav, ...actions];
-  }, [router, closePalette]);
+    return [...searchResults, ...recent, ...nav, ...actions];
+  }, [router, closePalette, searchResults]);
 
   /* Filter */
   const filtered = useMemo(() => {
@@ -146,6 +180,7 @@ export default function CommandPalette() {
     if (paletteOpen) {
       setQuery('');
       setActiveIdx(0);
+      setSearchResults([]);
       requestAnimationFrame(() => inputRef.current?.focus());
     }
   }, [paletteOpen]);
@@ -217,7 +252,7 @@ export default function CommandPalette() {
             type="text"
             value={query}
             onChange={e => { setQuery(e.target.value); setActiveIdx(0); }}
-            placeholder="Search pages, actions..."
+            placeholder="Search accounts, deals, leads, pages..."
             className="flex-1 bg-transparent py-3 text-[14px] text-[var(--text)] placeholder:text-muted outline-none"
           />
           <kbd className="hidden sm:inline-flex items-center gap-0.5 text-[10px] font-medium text-muted bg-[var(--surface)] border border-[var(--border)] px-1.5 py-[2px] rounded">
@@ -253,6 +288,7 @@ export default function CommandPalette() {
                   >
                     <item.icon className={cn('w-4 h-4 shrink-0', isActive ? 'text-brand' : 'text-muted')} />
                     <span className="flex-1 truncate">{item.label}</span>
+                    {item.subtitle && <span className="text-[10px] text-muted shrink-0">{item.subtitle}</span>}
                     {isActive && <ArrowRight className="w-3.5 h-3.5 text-muted shrink-0" />}
                   </button>
                 );

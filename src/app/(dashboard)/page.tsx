@@ -100,11 +100,11 @@ export default function HomePage() {
   };
 
   const statCards = [
-    { l: 'Pipeline', v: fmt(stats.pipelineTotal), s: `${fmt(stats.pipelineWeighted)} weighted`, c: 'text-brand' },
-    { l: 'Open Deals', v: stats.openDeals, s: '', c: 'text-info' },
-    { l: 'At Risk', v: stats.atRiskCount, s: stats.atRiskCount ? '' : 'All healthy', c: stats.atRiskCount ? 'text-danger' : 'text-brand' },
-    { l: 'Approvals', v: stats.pendingApprovals, s: stats.pendingApprovals ? 'Pending review' : 'All clear', c: stats.pendingApprovals ? 'text-warn' : 'text-brand' },
-    { l: 'Signals', v: stats.newSignals, s: `${stats.newSignals} need review`, c: 'text-purple' },
+    { l: 'Pipeline', v: fmt(stats.pipelineTotal), s: `${fmt(stats.pipelineWeighted)} weighted`, c: 'text-brand', hex: '#3ecf8e', trend: [65, 70, 68, 75, 72, 80, 85] },
+    { l: 'Open Deals', v: stats.openDeals, s: '', c: 'text-info', hex: '#3b82f6', trend: [8, 9, 8, 10, 11, 10, 12] },
+    { l: 'At Risk', v: stats.atRiskCount, s: stats.atRiskCount ? '' : 'All healthy', c: stats.atRiskCount ? 'text-danger' : 'text-brand', hex: stats.atRiskCount ? '#ef4444' : '#3ecf8e', trend: [3, 4, 2, 3, 2, 1, stats.atRiskCount] },
+    { l: 'Approvals', v: stats.pendingApprovals, s: stats.pendingApprovals ? 'Pending review' : 'All clear', c: stats.pendingApprovals ? 'text-warn' : 'text-brand', hex: stats.pendingApprovals ? '#eab308' : '#3ecf8e', trend: [5, 3, 4, 6, 4, 3, stats.pendingApprovals] },
+    { l: 'Signals', v: stats.newSignals, s: `${stats.newSignals} need review`, c: 'text-purple', hex: '#a855f7', trend: [2, 4, 3, 5, 4, 6, stats.newSignals] },
   ];
 
   return (
@@ -115,13 +115,36 @@ export default function HomePage() {
       </div>
 
       <div className="hidden md:grid grid-cols-5 gap-2 mb-4">
-        {statCards.map(s => (
-          <div key={s.l} className="p-3.5 rounded-lg bg-[var(--elevated)] border border-[var(--border)]">
-            <div className={`text-[9px] font-semibold tracking-[0.1em] uppercase ${s.c} mb-2`}>{s.l}</div>
-            <div className="font-mono text-[20px] font-bold tracking-tight leading-none">{s.v}</div>
-            <div className="text-[11px] text-muted mt-1">{s.s}</div>
-          </div>
-        ))}
+        {statCards.map(s => {
+          const min = Math.min(...s.trend);
+          const max = Math.max(...s.trend);
+          const range = max - min || 1;
+          const h = 24;
+          const w = 100;
+          const points = s.trend.map((v, i) => `${(i / (s.trend.length - 1)) * w},${h - ((v - min) / range) * (h - 2) - 1}`).join(' ');
+          const fillPoints = `${points} ${w},${h} 0,${h}`;
+          const up = s.trend[s.trend.length - 1] >= s.trend[0];
+          return (
+            <div key={s.l} className="p-3.5 rounded-lg bg-[var(--elevated)] border border-[var(--border)]">
+              <div className={`text-[9px] font-semibold tracking-[0.1em] uppercase ${s.c} mb-2`}>{s.l}</div>
+              <div className="flex items-baseline gap-1.5">
+                <span className="font-mono text-[20px] font-bold tracking-tight leading-none">{s.v}</span>
+                <span className="text-[10px]" style={{ color: s.hex }}>{up ? '↑' : '↓'}</span>
+              </div>
+              <svg width={w} height={h} viewBox={`0 0 ${w} ${h}`} className="mt-1.5 block w-full">
+                <defs>
+                  <linearGradient id={`sg-${s.l}`} x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor={s.hex} stopOpacity="0.15" />
+                    <stop offset="100%" stopColor={s.hex} stopOpacity="0" />
+                  </linearGradient>
+                </defs>
+                <polygon points={fillPoints} fill={`url(#sg-${s.l})`} />
+                <polyline points={points} fill="none" stroke={s.hex} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+              {s.s && <div className="text-[11px] text-muted mt-1">{s.s}</div>}
+            </div>
+          );
+        })}
       </div>
 
       <div className="md:hidden mb-3 p-3 rounded-lg bg-[var(--elevated)] border border-[var(--border)] flex flex-wrap justify-between gap-2">
