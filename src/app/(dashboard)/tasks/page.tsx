@@ -410,6 +410,7 @@ function TasksPageInner() {
       notes: t.notes ?? '',
       assigneeIds: t.assignees?.map((a: any) => a.id) ?? [],
       reviewerId: t.reviewer?.id ?? null as string | null,
+      subtasks: (t.subtasks || []).map(s => ({ ...s })),
     };
 
     openDrawer({
@@ -459,6 +460,42 @@ function TasksPageInner() {
               className="px-2.5 py-1.5 text-[12px] rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] placeholder:text-[var(--muted)] focus:outline-none focus:border-brand/40 resize-y"
             />
           </label>
+          <div className="flex flex-col gap-1">
+            <span className="text-[10px] font-semibold uppercase tracking-wide text-muted">Subtasks</span>
+            {state.subtasks.map((sub: any, i: number) => (
+              <div key={sub.id || i} className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-[var(--surface)] border border-[var(--border)]">
+                <input
+                  type="checkbox"
+                  checked={sub.done}
+                  onChange={e => { state.subtasks[i].done = e.target.checked; }}
+                  className="w-3.5 h-3.5"
+                />
+                <input
+                  defaultValue={sub.title}
+                  onChange={e => { state.subtasks[i].title = e.target.value; }}
+                  className="flex-1 text-[11px] bg-transparent focus:outline-none"
+                />
+                <div className="flex items-center gap-0.5">
+                  {i > 0 && <button className="text-[10px] text-muted hover:text-[var(--text)]" onClick={() => { const s = state.subtasks.splice(i, 1)[0]; state.subtasks.splice(i - 1, 0, s); state.subtasks.forEach((s: any, idx: number) => s.position = idx); openEditTaskDrawer({ ...t, subtasks: state.subtasks } as any); }}>↑</button>}
+                  {i < state.subtasks.length - 1 && <button className="text-[10px] text-muted hover:text-[var(--text)]" onClick={() => { const s = state.subtasks.splice(i, 1)[0]; state.subtasks.splice(i + 1, 0, s); state.subtasks.forEach((s: any, idx: number) => s.position = idx); openEditTaskDrawer({ ...t, subtasks: state.subtasks } as any); }}>↓</button>}
+                  <button className="text-[10px] text-muted hover:text-danger" onClick={() => { state.subtasks.splice(i, 1); state.subtasks.forEach((s: any, idx: number) => s.position = idx); openEditTaskDrawer({ ...t, subtasks: state.subtasks } as any); }}>✕</button>
+                </div>
+              </div>
+            ))}
+            {state.subtasks.length < 20 && (
+              <input
+                placeholder="Add subtask... (Enter)"
+                className="px-2.5 py-1.5 text-[11px] rounded-md bg-[var(--surface)] border border-dashed border-[var(--border)] text-[var(--text)] placeholder:text-muted focus:outline-none focus:border-brand/40"
+                onKeyDown={e => {
+                  if (e.key === 'Enter' && e.currentTarget.value.trim()) {
+                    state.subtasks.push({ title: e.currentTarget.value.trim(), done: false, position: state.subtasks.length });
+                    e.currentTarget.value = '';
+                    openEditTaskDrawer({ ...t, subtasks: state.subtasks } as any);
+                  }
+                }}
+              />
+            )}
+          </div>
           <div className="flex flex-col gap-1">
             <span className="text-[10px] font-semibold uppercase tracking-wide text-muted">Assignees</span>
             <div className="flex items-center gap-1 flex-wrap">
@@ -526,6 +563,12 @@ function TasksPageInner() {
                     notes: state.notes,
                     assigneeIds: state.assigneeIds,
                     reviewerId: state.reviewerId,
+                    subtasks: state.subtasks.map((s: any, i: number) => ({
+                      ...(s.id && !s.id.startsWith('temp-') ? { id: s.id } : {}),
+                      title: s.title,
+                      done: s.done,
+                      position: i,
+                    })),
                   },
                 },
                 {
@@ -584,6 +627,19 @@ function TasksPageInner() {
                   </div>
                 ))}</div>
               )}
+            </div>
+          )}
+          {(t.subtasks || []).length > 0 && (
+            <div>
+              <div className="text-[9px] font-semibold tracking-wide uppercase text-muted mb-1.5">
+                Subtasks <span className="text-muted font-mono">({(t.subtasks || []).filter(s => s.done).length}/{(t.subtasks || []).length})</span>
+              </div>
+              {(t.subtasks || []).map(sub => (
+                <div key={sub.id} className="flex items-center gap-1.5 py-0.5 text-[11px]">
+                  <span className={sub.done ? 'text-brand' : 'text-muted'}>{sub.done ? '✓' : '○'}</span>
+                  <span className={sub.done ? 'line-through text-muted' : ''}>{sub.title}</span>
+                </div>
+              ))}
             </div>
           )}
           <div>
@@ -727,6 +783,9 @@ function TasksPageInner() {
           </div>
         </div>
         <Badge variant={t.priority === 'High' ? 'err' : t.priority === 'Low' ? 'neutral' : 'warn'} className="!text-[9px]">{t.priority}</Badge>
+        {(t.subtasksTotal ?? 0) > 0 && (
+          <span className="text-[9px] text-muted font-mono">{t.subtasksDone}/{t.subtasksTotal}</span>
+        )}
         {!done && t.dueDate && (() => {
           const urgency = dueDateLabel(t.dueDate);
           return urgency ? (
