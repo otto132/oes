@@ -23,6 +23,7 @@ const sections = [
     { href: '/tasks', label: 'Tasks', icon: CheckSquare, badgeKey: 'tasks' },
   ]},
   { label: 'System', items: [
+    { href: '/admin', label: 'Admin', icon: Shield, adminOnly: true },
     { href: '/settings', label: 'Settings', icon: Settings },
   ]},
 ];
@@ -77,7 +78,9 @@ export default function Sidebar() {
         {sections.map(sec => (
           <div key={sec.label} className="py-1.5">
             <div className="px-2.5 pb-1 text-3xs font-semibold tracking-[0.08em] uppercase text-muted">{sec.label}</div>
-            {sec.items.map(item => {
+            {sec.items
+              .filter(item => !('adminOnly' in item && item.adminOnly) || session?.user?.role === 'ADMIN')
+              .map(item => {
               const active = isActive(item.href);
               const badge = item.badgeKey ? badgeCounts[item.badgeKey] : 0;
               return (
