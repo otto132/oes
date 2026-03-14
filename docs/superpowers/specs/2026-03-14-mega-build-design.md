@@ -9,7 +9,7 @@ Five-phase build that transforms eco-insight from a demo-quality app into a poli
 
 ## Phase 1: Type Unification
 
-**Goal:** Rewrite frontend types to match Prisma naming exactly, eliminating the adapter translation layer.
+**Goal:** Rewrite frontend types to match Prisma naming exactly, simplifying the adapter layer.
 
 ### Type Renames
 
@@ -19,9 +19,9 @@ Five-phase build that transforms eco-insight from a demo-quality app into a poli
 
 **DealHealth:** `eng` → `healthEngagement`, `stake` → `healthStakeholders`, `comp` → `healthCompetitive`, `time` → `healthTimeline`
 
-**Signal:** `src` → `source`, `srcUrl` → `sourceUrl`, `at` → `detectedAt`, `sum` → `summary`, `rel` → `relevance`, `conf` → `confidence`, `why` → `reasoning`
+**Signal:** `src` → `source`, `srcUrl` → `sourceUrl`, `at` → `detectedAt`, `sum` → `summary`, `rel` → `relevance`, `conf` → `confidence` (change type from `string` to `number`), `why` → `reasoning`
 
-**Lead:** `src` → `source`, `fit` → `moduleFit`, `conf` → `confidence`
+**Lead:** `src` → `source`, `fit` → `moduleFit`, `conf` → `confidence` (change type from `string` to `number`)
 
 **Account:** `cc` → `countryCode`, `pipe` → `pipelineValue`, `lastAct` → `lastActivityAt`, `fit` → `moduleFit`, `aiConf` → `aiConfidence`
 
@@ -35,11 +35,11 @@ Five-phase build that transforms eco-insight from a demo-quality app into a poli
 
 **Goal:** `accName` → `accountName`, `accId` → `accountId`
 
-**Activity:** `accId` → `accountId`, `accName` → `accountName`, `sum` → `summary`, `who` → `author`, `src` → `source`
+**Activity:** `accId` → `accountId`, `accName` → `accountName`, `sum` → `summary`, `who` → `author`, `src` → `source`, `date` → `createdAt` (maps from Prisma `createdAt`)
 
-**Email:** `subj` → `subject`, `prev` → `preview`, `dt` → `receivedAt`, `cls` → `classification`, `clsConf` → `classificationConf`, `acc` → `accountName`, `accId` → `accountId`
+**Email:** `subj` → `subject`, `from` → `fromEmail`, `prev` → `preview`, `dt` → `receivedAt`, `cls` → `classification`, `clsConf` → `classificationConf`, `acc` → `accountName`, `accId` → `accountId`, `linked` → `isLinked`, `unread` → `isUnread`, `archived` → `isArchived` (optional), `agent` → `classifierAgent`
 
-**Meeting:** `dur` → `duration`, `acc` → `accountName`, `accId` → `accountId`, `who` → `attendees`
+**Meeting:** `dur` → `duration`, `acc` → `accountName`, `accId` → `accountId`, `who` → `attendees`, `prep` → `prepStatus`, `time` → `startTime` (derived: adapter formats `Date` to `HH:MM` string), `date` remains (adapter converts `Date` to ISO string)
 
 ### Enum Renames
 
@@ -49,23 +49,37 @@ Five-phase build that transforms eco-insight from a demo-quality app into a poli
 
 **TaskStatus:** `'In Progress'` → `'InProgress'`, `'In Review'` → `'InReview'`
 
+### Constants Updates
+
+`STAGES`, `KANBAN_STAGES`, `STAGE_PROB`, `STAGE_COLOR`, and `LEAD_STAGES` arrays/records must update their keys to match new PascalCase enum values. For example:
+- `STAGE_PROB` keys: `'Solution Fit': 50` → `'SolutionFit': 50`
+- `STAGE_COLOR` keys: `'Solution Fit': '#33a882'` → `'SolutionFit': '#33a882'`
+- `KANBAN_STAGES` array values: `'Solution Fit'` → `'SolutionFit'`
+
 ### Display Labels
 
-Add a `displayLabel()` utility for rendering PascalCase enums as human-readable text in the UI (e.g. `'SolutionFit'` → `'Solution Fit'`). Used in stage badges, status badges, role selects.
+Add `displayLabel(value: string): string` utility in `src/lib/utils.ts` for rendering PascalCase enums as human-readable text in the UI (e.g. `'SolutionFit'` → `'Solution Fit'`, `'EconomicBuyer'` → `'Economic Buyer'`). Inserts a space before each uppercase letter that follows a lowercase letter. Used in stage badges, status badges, role selects, and anywhere enums are displayed.
 
 ### Adapter Simplification
 
-`adapters.ts` becomes a thin pass-through layer: no more enum maps or field renaming. Only handles Date → ISO string conversion and optional field spreading.
+`adapters.ts` is simplified but **not eliminated**. Remaining responsibilities:
+- Date → ISO string conversion
+- Optional field spreading (conditionals for nullable fields)
+- Nested object flattening: `account: { id, name }` → `accountId`/`accountName` (Opportunity, Task, Goal, Activity)
+- Meeting: `startTime` Date → `HH:MM` string formatting, `duration` number → display string
+- Confidence number formatting where needed (moved to UI display layer)
 
-### Files Affected (~23)
+What's **removed** from adapters: all enum maps (`OPP_STAGE_MAP`, `CONTACT_ROLE_MAP`, `SIGNAL_STATUS_MAP`, `TASK_STATUS_MAP`), field renaming (since FE fields now match Prisma).
 
-- `src/lib/types.ts` — type definitions + constants
-- `src/lib/adapters.ts` — simplify to pass-through
+### Files Affected
+
+- `src/lib/types.ts` — type definitions + constants (`STAGES`, `KANBAN_STAGES`, `STAGE_PROB`, `STAGE_COLOR`)
+- `src/lib/adapters.ts` — remove enum maps, simplify field mapping
 - `src/lib/data.ts` — mock data field names
-- `src/lib/utils.ts` — STAGE_PROB references
-- `src/components/ui/index.tsx` — FIUACBars, ScorePill
-- `src/components/layout/Sidebar.tsx` — user.ini
-- All 10 dashboard pages
+- `src/lib/utils.ts` — add `displayLabel()`, update `STAGE_PROB` references
+- `src/components/ui/index.tsx` — FIUACBars, ScorePill (score field names)
+- `src/components/layout/Sidebar.tsx` — `user.initials`
+- 8 dashboard pages + 2 detail pages
 - `src/lib/queries/opportunities.ts`, `src/lib/queries/tasks.ts`
 - `src/app/api/queue/route.ts`
 - `src/lib/__tests__/adapters.test.ts`
@@ -78,19 +92,18 @@ Add a `displayLabel()` utility for rendering PascalCase enums as human-readable 
 
 - `draggable="true"` + `onDragStart`/`onDragEnd` on opportunity cards
 - `onDragOver`/`onDrop` on stage columns
-- On drop: call `api.opportunities.move(id, newStage)` via React Query mutation
-- Optimistic update: move card immediately in local cache, revert on API error
+- On drop: wire into existing `useMoveStage()` mutation hook (already in `src/lib/queries/opportunities.ts` with optimistic update logic)
 - Visual feedback: dragging card reduced opacity, target column `border-color: var(--brand)` highlight
 - Empty columns show drop zone placeholder during drag
 - Mobile: no drag (uses existing list view)
 
 ### Files Affected
 
-- `src/app/(dashboard)/pipeline/page.tsx` — all logic inline, no new components
+- `src/app/(dashboard)/pipeline/page.tsx` — add drag handlers to existing kanban cards/columns
 
 ## Phase 3: CRUD Forms
 
-**Goal:** Create/edit forms for leads, accounts, contacts. Inline editing on detail pages.
+**Goal:** Create/edit forms for leads and contacts. Inline editing on detail pages. Account create form already exists.
 
 ### Lead Create Form
 
@@ -100,8 +113,7 @@ Add a `displayLabel()` utility for rendering PascalCase enums as human-readable 
 
 ### Account Create Form
 
-- Fields: name, type (Utility/Developer/Corporate/Trader/Other), country, region, notes
-- Drawer pattern, `useCreateAccount` hook already exists
+**Already exists** in `accounts/page.tsx` via `openNewAccountDrawer()`. Uses types: `PPA Buyer`, `Certificate Trader`, `Corporate Offtaker`, etc. No changes needed unless type list should be updated.
 
 ### Contact Create Form
 
@@ -118,7 +130,6 @@ Add a `displayLabel()` utility for rendering PascalCase enums as human-readable 
 ### Files Affected
 
 - `src/app/(dashboard)/leads/page.tsx` — add create form + drawer trigger
-- `src/app/(dashboard)/accounts/page.tsx` — add create form + drawer trigger
 - `src/app/(dashboard)/accounts/[id]/page.tsx` — add contact create form + inline editing
 - `src/app/(dashboard)/pipeline/[id]/page.tsx` — add inline editing
 
@@ -145,8 +156,8 @@ Add a `displayLabel()` utility for rendering PascalCase enums as human-readable 
 ### A. Kanban Card Polish
 
 - Gradient left border color mapped to health score (green → yellow → red)
-- Thin progress bar at card top showing stage position in pipeline (% through stages)
-- "Xd in stage" badge (computed from `updatedAt` or stage change timestamp)
+- Thin progress bar at card top showing stage position in pipeline (% through KANBAN_STAGES)
+- "Xd in stage" badge — use Opportunity `updatedAt` field from Prisma (already in schema) as proxy for last stage change
 - Hover reveals quick-action buttons (move to next stage, edit amount)
 - File: `pipeline/page.tsx`
 
@@ -166,9 +177,9 @@ Add a `displayLabel()` utility for rendering PascalCase enums as human-readable 
 - Gradient fill under the sparkline for visual weight
 - File: `src/app/(dashboard)/page.tsx`
 
-### D. Wired Command Palette (⌘K)
+### D. Wired Command Palette (Cmd+K)
 
-- Connect existing `CommandPalette` component to `/api/search` endpoint
+- Connect existing `CommandPalette` component to `/api/search` endpoint (already exists at `src/app/api/search/route.ts` — searches across accounts, opportunities, leads, contacts)
 - Show recent items by default (localStorage), fuzzy filter on type
 - Group results by type: Accounts, Deals, Leads, Contacts
 - Keyboard navigation: arrow keys + Enter to open
