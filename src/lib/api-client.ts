@@ -259,6 +259,7 @@ export const api = {
     agents: () => get<any>('/settings/agents'),
     patchAgent: (name: string, data: { status?: string; parameters?: Record<string, string> }) =>
       patch<any>(`/settings/agents/${name}`, data),
+    agentAnalytics: (period = 30) => get<any>(`/agents/analytics?period=${period}d`),
     integrations: () => get<any>('/settings/integrations'),
     invitations: () => get<any>('/settings/team/invitations'),
     invite: (data: { email: string; role?: string }) => post<any>('/settings/team/invite', data),

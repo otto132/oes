@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useSession } from 'next-auth/react';
 import { useStore } from '@/lib/store';
-import { Badge, Spinner } from '@/components/ui';
+import { Badge, Sparkline, Spinner } from '@/components/ui';
 import { Sun, Moon } from 'lucide-react';
 import {
   useTeamQuery,
@@ -18,6 +18,7 @@ import {
   usePatchAgent,
   useSyncMutation,
 } from '@/lib/queries/settings';
+import { useAgentAnalyticsQuery } from '@/lib/queries/agent-analytics';
 
 const TABS = ['Team', 'Integrations', 'Agents', 'Profile', 'Appearance'] as const;
 type Tab = (typeof TABS)[number];
@@ -474,6 +475,106 @@ function IntegrationsTab() {
   );
 }
 
+// ─── Agent Performance Section ───────────────────────────────
+
+function AgentPerformanceSection() {
+  const { data, isLoading, isError } = useAgentAnalyticsQuery();
+  const [expandedAgent, setExpandedAgent] = useState<string | null>(null);
+
+  if (isLoading) return (
+    <div className="animate-pulse space-y-2 mt-4">
+      {[...Array(3)].map((_, i) => <div key={i} className="h-9 bg-[var(--card-hover)] rounded" />)}
+    </div>
+  );
+
+  if (isError) return (
+    <div className="text-xs text-red-400 mt-4">Failed to load agent performance data</div>
+  );
+
+  const agents: any[] = data?.agents ?? [];
+  const overall = data?.overall;
+
+  if (!agents.length) return null;
+
+  return (
+    <div className="flex flex-col gap-3 mt-4">
+      <span className="text-3xs font-semibold tracking-wide uppercase text-[var(--muted)]">Agent Performance (30d)</span>
+      <div className="rounded-lg bg-[var(--elevated)] border border-[var(--border)] overflow-hidden">
+        {/* Table Header */}
+        <div className="grid grid-cols-[1fr_auto_auto_auto_auto] gap-x-4 px-4 py-2 border-b border-[var(--border)]">
+          <span className="text-3xs font-semibold uppercase tracking-wide text-[var(--muted)]">Agent</span>
+          <span className="text-3xs font-semibold uppercase tracking-wide text-[var(--muted)] text-right">Approval</span>
+          <span className="text-3xs font-semibold uppercase tracking-wide text-[var(--muted)] text-right">Items</span>
+          <span className="text-3xs font-semibold uppercase tracking-wide text-[var(--muted)] text-right">Runs</span>
+          <span className="text-3xs font-semibold uppercase tracking-wide text-[var(--muted)]">Trend</span>
+        </div>
+
+        {/* Table Rows */}
+        {agents.map((agent: any) => {
+          const name: string = agent.agentName ?? agent.name ?? '';
+          const displayName = name.replace(/_/g, ' ').replace(/\b\w/g, (c: string) => c.toUpperCase());
+          const approvalRate: number = agent.approvalRate ?? 0;
+          const approvalPct = Math.round(approvalRate * 100);
+          const approvalColor = approvalPct >= 80
+            ? 'text-brand'
+            : approvalPct >= 60
+              ? 'text-warn'
+              : 'text-red-400';
+          const itemsByDay: number[] = agent.itemsByDay ?? [];
+          const isExpanded = expandedAgent === name;
+
+          return (
+            <div key={name} className="border-b border-[var(--border)] last:border-b-0">
+              <button
+                className="w-full grid grid-cols-[1fr_auto_auto_auto_auto] gap-x-4 px-4 py-2.5 hover:bg-[var(--hover)] transition-colors text-left"
+                onClick={() => setExpandedAgent(isExpanded ? null : name)}
+              >
+                <span className="text-sm font-medium text-[var(--text)] truncate">{displayName}</span>
+                <span className={`text-sm font-semibold font-mono ${approvalColor} text-right tabular-nums`}>
+                  {approvalPct}%
+                </span>
+                <span className="text-sm text-[var(--sub)] text-right tabular-nums">{agent.itemsCreated ?? 0}</span>
+                <span className="text-sm text-[var(--sub)] text-right tabular-nums">{agent.runs ?? 0}</span>
+                <span className="flex items-center">
+                  <Sparkline
+                    data={itemsByDay}
+                    width={80}
+                    height={20}
+                    color={approvalPct >= 80 ? '#3ecf8e' : approvalPct >= 60 ? '#f59e0b' : '#f87171'}
+                  />
+                </span>
+              </button>
+
+              {/* Expanded: top rejection reasons */}
+              {isExpanded && overall?.topRejectionReasons && (
+                <div className="px-4 pb-3 pt-1 bg-[var(--surface)] border-t border-[var(--border)]">
+                  <span className="text-3xs font-semibold uppercase tracking-wide text-[var(--muted)] block mb-1.5">
+                    Top Rejection Reasons
+                  </span>
+                  {overall.topRejectionReasons.length === 0 ? (
+                    <span className="text-xs text-[var(--muted)]">No rejections in this period</span>
+                  ) : (
+                    <div className="flex flex-col gap-1">
+                      {overall.topRejectionReasons.map((r: any, idx: number) => (
+                        <div key={idx} className="flex items-center justify-between">
+                          <span className="text-xs text-[var(--sub)]">{r.reason ?? r.label ?? r}</span>
+                          {r.count != null && (
+                            <span className="text-2xs font-semibold text-[var(--muted)] tabular-nums">{r.count}</span>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 // ─── Agents Tab ─────────────────────────────────────────────
 
 function AgentsTab() {
@@ -556,6 +657,8 @@ function AgentsTab() {
           ))
         )}
       </div>
+
+      <AgentPerformanceSection />
     </div>
   );
 }
