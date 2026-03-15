@@ -196,48 +196,31 @@ ${rawNotes}`;
       if (contact.isNew) {
         items.push({
           type: 'enrichment',
-          title: `New contact: ${contact.name}`,
-          accName,
-          accId,
+          title: `New contact: ${contact.name}${contact.role ? ` (${contact.role})` : ''}`,
+          accName: meeting.accountName ?? '',
+          accId: meeting.accountId,
           agent: 'meeting_analyst',
-          confidence: 0.7,
-          confidenceBreakdown: {
-            meetingContext: 0.85,
-            newContact: 1.0,
-          },
-          sources: [{ name: 'Meeting Notes', url: null }],
-          payload: {
-            meetingId,
-            contactName: contact.name,
-            contactRole: contact.role ?? null,
-            sentiment: contact.sentiment ?? null,
-            isNew: true,
-          },
-          reasoning: `New contact ${contact.name}${contact.role ? ` (${contact.role})` : ''} identified in meeting "${meeting.title}"`,
+          confidence: 0.6,
+          confidenceBreakdown: { extraction: 0.6 },
+          sources: [{ name: `Meeting: ${meeting.title}`, url: null }],
+          payload: { type: 'new_contact', name: contact.name, role: contact.role, sentiment: contact.sentiment },
+          reasoning: `New contact "${contact.name}" mentioned during meeting "${meeting.title}".`,
           priority: 'Normal',
         });
-      } else if (contact.sentiment) {
+      }
+      if (contact.sentiment && !contact.isNew) {
         items.push({
           type: 'enrichment',
-          title: `Contact update: ${contact.name}`,
-          accName,
-          accId,
+          title: `Update warmth for ${contact.name}: ${contact.sentiment}`,
+          accName: meeting.accountName ?? '',
+          accId: meeting.accountId,
           agent: 'meeting_analyst',
           confidence: 0.65,
-          confidenceBreakdown: {
-            meetingContext: 0.8,
-            sentimentSignal: 0.7,
-          },
-          sources: [{ name: 'Meeting Notes', url: null }],
-          payload: {
-            meetingId,
-            contactName: contact.name,
-            contactRole: contact.role ?? null,
-            sentiment: contact.sentiment,
-            isNew: false,
-          },
-          reasoning: `Contact ${contact.name} showed ${contact.sentiment} sentiment in meeting "${meeting.title}"`,
-          priority: 'Normal',
+          confidenceBreakdown: { extraction: 0.65 },
+          sources: [{ name: `Meeting: ${meeting.title}`, url: null }],
+          payload: { type: 'warmth_update', contactName: contact.name, sentiment: contact.sentiment },
+          reasoning: `Contact "${contact.name}" showed ${contact.sentiment} sentiment during meeting.`,
+          priority: 'Low',
         });
       }
     }
