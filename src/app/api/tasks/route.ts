@@ -32,7 +32,7 @@ export async function GET(req: NextRequest) {
   // Then paginated query for tasks
   const tasks = await scoped.task.findMany({
     where,
-    include: { owner: true, assignees: true, reviewer: true, goal: true, account: { select: { id: true, name: true } }, comments: { include: { author: true }, orderBy: { createdAt: 'asc' } }, subtasks: { orderBy: { position: 'asc' as const } }, _count: { select: { subtasks: true } } },
+    include: { owner: true, assignees: true, reviewer: true, goal: true, account: { select: { id: true, name: true } }, comments: { include: { author: true }, orderBy: { createdAt: 'asc' }, take: 50 }, subtasks: { orderBy: { position: 'asc' as const } }, _count: { select: { subtasks: true } } },
     orderBy: [{ due: 'asc' }],
     take: pagination.limit + 1,
     ...(pagination.cursor ? { cursor: { id: pagination.cursor }, skip: 1 } : {}),
@@ -59,6 +59,14 @@ export const POST = withHandler(taskActionSchema, async (req, ctx) => {
     // Create task
     const { title, accountId, priority, due, assigneeIds, reviewerId, goalId } = body;
     const ownerId = ('ownerId' in body && typeof body.ownerId === 'string') ? body.ownerId : session.user.id;
+
+    // Validate assignee/reviewer IDs exist
+    const idsToCheck = [...(assigneeIds || []), ...(reviewerId ? [reviewerId] : [])];
+    if (idsToCheck.length > 0) {
+      const validUsers = await rawDb.user.count({ where: { id: { in: idsToCheck }, isActive: true } });
+      if (validUsers !== idsToCheck.length) return NextResponse.json({ error: 'One or more assignee/reviewer IDs are invalid' }, { status: 400 });
+    }
+
     const task = await ctx.db.task.create({
       data: {
         title, priority: priority || 'Medium', due: due ? new Date(due) : new Date(Date.now() + 7 * 864e5),

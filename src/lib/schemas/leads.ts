@@ -1,5 +1,10 @@
 import { z } from 'zod';
 
+const isoDate = z.string().regex(/^\d{4}-\d{2}-\d{2}/, 'Date must be YYYY-MM-DD format').refine(
+  s => !isNaN(new Date(s).getTime()),
+  'Invalid date',
+);
+
 export const leadActionSchema = z.discriminatedUnion('action', [
   z.object({
     action: z.literal('create'),
@@ -22,13 +27,13 @@ export const leadActionSchema = z.discriminatedUnion('action', [
     accountType: z.string().trim().optional(),
     oppName: z.string().trim().min(1, 'Opportunity name is required'),
     oppAmount: z.number().nonnegative().optional(),
-    closeDate: z.string().regex(/^\d{4}-\d{2}-\d{2}/, 'Date must be YYYY-MM-DD format').optional(),
+    closeDate: isoDate.optional(),
     ownerId: z.string().optional(),
   }),
   z.object({
     action: z.literal('pause'),
     id: z.string().min(1),
-    pausedUntil: z.string().regex(/^\d{4}-\d{2}-\d{2}/, 'Date must be YYYY-MM-DD format'),
+    pausedUntil: isoDate,
   }),
   z.object({ action: z.literal('requalify'), id: z.string().min(1) }),
   z.object({

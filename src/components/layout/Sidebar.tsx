@@ -7,6 +7,11 @@ import { useStore } from '@/lib/store';
 import { cn } from '@/lib/utils';
 import { useBadgeCounts } from '@/lib/queries/badge-counts';
 
+function useModKey() {
+  if (typeof navigator === 'undefined') return '⌘';
+  return /Mac|iPhone|iPad/.test(navigator.userAgent) ? '⌘' : 'Ctrl+';
+}
+
 interface NavItem {
   href: string;
   label: string;
@@ -82,7 +87,7 @@ export default function Sidebar() {
         >
           <Search className="w-3.5 h-3.5" />
           <span className="flex-1 text-sm text-left">Search…</span>
-          <kbd className="text-2xs">⌘K</kbd>
+          <kbd className="text-2xs">{useModKey()}K</kbd>
         </button>
       </div>
 

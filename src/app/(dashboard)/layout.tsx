@@ -4,6 +4,7 @@ import BottomNav from '@/components/layout/BottomNav';
 import Drawer from '@/components/shell/Drawer';
 import ToastContainer from '@/components/ui/Toast';
 import CommandPalette from '@/components/shell/CommandPalette';
+import PageTitle from '@/components/shell/PageTitle';
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -19,6 +20,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       <Drawer />
       <ToastContainer />
       <CommandPalette />
+      <PageTitle />
     </>
   );
 }

@@ -154,6 +154,7 @@ export const POST = withHandler(queueActionSchema, async (req, ctx) => {
     const { id, editedPayload } = body;
     const item = await ctx.db.queueItem.findUnique({ where: { id } });
     if (!item) return notFound('Queue item not found');
+    if (item.status !== 'pending') return badRequest('Queue item has already been reviewed');
 
     // Validate editedPayload against type-specific schema
     if (editedPayload) {
@@ -166,15 +167,24 @@ export const POST = withHandler(queueActionSchema, async (req, ctx) => {
       }
     }
 
-    const updated = await ctx.db.queueItem.update({
-      where: { id },
+    // Atomic update — only succeeds if still pending (prevents race conditions)
+    const { count } = await rawDb.queueItem.updateMany({
+      where: { id, status: 'pending' },
       data: {
         status: 'approved',
         reviewedById: userId,
         reviewedAt: new Date(),
-        ...(editedPayload ? { originalPayload: item.payload ?? undefined, payload: editedPayload as Prisma.InputJsonValue } : {}),
       },
     });
+    if (count === 0) return badRequest('Queue item was already reviewed by another user');
+
+    // Fetch the updated item and apply editedPayload if needed
+    const updated = editedPayload
+      ? await ctx.db.queueItem.update({
+          where: { id },
+          data: { originalPayload: item.payload ?? undefined, payload: editedPayload as Prisma.InputJsonValue },
+        })
+      : await ctx.db.queueItem.findUniqueOrThrow({ where: { id } });
 
     // Validate the effective payload before applying side-effects
     const effectivePayload = editedPayload || item.payload;
@@ -302,10 +312,15 @@ export const POST = withHandler(queueActionSchema, async (req, ctx) => {
     const { id, reason } = body;
     const item = await ctx.db.queueItem.findUnique({ where: { id } });
     if (!item) return notFound('Queue item not found');
-    const updated = await ctx.db.queueItem.update({
-      where: { id },
+    if (item.status !== 'pending') return badRequest('Queue item has already been reviewed');
+
+    // Atomic update — only succeeds if still pending
+    const { count } = await rawDb.queueItem.updateMany({
+      where: { id, status: 'pending' },
       data: { status: 'rejected', reviewedById: userId, reviewedAt: new Date(), rejReason: reason },
     });
+    if (count === 0) return badRequest('Queue item was already reviewed by another user');
+    const updated = await ctx.db.queueItem.findUniqueOrThrow({ where: { id } });
 
     // Notify admins of rejection (rawDb used — notifyUsers needs PrismaClient, not ScopedDb)
     const admins = await rawDb.user.findMany({

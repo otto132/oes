@@ -13,7 +13,7 @@ export default function DigestPage() {
   if (isLoading) {
     return (
       <div className="flex h-[calc(100vh-64px)]">
-        <div className="w-72 border-r border-[var(--border)] p-3 space-y-2">
+        <div className="hidden md:block w-72 border-r border-[var(--border)] p-3 space-y-2">
           {Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-16 w-full" />)}
         </div>
         <div className="flex-1 p-6"><Skeleton className="h-96 w-full" /></div>
@@ -39,30 +39,53 @@ export default function DigestPage() {
   }
 
   return (
-    <div className="flex h-[calc(100vh-64px)]">
-      {/* Archive list */}
-      <div className="w-72 border-r border-[var(--border)] bg-[var(--elevated)] flex flex-col">
-        <div className="px-4 py-3 border-b border-[var(--border)]">
-          <h1 className="text-lg font-semibold tracking-tight flex items-center gap-2">
-            <FileText className="w-5 h-5 text-brand" /> Weekly Digest
-          </h1>
-        </div>
-        <div className="flex-1 overflow-y-auto p-2 space-y-1.5">
-          {digests.map(d => (
-            <DigestCard
-              key={d.id}
-              digest={d}
-              expanded={false}
-              onClick={() => setSelectedId(d.id)}
-            />
-          ))}
-        </div>
+    <>
+      {/* Mobile: full-width stacked list */}
+      <div className="md:hidden">
+        <h1 className="text-lg font-semibold tracking-tight flex items-center gap-2 mb-3">
+          <FileText className="w-5 h-5 text-brand" /> Weekly Digest
+        </h1>
+        {selected && !selectedId && <DigestCard digest={selected} expanded />}
+        {selectedId && selected ? (
+          <>
+            <button onClick={() => setSelectedId(null)} className="text-sm text-brand mb-3 hover:underline">← All digests</button>
+            <DigestCard digest={selected} expanded />
+          </>
+        ) : (
+          <div className="space-y-2">
+            {digests.map(d => (
+              <DigestCard key={d.id} digest={d} expanded={false} onClick={() => setSelectedId(d.id)} />
+            ))}
+          </div>
+        )}
       </div>
 
-      {/* Selected digest */}
-      <div className="flex-1 overflow-y-auto p-6">
-        {selected && <DigestCard digest={selected} expanded />}
+      {/* Desktop: side-by-side layout */}
+      <div className="hidden md:flex h-[calc(100vh-64px)]">
+        {/* Archive list */}
+        <div className="w-72 border-r border-[var(--border)] bg-[var(--elevated)] flex flex-col">
+          <div className="px-4 py-3 border-b border-[var(--border)]">
+            <h1 className="text-lg font-semibold tracking-tight flex items-center gap-2">
+              <FileText className="w-5 h-5 text-brand" /> Weekly Digest
+            </h1>
+          </div>
+          <div className="flex-1 overflow-y-auto p-2 space-y-1.5">
+            {digests.map(d => (
+              <DigestCard
+                key={d.id}
+                digest={d}
+                expanded={false}
+                onClick={() => setSelectedId(d.id)}
+              />
+            ))}
+          </div>
+        </div>
+
+        {/* Selected digest */}
+        <div className="flex-1 overflow-y-auto p-6">
+          {selected && <DigestCard digest={selected} expanded />}
+        </div>
       </div>
-    </div>
+    </>
   );
 }

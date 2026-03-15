@@ -66,13 +66,13 @@ export default function MeetingsPage() {
             Meetings
           </h1>
           <div className="flex items-center gap-1 ml-4">
-            <button onClick={() => navigateDate(-1)} className="p-1 rounded hover:bg-[var(--hover)] transition-colors">
+            <button onClick={() => navigateDate(-1)} className="p-2 min-w-[44px] min-h-[44px] md:p-1 md:min-w-0 md:min-h-0 rounded hover:bg-[var(--hover)] transition-colors flex items-center justify-center">
               <ChevronLeft className="w-4 h-4" />
             </button>
-            <button onClick={goToToday} className="px-2 py-1 text-xs font-medium rounded hover:bg-[var(--hover)] transition-colors">
+            <button onClick={goToToday} className="px-3 py-2 min-h-[44px] md:px-2 md:py-1 md:min-h-0 text-xs font-medium rounded hover:bg-[var(--hover)] transition-colors flex items-center justify-center">
               Today
             </button>
-            <button onClick={() => navigateDate(1)} className="p-1 rounded hover:bg-[var(--hover)] transition-colors">
+            <button onClick={() => navigateDate(1)} className="p-2 min-w-[44px] min-h-[44px] md:p-1 md:min-w-0 md:min-h-0 rounded hover:bg-[var(--hover)] transition-colors flex items-center justify-center">
               <ChevronRight className="w-4 h-4" />
             </button>
           </div>

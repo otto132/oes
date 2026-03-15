@@ -27,7 +27,7 @@ export default function TopBar() {
         <button onClick={() => useStore.getState().openPalette()} className="inline-flex items-center gap-1 px-2.5 py-[5px] text-sm font-medium rounded-md bg-brand text-brand-on hover:brightness-110 transition-all">
           <Plus className="w-3.5 h-3.5" strokeWidth={2.5} /><span className="hidden md:inline">New</span>
         </button>
-        <button onClick={toggleTheme} className="p-1.5 rounded-md hover:bg-hover transition-colors text-muted" aria-label="Toggle theme">
+        <button onClick={toggleTheme} className="p-1.5 rounded-md hover:bg-hover transition-colors text-muted md:hidden" aria-label="Toggle theme">
           {theme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
         </button>
         <NotificationDropdown />

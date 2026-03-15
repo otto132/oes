@@ -180,6 +180,7 @@ export const POST = withHandler(leadActionSchema, async (req, ctx) => {
 
   if (body.action === 'bulk_advance') {
     const { ids } = body;
+    if (ids.length > 500) return badRequest('Too many items (max 500)');
     const next: Record<string, LeadStage> = { New: LeadStage.Researching, Researching: LeadStage.Qualified };
     const results = [];
     for (const id of ids) {
@@ -198,6 +199,7 @@ export const POST = withHandler(leadActionSchema, async (req, ctx) => {
 
   if (body.action === 'bulk_disqualify') {
     const { ids } = body;
+    if (ids.length > 500) return badRequest('Too many items (max 500)');
     await ctx.db.lead.updateMany({
       where: { id: { in: ids } },
       data: { stage: 'Disqualified' },
@@ -207,6 +209,7 @@ export const POST = withHandler(leadActionSchema, async (req, ctx) => {
 
   if (body.action === 'bulk_assign') {
     const { ids, ownerId } = body;
+    if (ids.length > 500) return badRequest('Too many items (max 500)');
     await ctx.db.lead.updateMany({
       where: { id: { in: ids } },
       data: { ownerId },

@@ -6,6 +6,7 @@ import { unauthorized } from '@/lib/api-errors';
 export async function GET() {
   const session = await auth();
   if (!session?.user?.id) return unauthorized();
+  const isAdmin = session.user.role === 'ADMIN';
   const db = resolveTenantDb(session as any);
 
   const users = await db.user.findMany({
@@ -13,12 +14,12 @@ export async function GET() {
       id: true,
       name: true,
       initials: true,
-      email: true,
+      email: isAdmin,
       role: true,
       color: true,
       isActive: true,
-      createdAt: true,
-      lastLoginAt: true,
+      createdAt: isAdmin,
+      lastLoginAt: isAdmin,
     },
     orderBy: { createdAt: 'asc' },
   });

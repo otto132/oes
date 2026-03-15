@@ -1,4 +1,6 @@
 'use client';
+import { Suspense, useState } from 'react';
+import { useSearchParams, useRouter } from 'next/navigation';
 import { useStore } from '@/lib/store';
 import { useLeadsQuery, useCreateLead, useAdvanceLead, useDisqualifyLead, useConvertLead, usePauseLead, useRequalifyLead, usePausedLeadsQuery } from '@/lib/queries/leads';
 import { Badge, Avatar, FIUACBars, ScorePill, EmptyState, Skeleton, SkeletonCard, SkeletonText, ErrorState, Spinner, HelpTip, BulkActionBar } from '@/components/ui';
@@ -7,7 +9,6 @@ import { useTeamQuery } from '@/lib/queries/settings';
 import { compositeScore, cn } from '@/lib/utils';
 import type { Lead } from '@/lib/types';
 import { usePendingMutations, useFailedMutations } from '@/hooks/use-mutation-state';
-import { useState } from 'react';
 import { RotateCw } from 'lucide-react';
 
 function LeadsSkeleton() {
@@ -323,6 +324,12 @@ function PausedLeadsView() {
 
 // ── Main Page ─────────────────────────────────────────────────────────────────
 export default function LeadsPage() {
+  return <Suspense><LeadsPageInner /></Suspense>;
+}
+
+function LeadsPageInner() {
+  const searchParams = useSearchParams();
+  const router = useRouter();
   const { data: resp, isLoading, isError, refetch } = useLeadsQuery();
   const { data: pausedResp } = usePausedLeadsQuery();
   const { openDrawer, closeDrawer } = useStore();
@@ -334,8 +341,16 @@ export default function LeadsPage() {
   const pendingIds = usePendingMutations(['leads']);
   const failedMutations = useFailedMutations(['leads']);
 
+  function updateParam(key: string, value: string, defaultValue: string) {
+    const params = new URLSearchParams(searchParams.toString());
+    if (value === defaultValue) params.delete(key);
+    else params.set(key, value);
+    const qs = params.toString();
+    router.replace(qs ? `?${qs}` : window.location.pathname, { scroll: false });
+  }
+
   // Paused tab
-  const [showPaused, setShowPaused] = useState(false);
+  const [showPaused, setShowPaused] = useState(searchParams.get('view') === 'paused');
   const pausedCount = pausedResp?.data?.length ?? 0;
 
   // Convert modal
@@ -354,6 +369,7 @@ export default function LeadsPage() {
   const bulkAssign = useBulkAssignLeads();
   const { data: teamData } = useTeamQuery();
   const [showAssignPicker, setShowAssignPicker] = useState(false);
+  const [showBulkDisqualifyConfirm, setShowBulkDisqualifyConfirm] = useState(false);
 
   function toggleSelect(id: string) {
     setSelected(prev => {
@@ -470,7 +486,7 @@ export default function LeadsPage() {
       {/* Paused tab toggle */}
       <div className="flex items-center gap-2 mb-3">
         <button
-          onClick={() => setShowPaused(false)}
+          onClick={() => { setShowPaused(false); updateParam('view', 'active', 'active'); }}
           className={cn(
             'px-3 py-1 text-xs font-medium rounded-full transition-colors',
             !showPaused
@@ -481,7 +497,7 @@ export default function LeadsPage() {
           Active
         </button>
         <button
-          onClick={() => setShowPaused(true)}
+          onClick={() => { setShowPaused(true); updateParam('view', 'paused', 'active'); }}
           className={cn(
             'px-3 py-1 text-xs font-medium rounded-full transition-colors',
             showPaused
@@ -660,14 +676,7 @@ export default function LeadsPage() {
             label: 'Disqualify',
             variant: 'danger',
             isPending: bulkDisqualify.isPending,
-            onClick: () => {
-              bulkDisqualify.mutate([...selected], {
-                onSuccess: () => {
-                  addToast({ type: 'info', message: `Leads disqualified` });
-                  setSelected(new Set());
-                },
-              });
-            },
+            onClick: () => setShowBulkDisqualifyConfirm(true),
           },
           {
             label: 'Assign Owner',
@@ -677,6 +686,38 @@ export default function LeadsPage() {
         ]}
         onClear={() => setSelected(new Set())}
       />
+
+      {showBulkDisqualifyConfirm && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-[var(--elevated)] border border-[var(--border)] rounded-lg p-4 max-w-xs mx-4">
+            <p className="text-sm font-medium text-[var(--text)] mb-1">Disqualify {selected.size} leads?</p>
+            <p className="text-xs text-[var(--muted)] mb-4">These leads will be marked as disqualified. You can requalify them later from the paused/disqualified view.</p>
+            <div className="flex items-center justify-end gap-2">
+              <button
+                className="px-3 py-1.5 text-sm text-[var(--sub)] bg-[var(--surface)] border border-[var(--border)] rounded-md hover:bg-[var(--hover)] transition-colors"
+                onClick={() => setShowBulkDisqualifyConfirm(false)}
+              >
+                Cancel
+              </button>
+              <button
+                disabled={bulkDisqualify.isPending}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium bg-red-500 text-white rounded-md hover:brightness-110 transition-colors disabled:opacity-50"
+                onClick={() => {
+                  bulkDisqualify.mutate([...selected], {
+                    onSuccess: () => {
+                      addToast({ type: 'info', message: `Leads disqualified` });
+                      setSelected(new Set());
+                      setShowBulkDisqualifyConfirm(false);
+                    },
+                  });
+                }}
+              >
+                {bulkDisqualify.isPending && <Spinner className="h-3 w-3" />}Disqualify
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {showAssignPicker && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">

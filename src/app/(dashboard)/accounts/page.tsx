@@ -276,8 +276,20 @@ function AccountsPageInner() {
         </button>
       </div>
 
+      {sorted.length === 0 && (
+        <div className="rounded-lg border border-[var(--border)] bg-[var(--elevated)] py-12 text-center">
+          <p className="text-sm text-[var(--muted)]">No accounts match your filters.</p>
+          <button
+            onClick={() => { setSearch(''); setDebouncedSearch(''); setTypeFilter('all'); setOwnerFilter('all'); updateParams({ q: '', type: 'all', owner: 'all' }); }}
+            className="mt-2 text-sm text-brand hover:underline"
+          >
+            Clear filters
+          </button>
+        </div>
+      )}
+
       {/* Desktop table */}
-      <div className="hidden md:block rounded-lg bg-[var(--elevated)] border border-[var(--border)] overflow-hidden">
+      {sorted.length > 0 && <div className="hidden md:block rounded-lg bg-[var(--elevated)] border border-[var(--border)] overflow-hidden">
         <table className="w-full border-collapse">
           <thead>
             <tr>{['Account', 'Type', 'Score', 'FIUAC', 'Pipeline', 'Last Activity', 'Owner', ''].map(h => (
@@ -309,10 +321,10 @@ function AccountsPageInner() {
             })}
           </tbody>
         </table>
-      </div>
+      </div>}
 
       {/* Mobile list */}
-      <div className="md:hidden flex flex-col gap-1.5">
+      {sorted.length > 0 && <div className="md:hidden flex flex-col gap-1.5">
         {sorted.map(a => (
           <Link key={a.id} href={`/accounts/${a.id}`}>
             <div className="rounded-lg p-3 bg-[var(--elevated)] border border-[var(--border)] cursor-pointer">
@@ -328,7 +340,7 @@ function AccountsPageInner() {
             </div>
           </Link>
         ))}
-      </div>
+      </div>}
     </div>
   );
 }

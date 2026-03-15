@@ -25,7 +25,7 @@ export async function GET() {
       where: openWhere,
       _sum: { amount: true },
     }),
-    // Only load opps that are actually at risk (health < 50)
+    // Only load opps that are actually at risk (health < 50), capped at 100
     scoped.opportunity.findMany({
       where: {
         ...openWhere,
@@ -37,6 +37,7 @@ export async function GET() {
         ],
       },
       include: { owner: true, account: { select: { id: true, name: true } } },
+      take: 100,
     }),
     // Load opps with pending next actions for NBA (limit 5)
     scoped.opportunity.findMany({
