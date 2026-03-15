@@ -10,6 +10,7 @@ export function useBadgeCounts() {
   return useQuery({
     queryKey: badgeKeys.all,
     queryFn: () => api.badgeCounts.get(),
-    refetchInterval: 30_000,
+    // No refetchInterval — SSE stream (useNotificationStream) handles live updates.
+    // Polling fallback (30s) is activated by useNotificationStream if SSE fails.
   });
 }
