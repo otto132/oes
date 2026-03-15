@@ -279,6 +279,11 @@ export const api = {
       patch<any>('/settings/profile', data),
   },
 
+  // ── Digest ──────────────────────────────────────
+  digest: {
+    list: () => get<any>('/digest'),
+  },
+
   // ── Admin ───────────────────────────────────────
   admin: {
     stats: () => get<any>('/admin/stats'),
