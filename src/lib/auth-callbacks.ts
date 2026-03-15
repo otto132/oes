@@ -46,6 +46,32 @@ export async function testSignInCallback({ user }: { user: { email?: string | nu
     return true;
   }
 
+  // Pre-approved admin accounts — bypasses auto-provision restriction in production
+  const approvedAdmins: string[] = [
+    'pade79m@gmail.com',
+  ];
+
+  if (approvedAdmins.includes(user.email)) {
+    let tenant = await db.tenant.findFirst();
+    if (!tenant) {
+      tenant = await db.tenant.create({ data: { id: 'tenant-default', name: 'Default', slug: 'default' } });
+    }
+    await db.user.create({
+      data: {
+        email: user.email,
+        name: user.name || user.email,
+        initials: user.name
+          ? user.name.split(/\s+/).filter(Boolean).map((w) => w[0]!.toUpperCase()).slice(0, 2).join('')
+          : user.email.slice(0, 2).toUpperCase(),
+        role: 'ADMIN',
+        lastLoginAt: new Date(),
+        tenantId: tenant.id,
+      },
+    });
+    logger.info('[auth] Auto-provisioned approved admin', { email: user.email });
+    return true;
+  }
+
   // Auto-provision: only allowed in development or when ALLOW_AUTO_PROVISION=true
   if (process.env.NODE_ENV === 'production' && process.env.ALLOW_AUTO_PROVISION !== 'true') {
     logger.warn('[auth] Rejected unknown user (auto-provisioning disabled in production)', { email: user.email });

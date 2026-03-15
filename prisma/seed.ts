@@ -60,7 +60,8 @@ async function main() {
   const u3 = await prisma.user.create({ data: { id: 'u3', name: 'Nick Schoch', initials: 'NS', email: 'nick@eco-insight.com', role: 'MEMBER', color: 'blue', tenantId: 'tenant-default' } });
   const u4 = await prisma.user.create({ data: { id: 'u4', name: 'Otto Savasti', initials: 'OS', email: 'otto@savasti.fi', role: 'ADMIN', color: 'default', tenantId: 'tenant-default' } });
   const u5 = await prisma.user.create({ data: { id: 'u5', name: 'Markku', initials: 'M', email: 'markku@developers.fi', role: 'ADMIN', color: 'blue', tenantId: 'tenant-default' } });
-  console.log('  ✓ 5 users');
+  const u6 = await prisma.user.create({ data: { id: 'u6', name: 'Pade', initials: 'P', email: 'pade79m@gmail.com', role: 'ADMIN', color: 'default', tenantId: 'tenant-default' } });
+  console.log('  ✓ 6 users');
 
   // ── Signals ────────────────────────────────────
   await prisma.signal.createMany({ data: [
