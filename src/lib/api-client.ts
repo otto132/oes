@@ -320,13 +320,16 @@ export const api = {
 
   // ── Notifications ───────────────────────────────────
   notifications: {
-    list: (cursor?: string) => {
+    list: (opts?: { cursor?: string; readStatus?: string; type?: string }) => {
       const params = new URLSearchParams();
-      if (cursor) params.set('cursor', cursor);
+      if (opts?.cursor) params.set('cursor', opts.cursor);
+      if (opts?.readStatus) params.set('readStatus', opts.readStatus);
+      if (opts?.type) params.set('type', opts.type);
       const qs = params.toString();
       return get<any>(`/notifications${qs ? `?${qs}` : ''}`);
     },
     markRead: (ids: string[]) => patch<any>('/notifications/mark-read', { ids }),
-    markAllRead: () => patch<any>('/notifications/mark-read', { all: true }),
+    markAllRead: (types?: string[]) =>
+      patch<any>('/notifications/mark-read', { all: true, ...(types ? { types } : {}) }),
   },
 };

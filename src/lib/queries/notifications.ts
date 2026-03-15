@@ -5,13 +5,17 @@ import { badgeKeys } from '@/lib/queries/badge-counts';
 
 export const notificationKeys = {
   all: ['notifications'] as const,
-  list: () => ['notifications', 'list'] as const,
+  list: (filters?: { readStatus?: string; type?: string }) =>
+    ['notifications', 'list', filters ?? {}] as const,
 };
 
-export function useNotificationsQuery(enabled = true) {
+export function useNotificationsQuery(
+  enabled = true,
+  filters?: { readStatus?: string; type?: string },
+) {
   return useQuery({
-    queryKey: notificationKeys.list(),
-    queryFn: () => api.notifications.list(),
+    queryKey: notificationKeys.list(filters),
+    queryFn: () => api.notifications.list({ ...filters }),
     enabled,
   });
 }
@@ -32,7 +36,7 @@ export function useMarkAllReadMutation() {
   const qc = useQueryClient();
   return useMutation({
     mutationKey: ['notifications', 'markAllRead'],
-    mutationFn: () => api.notifications.markAllRead(),
+    mutationFn: (types?: string[]) => api.notifications.markAllRead(types),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: notificationKeys.all });
       qc.invalidateQueries({ queryKey: badgeKeys.all });

@@ -13,8 +13,12 @@ export async function PATCH(req: NextRequest) {
   const now = new Date();
 
   if (body.all === true) {
+    const where: any = { userId, readAt: null };
+    if (Array.isArray(body.types) && body.types.length > 0) {
+      where.type = { in: body.types };
+    }
     await db.notification.updateMany({
-      where: { userId, readAt: null },
+      where,
       data: { readAt: now },
     });
     return NextResponse.json({ success: true });
