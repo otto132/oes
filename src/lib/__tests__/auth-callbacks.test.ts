@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 const { mockDb } = vi.hoisted(() => ({
   mockDb: {
-    user: { findUnique: vi.fn(), create: vi.fn(), update: vi.fn() },
+    user: { findUnique: vi.fn(), create: vi.fn(), update: vi.fn(), count: vi.fn() },
     invitation: { findFirst: vi.fn(), update: vi.fn() },
     tenant: { findFirst: vi.fn(), create: vi.fn() },
   },
@@ -40,12 +40,31 @@ describe('testSignInCallback', () => {
     );
   });
 
-  it('rejects unknown user with no invitation', async () => {
+  it('auto-provisions unknown user in non-production', async () => {
+    mockDb.user.findUnique.mockResolvedValue(null);
+    mockDb.invitation.findFirst.mockResolvedValue(null);
+    mockDb.user.count.mockResolvedValue(0);
+    mockDb.tenant.findFirst.mockResolvedValue({ id: 'tenant-default' });
+    mockDb.user.create.mockResolvedValue({ id: 'u-new' });
+
+    const result = await testSignInCallback({ user: { email: 'rando@example.com', name: 'Rando' } });
+    expect(result).toBe(true);
+    expect(mockDb.user.create).toHaveBeenCalledWith(
+      expect.objectContaining({ data: expect.objectContaining({ role: 'ADMIN' }) }),
+    );
+  });
+
+  it('rejects unknown user in production without ALLOW_AUTO_PROVISION', async () => {
+    const origEnv = process.env.NODE_ENV;
+    process.env.NODE_ENV = 'production';
+
     mockDb.user.findUnique.mockResolvedValue(null);
     mockDb.invitation.findFirst.mockResolvedValue(null);
 
     const result = await testSignInCallback({ user: { email: 'rando@evil.com', name: 'Rando' } });
     expect(result).toBe(false);
     expect(mockDb.user.create).not.toHaveBeenCalled();
+
+    process.env.NODE_ENV = origEnv;
   });
 });

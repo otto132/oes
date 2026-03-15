@@ -496,26 +496,40 @@ function PipelinePageInner() {
         </div>
       )}
 
-      {/* Mobile list */}
-      <div className="md:hidden flex flex-col gap-1.5">
+      {/* Mobile kanban — horizontal scroll */}
+      <div className="md:hidden overflow-x-auto pb-4 -mx-4 px-4">
         {open.length === 0 ? (
           <EmptyState icon="↗" title="No open opportunities" description="Create one from an account or convert a qualified lead." action={{ label: 'Create Opportunity', onClick: () => openNewOppDrawer() }} />
-        ) : open.sort((a, b) => healthAvg(a.health) - healthAvg(b.health)).map(o => (
-          <Link key={o.id} href={`/pipeline/${o.id}`}>
-            <div className="rounded-lg p-3 bg-[var(--elevated)] border border-[var(--border)] cursor-pointer hover:bg-[var(--hover)] transition-colors" style={{ borderLeft: `3px solid ${riskHex(o.health)}` }}>
-              <div className="flex items-center justify-between mb-1">
-                <span className="text-sm font-medium text-[var(--text)]">{o.name}</span>
-                <span className="font-mono font-semibold text-xs text-[var(--text)]">{fmt(o.amount)}</span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <StageBadge stage={o.stage} />
-                <HealthBar health={o.health} />
-                <span className="text-2xs text-[var(--muted)]">{o.accountName}</span>
-              </div>
-              {o.nextAction && <div className="text-2xs text-[var(--muted)] mt-1">→ {o.nextAction}</div>}
-            </div>
-          </Link>
-        ))}
+        ) : (
+          <div className="flex gap-3" style={{ width: `${KANBAN_STAGES.length * 200 + (KANBAN_STAGES.length - 1) * 12}px` }}>
+            {KANBAN_STAGES.map(stage => {
+              const cards = open.filter(o => o.stage === stage);
+              const stageAmt = cards.reduce((s, o) => s + o.amount, 0);
+              return (
+                <div key={stage} className="flex-shrink-0 w-[200px]">
+                  <div className="flex items-center justify-between px-1 mb-1.5">
+                    <span className="text-2xs font-semibold uppercase tracking-wide text-[var(--muted)]">{displayLabel(stage)}</span>
+                    <span className="text-2xs font-mono text-[var(--muted)]">{cards.length > 0 ? fmt(stageAmt) : ''}</span>
+                  </div>
+                  <div className="flex flex-col gap-1.5 min-h-[60px]">
+                    {cards.map(o => (
+                      <Link key={o.id} href={`/pipeline/${o.id}`}>
+                        <div className="rounded-lg p-2.5 bg-[var(--elevated)] border border-[var(--border)] cursor-pointer active:bg-[var(--hover)] transition-colors" style={{ borderLeft: `3px solid ${riskHex(o.health)}` }}>
+                          <div className="text-xs font-medium text-[var(--text)] truncate mb-0.5">{o.name}</div>
+                          <div className="flex items-center justify-between">
+                            <span className="font-mono text-2xs font-semibold text-[var(--text)]">{fmt(o.amount)}</span>
+                            <HealthBar health={o.health} />
+                          </div>
+                          <div className="text-2xs text-[var(--muted)] truncate mt-0.5">{o.accountName}</div>
+                        </div>
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
 
       <BulkActionBar

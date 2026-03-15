@@ -1,5 +1,5 @@
 'use client';
-import { useRef } from 'react';
+import { useRef, useEffect } from 'react';
 import { useStore } from '@/lib/store';
 import { X } from 'lucide-react';
 import { useFocusTrap } from '@/hooks/use-focus-trap';
@@ -8,6 +8,21 @@ export default function Drawer() {
   const { drawerOpen, drawerContent, closeDrawer } = useStore();
   const panelRef = useRef<HTMLDivElement>(null);
   useFocusTrap(panelRef, drawerOpen);
+
+  // Back-button closes drawer instead of navigating away
+  useEffect(() => {
+    if (!drawerOpen) return;
+    history.pushState({ drawer: true }, '');
+    const onPopState = (e: PopStateEvent) => {
+      if (e.state?.drawer !== true) closeDrawer();
+    };
+    window.addEventListener('popstate', onPopState);
+    return () => {
+      window.removeEventListener('popstate', onPopState);
+      // Clean up the extra history entry if drawer is closed programmatically
+      if (history.state?.drawer) history.back();
+    };
+  }, [drawerOpen, closeDrawer]);
 
   return (
     <>

@@ -1,10 +1,43 @@
 'use client';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, Shield, TrendingUp, Inbox, CheckSquare, MoreHorizontal, X, Zap, Users, Building2, Calendar, Settings, ShieldCheck } from 'lucide-react';
+import { Home, Shield, TrendingUp, Inbox, CheckSquare, MoreHorizontal, X, Zap, Users, Building2, Calendar, Settings, ShieldCheck, Signal, BarChart3 } from 'lucide-react';
 import { useBadgeCounts } from '@/lib/queries/badge-counts';
 import { cn } from '@/lib/utils';
+
+const ALL_TABS = [
+  { href: '/', label: 'Home', icon: Home },
+  { href: '/queue', label: 'Queue', icon: Shield, badgeKey: 'queue' as const },
+  { href: '/pipeline', label: 'Pipeline', icon: TrendingUp },
+  { href: '/inbox', label: 'Inbox', icon: Inbox, badgeKey: 'inbox' as const },
+  { href: '/tasks', label: 'Tasks', icon: CheckSquare, badgeKey: 'tasks' as const },
+  { href: '/leads', label: 'Leads', icon: Users },
+  { href: '/signals', label: 'Signals', icon: Signal },
+  { href: '/accounts', label: 'Accounts', icon: BarChart3 },
+  { href: '/meetings', label: 'Meetings', icon: Calendar },
+] as const;
+
+const DEFAULT_TABS = ['/', '/queue', '/pipeline', '/inbox', '/tasks'];
+const STORAGE_KEY = 'eco-bottom-nav-tabs';
+
+function getSelectedTabs(): string[] {
+  if (typeof window === 'undefined') return DEFAULT_TABS;
+  try {
+    const stored = localStorage.getItem(STORAGE_KEY);
+    if (stored) {
+      const parsed = JSON.parse(stored);
+      if (Array.isArray(parsed) && parsed.length === 5) return parsed;
+    }
+  } catch {}
+  return DEFAULT_TABS;
+}
+
+export function setBottomNavTabs(hrefs: string[]): void {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(hrefs.slice(0, 5)));
+}
+
+export { ALL_TABS, DEFAULT_TABS, STORAGE_KEY };
 
 const tabs = [
   { href: '/', label: 'Home', icon: Home },
@@ -27,6 +60,12 @@ export default function BottomNav() {
   const pathname = usePathname();
   const { data: bc } = useBadgeCounts();
   const [moreOpen, setMoreOpen] = useState(false);
+  const [selected, setSelected] = useState(DEFAULT_TABS);
+
+  useEffect(() => {
+    setSelected(getSelectedTabs());
+  }, []);
+
   const badges: Record<string, number> = {
     queue: bc?.queue ?? 0,
     inbox: bc?.inbox ?? 0,

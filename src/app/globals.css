@@ -145,3 +145,15 @@ kbd {
   border: 1px solid var(--border);
   color: var(--muted);
 }
+
+/* ── Print ── */
+@media print {
+  nav, aside, [role="banner"], [role="navigation"],
+  .md\:ml-\[220px\] > :first-child,
+  button, .toast-slide-in, .fixed { display: none !important; }
+  main { margin-left: 0 !important; padding-top: 0 !important; }
+  body { background: white !important; color: black !important; font-size: 12pt; }
+  * { box-shadow: none !important; border-color: #ccc !important; }
+  a[href]::after { content: " (" attr(href) ")"; font-size: 0.8em; color: #666; }
+  .page-enter, .stagger-item { animation: none !important; }
+}

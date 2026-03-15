@@ -11,7 +11,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     <>
       <Sidebar />
       <TopBar />
-      <main className="md:ml-[220px] pt-12 min-h-screen pb-20 md:pb-0">
+      <main id="main-content" className="md:ml-[220px] pt-12 min-h-screen pb-20 md:pb-0">
         <div className="px-4 py-4 md:px-6 md:py-5 max-w-[1280px]">
           {children}
         </div>
