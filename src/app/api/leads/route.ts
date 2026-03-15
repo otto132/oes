@@ -1,14 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { AccountType, LeadStage, OppStage } from '@prisma/client';
+import { AccountType, LeadStage } from '@prisma/client';
 import { db as rawDb } from '@/lib/db';
 import { scopedDb } from '@/lib/scoped-db';
 import { adaptLead } from '@/lib/adapters';
 import { withHandler } from '@/lib/api-handler';
 import { leadActionSchema } from '@/lib/schemas/leads';
-import { notFound, badRequest, conflict, unauthorized } from '@/lib/api-errors';
+import { notFound, badRequest, unauthorized } from '@/lib/api-errors';
 import { parsePagination, paginate } from '@/lib/schemas/pagination';
 import { auth } from '@/lib/auth';
-import { STAGE_PROB } from '@/lib/types';
 
 export async function GET(req: NextRequest) {
   const session = await auth();
@@ -17,8 +16,14 @@ export async function GET(req: NextRequest) {
 
   const pagination = parsePagination(req);
 
+  const showPaused = req.nextUrl.searchParams.get('paused') === 'true';
+
+  const where = showPaused
+    ? { stage: 'Paused' as LeadStage }
+    : { stage: { notIn: ['Converted', 'Disqualified', 'Paused'] as LeadStage[] } };
+
   const leads = await scoped.lead.findMany({
-    where: { stage: { notIn: ['Converted', 'Disqualified'] } },
+    where,
     include: { owner: true },
     orderBy: { createdAt: 'desc' },
     take: pagination.limit + 1,
@@ -26,7 +31,7 @@ export async function GET(req: NextRequest) {
   });
 
   const { data, meta } = paginate(leads, pagination.limit);
-  return NextResponse.json({ data: data.map(adaptLead), meta });
+  return NextResponse.json({ data: data.map((l: any) => adaptLead(l)), meta });
 }
 
 export const POST = withHandler(leadActionSchema, async (req, ctx) => {
@@ -37,9 +42,6 @@ export const POST = withHandler(leadActionSchema, async (req, ctx) => {
     const { company, type, country, pain } = body;
     const ownerId = body.ownerId || session.user.id;
     if (!company) return badRequest('Company required');
-    // Cross-user duplicate check uses raw unscoped db
-    const dup = await rawDb.lead.findFirst({ where: { company: { equals: company, mode: 'insensitive' } } });
-    if (dup) return conflict(`Lead "${dup.company}" already exists`);
     const lead = await ctx.db.lead.create({
       data: { company, source: 'Manual', type: (type || 'Unknown') as AccountType, country: country || '', pain: pain || '', ownerId },
       include: { owner: true },
@@ -58,52 +60,122 @@ export const POST = withHandler(leadActionSchema, async (req, ctx) => {
   }
 
   if (body.action === 'disqualify') {
-    const { id } = body;
-    const updated = await ctx.db.lead.update({ where: { id }, data: { stage: 'Disqualified' }, include: { owner: true } });
+    const { id, reason } = body;
+    const updated = await ctx.db.lead.update({
+      where: { id },
+      data: { stage: 'Disqualified', disqualifyReason: reason },
+      include: { owner: true },
+    });
     return NextResponse.json({ data: adaptLead(updated) });
   }
 
   if (body.action === 'convert') {
-    const { id, accountName, accountType, oppName, oppAmount, oppStage } = body;
+    const { id, accountName, accountType, oppName, oppAmount, closeDate } = body;
     const lead = await ctx.db.lead.findUnique({ where: { id } });
     if (!lead) return notFound('Lead not found');
+    if (lead.stage !== 'Qualified') return badRequest('Only qualified leads can be converted');
     const ownerId = body.ownerId || session.user.id;
 
     const resolvedName = accountName || lead.company;
+    const resolvedCloseDate = closeDate ? new Date(closeDate) : new Date(Date.now() + 90 * 864e5);
 
-    // Use rawDb for transaction — lead ownership already verified via ctx.db.findUnique above
     const result = await rawDb.$transaction(async (tx: any) => {
-      await tx.lead.update({ where: { id }, data: { stage: 'Converted' } });
-
-      // Check for existing account with same name (case-insensitive)
+      // 1. Account upsert
       const existingAccount = await tx.account.findFirst({
         where: { name: { equals: resolvedName, mode: 'insensitive' } },
       });
 
       const account = existingAccount ?? await tx.account.create({
         data: {
-          name: resolvedName, type: (accountType || lead.type) as AccountType, country: lead.country,
-          region: lead.region, status: 'Prospect', ownerId,
-          scoreFit: lead.scoreFit, scoreIntent: lead.scoreIntent, scoreUrgency: lead.scoreUrgency,
-          scoreAccess: lead.scoreAccess, scoreCommercial: lead.scoreCommercial,
-          pain: lead.pain, whyNow: 'Converted from lead', moduleFit: lead.moduleFit,
+          name: resolvedName,
+          type: (accountType || lead.type) as any,
+          country: lead.country,
+          region: lead.region,
+          status: 'Prospect',
+          ownerId,
+          scoreFit: lead.scoreFit,
+          scoreIntent: lead.scoreIntent,
+          scoreUrgency: lead.scoreUrgency,
+          scoreAccess: lead.scoreAccess,
+          scoreCommercial: lead.scoreCommercial,
+          pain: lead.pain,
+          whyNow: 'Converted from lead',
+          moduleFit: lead.moduleFit,
           aiConfidence: lead.confidence,
         },
       });
 
-      let opp = null;
-      if (oppName) {
-        opp = await tx.opportunity.create({
-          data: {
-            name: oppName, accountId: account.id, stage: (oppStage || 'Discovery') as OppStage,
-            amount: oppAmount || 0, probability: STAGE_PROB[oppStage || 'Discovery'] || 20, ownerId,
-          },
-        });
-      }
+      // 2. Opportunity create — mandatory, with FIUAC → health seeding
+      const opp = await tx.opportunity.create({
+        data: {
+          name: oppName,
+          accountId: account.id,
+          stage: 'Discovery',
+          amount: oppAmount || 0,
+          probability: 15,
+          closeDate: resolvedCloseDate,
+          source: lead.source,
+          ownerId,
+          // FIUAC → Deal Health seeding
+          healthEngagement: lead.scoreIntent,
+          healthStakeholders: lead.scoreAccess,
+          healthCompetitive: lead.scoreCommercial,
+          healthTimeline: lead.scoreUrgency,
+        },
+      });
+
+      // 3. Lead update — mark converted with FK
+      await tx.lead.update({
+        where: { id },
+        data: {
+          stage: 'Converted',
+          opportunityId: opp.id,
+          convertedAt: new Date(),
+        },
+      });
+
+      // 4. Activity — conversion event
+      await tx.activity.create({
+        data: {
+          type: 'Note',
+          summary: `Lead converted → Created deal '${oppName}'`,
+          detail: `Converted from lead: ${lead.company}. Source: ${lead.source}.`,
+          source: 'Pipeline',
+          accountId: account.id,
+          authorId: ownerId,
+        },
+      });
+
       return { account, opportunity: opp, linkedExisting: !!existingAccount };
     });
 
     return NextResponse.json({ data: result }, { status: 201 });
+  }
+
+  if (body.action === 'pause') {
+    const { id, pausedUntil } = body;
+    const lead = await ctx.db.lead.findUnique({ where: { id } });
+    if (!lead) return notFound('Lead not found');
+    if (['Converted', 'Disqualified'].includes(lead.stage)) return badRequest('Cannot pause terminal leads');
+    const updated = await ctx.db.lead.update({
+      where: { id },
+      data: { stage: 'Paused' as LeadStage, pausedUntil: new Date(pausedUntil) },
+      include: { owner: true },
+    });
+    return NextResponse.json({ data: adaptLead(updated) });
+  }
+
+  if (body.action === 'requalify') {
+    const { id } = body;
+    const lead = await ctx.db.lead.findUnique({ where: { id } });
+    if (!lead) return notFound('Lead not found');
+    if (!['Disqualified', 'Paused'].includes(lead.stage)) return badRequest('Can only requalify disqualified or paused leads');
+    const updated = await ctx.db.lead.update({
+      where: { id },
+      data: { stage: 'Researching', pausedUntil: null, disqualifyReason: null },
+      include: { owner: true },
+    });
+    return NextResponse.json({ data: adaptLead(updated) });
   }
 
   if (body.action === 'bulk_advance') {

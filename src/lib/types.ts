@@ -40,13 +40,15 @@ export interface Signal {
 }
 
 // ── Leads ────────────────────────────────────────
-export type LeadStage = 'New' | 'Researching' | 'Qualified' | 'Converted' | 'Disqualified';
+export type LeadStage = 'New' | 'Researching' | 'Qualified' | 'Paused' | 'Converted' | 'Disqualified';
 
 export interface Lead {
   id: ID; company: string; domain: string; source: string; signalId: ID | null;
   type: string; country: string; region: string; stage: LeadStage;
   pain: string; moduleFit: string[]; scores: FIUACScores; confidence: number;
   owner: User; createdAt: string;
+  opportunityId?: ID | null; convertedAt?: string | null;
+  disqualifyReason?: string | null; pausedUntil?: string | null;
 }
 
 // ── Contacts ─────────────────────────────────────
@@ -59,7 +61,7 @@ export interface Contact {
 }
 
 // ── Accounts ─────────────────────────────────────
-export type AccountStatus = 'Prospect' | 'Active' | 'Partner' | 'Churned';
+export type AccountStatus = 'Prospect' | 'Active' | 'Customer' | 'Partner' | 'Churned';
 export type CertScheme = 'GoO' | 'ELcert' | 'REGO' | 'I-REC' | 'EECS';
 
 export interface Account {
@@ -72,19 +74,20 @@ export interface Account {
 }
 
 // ── Opportunities ────────────────────────────────
-export type OppStage = 'Identified' | 'Contacted' | 'Discovery' | 'Qualified' | 'SolutionFit' | 'Proposal' | 'Negotiation' | 'VerbalCommit' | 'ClosedWon' | 'ClosedLost';
+export type OppStage = 'Discovery' | 'Evaluation' | 'Proposal' | 'Negotiation' | 'Commit' | 'Won' | 'Lost';
 
-export const STAGES: OppStage[] = ['Identified','Contacted','Discovery','Qualified','SolutionFit','Proposal','Negotiation','VerbalCommit','ClosedWon','ClosedLost'];
-export const KANBAN_STAGES: OppStage[] = ['Contacted','Discovery','Qualified','SolutionFit','Proposal','Negotiation','VerbalCommit'];
-export const STAGE_PROB: Record<string, number> = { Identified:5,Contacted:10,Discovery:20,Qualified:35,SolutionFit:50,Proposal:65,Negotiation:80,VerbalCommit:90,ClosedWon:100,ClosedLost:0 };
-export const STAGE_COLOR: Record<string, string> = { Contacted:'#3b82f6',Discovery:'#8b5cf6',Qualified:'#14b8a6',SolutionFit:'#33a882',Proposal:'#f59e0b',Negotiation:'#f97316',VerbalCommit:'#ec4899' };
-export const LEAD_STAGES: LeadStage[] = ['New','Researching','Qualified','Converted','Disqualified'];
+export const STAGES: OppStage[] = ['Discovery','Evaluation','Proposal','Negotiation','Commit','Won','Lost'];
+export const KANBAN_STAGES: OppStage[] = ['Discovery','Evaluation','Proposal','Negotiation','Commit'];
+export const STAGE_PROB: Record<string, number> = { Discovery:15,Evaluation:35,Proposal:55,Negotiation:75,Commit:90,Won:100,Lost:0 };
+export const STAGE_COLOR: Record<string, string> = { Discovery:'#3b82f6',Evaluation:'#8b5cf6',Proposal:'#f59e0b',Negotiation:'#f97316',Commit:'#ec4899' };
+export const LEAD_STAGES: LeadStage[] = ['New','Researching','Qualified','Paused','Converted','Disqualified'];
 
 export interface Opportunity {
   id: ID; name: string; accountId: ID; accountName: string;
   stage: OppStage; amount: number; probability: number; closeDate: string;
   owner: User; health: DealHealth;
   nextAction: string; nextActionDate: string;
+  source?: string;
   lossReason?: string; lossCompetitor?: string;
   lessonsLearned?: string; keyStakeholders?: string;
 }

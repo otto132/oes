@@ -39,7 +39,7 @@ export function useCreateOpportunity() {
       id: `temp-${Date.now()}`,
       name: vars.name,
       accountId: vars.accountId,
-      stage: vars.stage ?? 'Prospecting',
+      stage: vars.stage ?? 'Discovery',
       amount: vars.amount,
       closeDate: vars.closeDate,
     })),
@@ -63,9 +63,9 @@ export function useCloseWon() {
     mutationKey: ['opportunities', 'closeWon'],
     mutationFn: ({ id, ...data }) => api.opportunities.closeWon(id, data),
     queryKey: oppKeys.all,
-    updater: updateById((opp) => ({ ...opp, stage: 'ClosedWon' })),
+    updater: updateById((opp) => ({ ...opp, stage: 'Won' })),
     detailQueryKey: (vars) => oppKeys.detail(vars.id),
-    detailUpdater: (old) => ({ ...old, stage: 'ClosedWon' }),
+    detailUpdater: (old) => ({ ...old, stage: 'Won' }),
   });
 }
 
@@ -85,8 +85,8 @@ export function useCloseLost() {
     mutationKey: ['opportunities', 'closeLost'],
     mutationFn: ({ id, ...data }) => api.opportunities.closeLost(id, data),
     queryKey: oppKeys.all,
-    updater: updateById((opp) => ({ ...opp, stage: 'ClosedLost' })),
+    updater: updateById((opp) => ({ ...opp, stage: 'Lost' })),
     detailQueryKey: (vars) => oppKeys.detail(vars.id),
-    detailUpdater: (old) => ({ ...old, stage: 'ClosedLost' }),
+    detailUpdater: (old) => ({ ...old, stage: 'Lost' }),
   });
 }

@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useOpportunityDetail, useMoveStage, useCloseWon, useCloseLost, useUpdateOpportunity } from '@/lib/queries/opportunities';
 import { Badge, Avatar, HealthBar, StageBadge, AgentTag, Skeleton, SkeletonCard, ErrorState, Spinner } from '@/components/ui';
 import { fmt, fDate, fR, isOverdue, weightedValue, cn, displayLabel } from '@/lib/utils';
-import { STAGES, STAGE_COLOR, healthAvg } from '@/lib/types';
+import { STAGES, KANBAN_STAGES, STAGE_COLOR, healthAvg } from '@/lib/types';
 import type { Activity, Contact } from '@/lib/types';
 import { useStore } from '@/lib/store';
 
@@ -395,8 +395,11 @@ export default function OppDetailPage() {
         <div className="flex items-start justify-between flex-col md:flex-row gap-3 mb-3">
           <div>
             <Link href={`/accounts/${o.accountId}`} className="text-sm text-brand hover:underline mb-0.5 block">{o.accountName} →</Link>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               <h1 className="text-2xl font-semibold tracking-tight text-[var(--text)]">{o.name}</h1>
+              {o.source && (
+                <span className="px-2 py-0.5 text-2xs font-medium rounded-full bg-[var(--surface)] border border-[var(--border)] text-[var(--sub)]">{o.source}</span>
+              )}
               <button
                 onClick={openEditDrawer}
                 disabled={isMutating}
@@ -422,9 +425,16 @@ export default function OppDetailPage() {
         {/* Stage progress */}
         <div className="text-2xs text-[var(--muted)] mb-1">Stage Progress</div>
         <div className="flex gap-0.5">
-          {STAGES.slice(0, -2).map((s, i) => (
-            <div key={s} className="flex-1 h-1 rounded-sm" style={{ background: i <= sIdx ? (STAGE_COLOR[s] || '#33a882') : 'var(--surface)' }} />
-          ))}
+          {KANBAN_STAGES.map((s, i) => {
+            const kIdx = KANBAN_STAGES.indexOf(o.stage as typeof KANBAN_STAGES[number]);
+            const filled = kIdx >= 0 && i <= kIdx;
+            return (
+              <div key={s} className="flex-1 flex flex-col gap-0.5">
+                <div className="h-1 rounded-sm" style={{ background: filled ? (STAGE_COLOR[s] || '#33a882') : 'var(--surface)' }} />
+                <div className={cn('text-3xs text-center truncate', filled ? 'text-[var(--sub)]' : 'text-[var(--muted)]')}>{s}</div>
+              </div>
+            );
+          })}
         </div>
 
         {/* Next action */}
@@ -486,10 +496,17 @@ export default function OppDetailPage() {
               <span className="text-2xs text-[var(--muted)]">Owner</span>
               <div className="flex items-center gap-1"><Avatar initials={o.owner.initials} color={o.owner.color} size="xs" /><span className="text-xs text-[var(--text)]">{o.owner.name.split(' ')[0]}</span></div>
             </div>
-            <div className="flex items-center justify-between py-1.5">
+            <div className="flex items-center justify-between py-1.5 border-b border-[var(--border)]">
               <span className="text-2xs text-[var(--muted)]">Close</span>
               <span className={cn('font-mono text-xs', isOverdue(o.closeDate) ? 'text-danger' : 'text-[var(--sub)]')}>{fDate(o.closeDate)}</span>
             </div>
+            {/* TODO: Show "Originated from lead: {company}" if the API includes `opportunity.lead` relation in the detail query */}
+            {o.source && (
+              <div className="flex items-center justify-between py-1.5">
+                <span className="text-2xs text-[var(--muted)]">Source</span>
+                <span className="text-xs text-[var(--sub)]">{o.source}</span>
+              </div>
+            )}
           </div>
 
           {/* Contacts */}
@@ -515,7 +532,7 @@ export default function OppDetailPage() {
           <div className="rounded-lg bg-[var(--elevated)] border border-[var(--border)] p-3.5">
             <div className="text-3xs font-semibold tracking-widest uppercase text-[var(--muted)] mb-2">Move Stage</div>
             <div className="flex flex-col gap-0.5">
-              {STAGES.filter(s => !['ClosedWon', 'ClosedLost'].includes(s)).map(s => {
+              {STAGES.filter(s => !['Won', 'Lost'].includes(s)).map(s => {
                 const active = o.stage === s;
                 return (
                   <button
@@ -543,14 +560,14 @@ export default function OppDetailPage() {
                 onClick={openCloseWonDrawer}
                 className="text-left px-2 py-1.5 rounded-md text-xs text-brand font-medium hover:bg-[var(--hover)] transition-colors disabled:opacity-50"
               >
-                {displayLabel('ClosedWon')}
+                {displayLabel('Won')}
               </button>
               <button
                 disabled={isMutating}
                 onClick={openCloseLostDrawer}
                 className="text-left px-2 py-1.5 rounded-md text-xs text-danger hover:bg-[var(--hover)] transition-colors disabled:opacity-50"
               >
-                {displayLabel('ClosedLost')}
+                {displayLabel('Lost')}
               </button>
             </div>
           </div>

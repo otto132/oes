@@ -118,20 +118,18 @@ export function Avatar({ initials, color = 'default', size = 'sm' }: { initials:
 
 /* ── Stage Badge ── */
 const stageColors: Record<string, string> = {
-  Contacted: 'text-blue-400 border-blue-400/12 bg-blue-400/[.05]',
-  Discovery: 'text-purple border-purple/12 bg-purple/[.05]',
-  Qualified: 'text-teal border-teal/12 bg-teal/[.05]',
-  SolutionFit: 'text-brand border-brand/12 bg-brand/[.05]',
+  Discovery: 'text-blue-400 border-blue-400/12 bg-blue-400/[.05]',
+  Evaluation: 'text-purple border-purple/12 bg-purple/[.05]',
   Proposal: 'text-warn border-warn/12 bg-warn/[.05]',
   Negotiation: 'text-orange-400 border-orange-400/12 bg-orange-400/[.05]',
-  VerbalCommit: 'text-pink-400 border-pink-400/12 bg-pink-400/[.05]',
-  ClosedWon: 'text-brand border-brand/12 bg-brand/[.05]',
-  ClosedLost: 'text-muted border-[var(--border)] bg-[var(--bar-track)]',
+  Commit: 'text-pink-400 border-pink-400/12 bg-pink-400/[.05]',
+  Won: 'text-brand border-brand/12 bg-brand/[.05]',
+  Lost: 'text-muted border-[var(--border)] bg-[var(--bar-track)]',
 };
 
 export function StageBadge({ stage }: { stage: string }) {
   return (
-    <span className={`inline-flex items-center gap-1 text-2xs font-semibold px-1.5 py-[1px] rounded border whitespace-nowrap ${stageColors[stage] || stageColors.Contacted}`}>
+    <span className={`inline-flex items-center gap-1 text-2xs font-semibold px-1.5 py-[1px] rounded border whitespace-nowrap ${stageColors[stage] || stageColors.Discovery}`}>
       <span className="w-1.5 h-1.5 rounded-full bg-current" />{displayLabel(stage)}
     </span>
   );

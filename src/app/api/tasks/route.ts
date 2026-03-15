@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { Prisma, OppStage } from '@prisma/client';
+import { Prisma } from '@prisma/client';
 import type { Task } from '@prisma/client';
 import { resolveTenantDb } from '@/lib/tenant';
 import { db as rawDb } from '@/lib/db';
@@ -100,7 +100,7 @@ export const POST = withHandler(taskActionSchema, async (req, ctx) => {
     if (task.accountId) {
       await ctx.db.account.update({ where: { id: task.accountId }, data: { lastActivityAt: new Date() } });
       const opp = await ctx.db.opportunity.findFirst({
-        where: { accountId: task.accountId, stage: { notIn: [OppStage.ClosedWon, OppStage.ClosedLost] } },
+        where: { accountId: task.accountId, stage: { notIn: ['Won', 'Lost'] as any } },
       });
       if (opp) {
         await ctx.db.opportunity.update({

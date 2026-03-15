@@ -7,12 +7,21 @@ import { useOptimisticMutation, removeById, updateById, prependItem, replaceTemp
 export const leadKeys = {
   all: ['leads'] as const,
   list: () => ['leads', 'list'] as const,
+  paused: () => ['leads', 'paused'] as const,
 };
 
 export function useLeadsQuery() {
   return useQuery({
     queryKey: leadKeys.list(),
     queryFn: () => api.leads.list(),
+    placeholderData: keepPreviousData,
+  });
+}
+
+export function usePausedLeadsQuery() {
+  return useQuery({
+    queryKey: leadKeys.paused(),
+    queryFn: () => api.leads.list(undefined, undefined, true),
     placeholderData: keepPreviousData,
   });
 }
@@ -27,9 +36,9 @@ export function useAdvanceLead() {
 }
 
 export function useDisqualifyLead() {
-  return useOptimisticMutation<unknown, { id: string }>({
+  return useOptimisticMutation<unknown, { id: string; reason: string }>({
     mutationKey: ['leads', 'disqualify'],
-    mutationFn: ({ id }) => api.leads.disqualify(id),
+    mutationFn: ({ id, reason }) => api.leads.disqualify(id, reason),
     queryKey: leadKeys.all,
     updater: updateById((lead) => ({ ...lead, stage: 'Disqualified' })),
   });
@@ -38,12 +47,39 @@ export function useDisqualifyLead() {
 const removeLeadById = removeById();
 
 export function useConvertLead() {
-  return useOptimisticMutation<unknown, { id: string; accountName?: string; accountType?: string; oppName?: string; oppAmount?: number; oppStage?: string }>({
+  return useOptimisticMutation<unknown, {
+    id: string;
+    accountName: string;
+    accountType?: string;
+    oppName: string;
+    oppAmount?: number;
+    closeDate?: string;
+  }>({
     mutationKey: ['leads', 'convert'],
     mutationFn: ({ id, ...data }) => api.leads.convert(id, data),
     queryKey: leadKeys.all,
     updater: (old, vars) => removeLeadById(old, vars.id),
     invalidateKeys: [accountKeys.all, oppKeys.all],
+  });
+}
+
+export function usePauseLead() {
+  return useOptimisticMutation<unknown, { id: string; pausedUntil: string }>({
+    mutationKey: ['leads', 'pause'],
+    mutationFn: ({ id, pausedUntil }) => api.leads.pause(id, pausedUntil),
+    queryKey: leadKeys.all,
+    updater: updateById((lead) => ({ ...lead, stage: 'Paused' })),
+    invalidateKeys: [leadKeys.paused()],
+  });
+}
+
+export function useRequalifyLead() {
+  return useOptimisticMutation<unknown, { id: string }>({
+    mutationKey: ['leads', 'requalify'],
+    mutationFn: ({ id }) => api.leads.requalify(id),
+    queryKey: leadKeys.all,
+    updater: updateById((lead) => ({ ...lead, stage: 'Researching' })),
+    invalidateKeys: [leadKeys.paused()],
   });
 }
 
@@ -64,7 +100,7 @@ export function useCreateLead() {
   });
 }
 
-const LEAD_STAGES = ['New', 'Contacted', 'Qualified', 'Converted'];
+const LEAD_STAGES = ['New', 'Researching', 'Qualified'];
 function getNextStage(current: string): string {
   const idx = LEAD_STAGES.indexOf(current);
   return idx >= 0 && idx < LEAD_STAGES.length - 1 ? LEAD_STAGES[idx + 1] : current;

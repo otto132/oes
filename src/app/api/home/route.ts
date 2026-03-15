@@ -16,7 +16,7 @@ export async function GET() {
   const startOfDay = new Date(now); startOfDay.setHours(0, 0, 0, 0);
   const endOfDay = new Date(now); endOfDay.setHours(23, 59, 59, 999);
 
-  const openWhere: any = { stage: { notIn: ['ClosedWon', 'ClosedLost'] } };
+  const openWhere: any = { stage: { notIn: ['Won', 'Lost'] } };
 
   const [stageAgg, atRiskOpps, nextActionOpps, pendingQueue, newSignals, overdueTasks, todayMeetings, recentActivity, unreadEmails, openDealCount, accountCount] = await Promise.all([
     // Aggregate pipeline totals by stage (replaces loading ALL opps)

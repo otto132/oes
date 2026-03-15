@@ -204,7 +204,7 @@ describe('adaptOpportunity', () => {
   const base = {
     id: 'o1',
     name: 'Acme Expansion',
-    stage: 'SolutionFit',
+    stage: 'Evaluation',
     amount: 150000,
     probability: 50,
     closeDate: new Date('2025-09-01T00:00:00Z'),
@@ -222,7 +222,7 @@ describe('adaptOpportunity', () => {
 
   it('maps stage through enum value', () => {
     const result = adaptOpportunity(base);
-    expect(result.stage).toBe('SolutionFit');
+    expect(result.stage).toBe('Evaluation');
   });
 
   it('adapts health sub-object', () => {
@@ -272,6 +272,16 @@ describe('adaptOpportunity', () => {
     });
     expect(result.nextAction).toBe('');
     expect(result.nextActionDate).toBe('');
+  });
+
+  it('includes source when present', () => {
+    const result = adaptOpportunity({ ...base, source: 'Signal' });
+    expect(result.source).toBe('Signal');
+  });
+
+  it('defaults source to empty string when missing', () => {
+    const result = adaptOpportunity(base);
+    expect(result.source).toBe('');
   });
 });
 
@@ -382,6 +392,26 @@ describe('adaptLead', () => {
     const result = adaptLead(base);
     expect(result.owner.initials).toBe('AS');
     expect(result.owner.color).toBe('#3b82f6');
+  });
+
+  it('includes opportunityId when present', () => {
+    const result = adaptLead({ ...base, opportunityId: 'o1' });
+    expect(result.opportunityId).toBe('o1');
+  });
+
+  it('includes convertedAt as ISO string when present', () => {
+    const result = adaptLead({ ...base, convertedAt: new Date('2026-03-15T10:00:00Z') });
+    expect(result.convertedAt).toBe('2026-03-15T10:00:00.000Z');
+  });
+
+  it('includes disqualifyReason when present', () => {
+    const result = adaptLead({ ...base, disqualifyReason: 'No Budget' });
+    expect(result.disqualifyReason).toBe('No Budget');
+  });
+
+  it('includes pausedUntil as ISO string when present', () => {
+    const result = adaptLead({ ...base, pausedUntil: new Date('2026-06-01T00:00:00Z') });
+    expect(result.pausedUntil).toBe('2026-06-01T00:00:00.000Z');
   });
 });
 
