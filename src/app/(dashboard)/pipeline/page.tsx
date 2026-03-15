@@ -62,7 +62,7 @@ function OpportunityCreateForm({
   const [accountResults, setAccountResults] = useState<any[]>([]);
   const [showDropdown, setShowDropdown] = useState(false);
   const [selectedAccountName, setSelectedAccountName] = useState(prefilledAccountName || '');
-  const [stage, setStage] = useState('Contacted');
+  const [stage, setStage] = useState('Discovery');
   const [amount, setAmount] = useState(0);
   const defaultClose = new Date(Date.now() + 90 * 864e5).toISOString().split('T')[0];
   const [closeDate, setCloseDate] = useState(defaultClose);
@@ -292,7 +292,7 @@ function PipelinePageInner() {
     <div className="max-w-[1400px] page-enter">
       <div className="flex items-center justify-between mb-3.5">
         <div>
-          <div className="flex items-center gap-1.5"><h1 className="text-2xl font-semibold tracking-tight text-[var(--text)]">Pipeline</h1><HelpTip label="Deals progress through stages from Contacted to Closed. Each stage has an associated win probability used for weighted pipeline value." title="Pipeline" /></div>
+          <div className="flex items-center gap-1.5"><h1 className="text-2xl font-semibold tracking-tight text-[var(--text)]">Pipeline</h1><HelpTip label="Deals progress through stages from Discovery to Commit. Each stage has an associated win probability used for weighted pipeline value." title="Pipeline" /></div>
           <p className="text-sm text-[var(--sub)] mt-0.5">
             {open.length} open · <span className="font-mono font-semibold">{fmt(totalPipe)}</span> total · <span className="font-mono text-[var(--sub)]">{fmt(totalWeighted)}</span> weighted
           </p>
@@ -350,6 +350,12 @@ function PipelinePageInner() {
                   if (id) {
                     const opp = open.find(o => o.id === id);
                     if (opp && opp.stage !== stage) {
+                      const srcIdx = KANBAN_STAGES.indexOf(opp.stage);
+                      const tgtIdx = KANBAN_STAGES.indexOf(stage);
+                      if (tgtIdx <= srcIdx) {
+                        addToast({ type: 'info', message: 'Use the stage dropdown to move deals back.' });
+                        return;
+                      }
                       moveStage.mutate(
                         { id, stage },
                         { onError: (err: unknown) => addToast({ type: 'error', message: err instanceof Error ? err.message : 'An error occurred' }) }
@@ -434,6 +440,7 @@ function PipelinePageInner() {
                             <Avatar initials={o.owner.initials} color={o.owner.color} size="xs" />
                             <span className="text-3xs text-[var(--muted)] bg-[var(--surface)] px-1.5 py-0.5 rounded">{STAGE_PROB[o.stage]}%</span>
                           </div>
+                          {o.source && <span className="inline-block mt-1.5 text-3xs px-1.5 py-0.5 rounded bg-[var(--surface)] text-[var(--muted)] border border-[var(--border)]">{o.source}</span>}
                           {o.nextAction && <div className="text-2xs text-[var(--muted)] mt-1.5 leading-tight line-clamp-2">→ {o.nextAction}</div>}
                         </div>
                       </div>
@@ -453,7 +460,7 @@ function PipelinePageInner() {
             <thead>
               <tr>
                 <th className="w-8 px-2 py-2 bg-[var(--surface)] border-b border-[var(--border)]" />
-                {['Opportunity', 'Stage', 'Amount', 'Health', 'Close', 'Owner'].map(h => (
+                {['Opportunity', 'Stage', 'Source', 'Amount', 'Health', 'Close', 'Owner'].map(h => (
                 <th key={h} className="text-3xs font-semibold uppercase tracking-wide text-[var(--muted)] text-left px-3.5 py-2 bg-[var(--surface)] border-b border-[var(--border)] whitespace-nowrap">{h}</th>
               ))}</tr>
             </thead>
@@ -470,6 +477,7 @@ function PipelinePageInner() {
                   </td>
                   <td className="px-3.5 py-2.5 border-b border-[var(--border)]"><div className="font-medium text-sm text-[var(--text)]">{o.name}</div><div className="text-2xs text-[var(--muted)]">{o.accountName}</div></td>
                   <td className="px-3.5 py-2.5 border-b border-[var(--border)]"><StageBadge stage={o.stage} /></td>
+                  <td className="px-3.5 py-2.5 border-b border-[var(--border)]">{o.source ? <span className="text-2xs px-1.5 py-0.5 rounded bg-[var(--surface)] text-[var(--muted)] border border-[var(--border)]">{o.source}</span> : <span className="text-2xs text-[var(--muted)]">—</span>}</td>
                   <td className="px-3.5 py-2.5 border-b border-[var(--border)] font-mono font-semibold text-sm text-[var(--text)]">{fmt(o.amount)}</td>
                   <td className="px-3.5 py-2.5 border-b border-[var(--border)]"><div className="flex items-center gap-1.5"><HealthBar health={o.health} /><span className="text-2xs" style={{ color: riskHex(o.health) }}>{healthAvg(o.health)}</span></div></td>
                   <td className="px-3.5 py-2.5 border-b border-[var(--border)]"><span className={`font-mono text-xs ${isOverdue(o.closeDate) ? 'text-danger' : 'text-[var(--sub)]'}`}>{fDate(o.closeDate)}</span></td>
