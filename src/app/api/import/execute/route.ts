@@ -7,7 +7,7 @@ import { unauthorized, badRequest } from '@/lib/api-errors';
 import { executeRequestSchema, leadRowSchema } from '@/lib/schemas/import';
 import { logger } from '@/lib/logger';
 
-const MAX_ROWS = 500;
+const MAX_ROWS = 2000;
 
 export async function POST(req: NextRequest) {
   const session = await auth();

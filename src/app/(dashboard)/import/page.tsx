@@ -12,6 +12,11 @@ type Step = 'upload' | 'mapping' | 'preview' | 'results';
 function parseCSV(text: string): { headers: string[]; rows: string[][] } {
   const lines = text.split(/\r?\n/).filter(l => l.trim());
   if (lines.length < 2) return { headers: [], rows: [] };
+
+  // Auto-detect delimiter from header line: semicolon or comma
+  const headerLine = lines[0];
+  const delimiter = headerLine.includes(';') ? ';' : ',';
+
   const parseLine = (line: string): string[] => {
     const result: string[] = [];
     let current = '';
@@ -21,7 +26,7 @@ function parseCSV(text: string): { headers: string[]; rows: string[][] } {
       if (ch === '"') {
         if (inQuotes && line[i + 1] === '"') { current += '"'; i++; }
         else inQuotes = !inQuotes;
-      } else if (ch === ',' && !inQuotes) { result.push(current.trim()); current = ''; }
+      } else if (ch === delimiter && !inQuotes) { result.push(current.trim()); current = ''; }
       else current += ch;
     }
     result.push(current.trim());
@@ -84,8 +89,8 @@ export default function ImportPage() {
       return;
     }
 
-    if (parsedRows.length > 500) {
-      addToast({ type: 'error', message: `Too many rows (${parsedRows.length}). Maximum is 500.` });
+    if (parsedRows.length > 2000) {
+      addToast({ type: 'error', message: `Too many rows (${parsedRows.length}). Maximum is 2000.` });
       return;
     }
 
@@ -181,7 +186,7 @@ export default function ImportPage() {
             <>
               <Upload size={32} className="mx-auto text-[var(--muted)] mb-3" />
               <p className="text-sm font-medium text-[var(--text)] mb-1">Drop a file or click to browse</p>
-              <p className="text-xs text-[var(--muted)] mb-4">CSV, TSV, XLSX, XLS · Max 500 rows · Max 5MB</p>
+              <p className="text-xs text-[var(--muted)] mb-4">CSV, TSV, XLSX, XLS · Max 2000 rows · Max 5MB</p>
               <label className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium bg-brand text-brand-on rounded-md hover:brightness-110 transition-colors cursor-pointer">
                 <Upload size={14} /> Choose File
                 <input
