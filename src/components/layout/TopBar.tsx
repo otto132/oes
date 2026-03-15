@@ -4,6 +4,7 @@ import { Plus, Sun, Moon } from 'lucide-react';
 import { useSession } from 'next-auth/react';
 import NotificationDropdown from '@/components/layout/NotificationDropdown';
 import { useStore } from '@/lib/store';
+import { useNotificationStream } from '@/lib/queries/notifications';
 
 const titles: Record<string, string> = {
   '/': 'Home', '/queue': 'Approval Queue', '/signals': 'Signals', '/leads': 'Leads',
@@ -17,6 +18,7 @@ export default function TopBar() {
   const toggleTheme = useStore(s => s.toggleTheme);
   const title = titles[pathname] || (pathname.startsWith('/accounts/') ? 'Account' : pathname.startsWith('/pipeline/') ? 'Opportunity' : 'Eco-Insight');
   const initials = session?.user?.name?.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2) ?? '?';
+  useNotificationStream();
 
   return (
     <header className="fixed top-0 left-0 md:left-[220px] right-0 h-12 bg-elevated/80 backdrop-blur-sm border-b border-border flex items-center gap-3 px-4 md:px-6 z-20">

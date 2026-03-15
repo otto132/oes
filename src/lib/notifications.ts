@@ -1,4 +1,5 @@
 import type { PrismaClient, NotificationType, Notification } from '@prisma/client';
+import { publishToUser } from '@/lib/notifications-pubsub';
 
 interface CreateNotificationParams {
   userId: string;
@@ -32,7 +33,7 @@ export async function createNotification(
     if (existing) return null;
   }
 
-  return db.notification.create({
+  const notification = await db.notification.create({
     data: {
       userId: params.userId,
       actorId: params.actorId,
@@ -42,7 +43,31 @@ export async function createNotification(
       entityType: params.entityType,
       entityId: params.entityId,
     },
+    include: {
+      actor: { select: { id: true, name: true, initials: true, color: true } },
+    },
   });
+
+  // Push to SSE-connected clients (fire-and-forget, never blocks)
+  try {
+    publishToUser(params.userId, 'notification', {
+      id: notification.id,
+      type: notification.type,
+      title: notification.title,
+      message: notification.message,
+      entityType: notification.entityType,
+      entityId: notification.entityId,
+      readAt: null,
+      createdAt: notification.createdAt.toISOString(),
+      actor: notification.actor
+        ? { id: notification.actor.id, name: notification.actor.name, initials: notification.actor.initials, color: notification.actor.color }
+        : null,
+    });
+  } catch {
+    // Never block notification creation
+  }
+
+  return notification;
 }
 
 /**
