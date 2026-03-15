@@ -150,6 +150,10 @@ export function adaptLead(l: {
   confidence: number;
   createdAt: Date;
   owner: Parameters<typeof adaptUser>[0];
+  opportunityId?: string | null;
+  convertedAt?: Date | null;
+  disqualifyReason?: string | null;
+  pausedUntil?: Date | null;
   [k: string]: unknown;
 }): UILead {
   return {
@@ -168,6 +172,10 @@ export function adaptLead(l: {
     confidence: l.confidence,
     owner: adaptUser(l.owner),
     createdAt: l.createdAt.toISOString(),
+    ...(l.opportunityId != null ? { opportunityId: l.opportunityId } : {}),
+    ...(l.convertedAt ? { convertedAt: l.convertedAt.toISOString() } : {}),
+    ...(l.disqualifyReason != null ? { disqualifyReason: l.disqualifyReason } : {}),
+    ...(l.pausedUntil ? { pausedUntil: l.pausedUntil.toISOString() } : {}),
   };
 }
 
@@ -237,6 +245,7 @@ export function adaptOpportunity(o: {
   lossCompetitor: string | null;
   account: { id: string; name: string };
   owner: Parameters<typeof adaptUser>[0];
+  source?: string;
   [k: string]: unknown;
 }): UIOpportunity {
   return {
@@ -252,6 +261,7 @@ export function adaptOpportunity(o: {
     health: adaptHealth(o),
     nextAction: o.nextAction ?? '',
     nextActionDate: o.nextActionDate ? o.nextActionDate.toISOString() : '',
+    source: o.source ?? '',
     ...(o.lossReason ? { lossReason: o.lossReason as string } : {}),
     ...(o.lossCompetitor ? { lossCompetitor: o.lossCompetitor as string } : {}),
     ...(o.lessonsLearned ? { lessonsLearned: o.lessonsLearned as string } : {}),
