@@ -170,108 +170,230 @@ function TasksPageInner() {
 
   function openNewTaskDrawer() {
     const defaultDue = new Date(Date.now() + 7 * 864e5).toISOString().split('T')[0];
-    const state = { title: '', priority: 'Medium', dueDate: defaultDue, accountName: '', goalId: '' };
+    const state = {
+      title: '', priority: 'Medium', dueDate: defaultDue, accountName: '', goalId: '',
+      assigneeIds: [] as string[],
+      assigneeNames: [] as { id: string; name: string; initials: string; color: string }[],
+      subtasks: [] as string[],
+    };
 
-    openDrawer({
-      title: 'New Task',
-      subtitle: 'Create a manual task',
-      body: (
-        <div className="flex flex-col gap-3">
-          <label className="flex flex-col gap-1">
-            <span className="text-2xs font-semibold uppercase tracking-wide text-muted">Title</span>
-            <input
-              autoFocus
-              onChange={e => { state.title = e.target.value; }}
-              placeholder="e.g. Follow up with Ørsted on PPA terms"
-              className="px-2.5 py-1.5 text-sm rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] placeholder:text-muted focus:outline-none focus:border-brand/40"
-            />
-          </label>
-          <div className="flex gap-2">
-            <label className="flex flex-col gap-1 flex-1">
-              <span className="text-2xs font-semibold uppercase tracking-wide text-muted">Priority</span>
-              <select
-                defaultValue="Medium"
-                onChange={e => { state.priority = e.target.value as TaskPriority; }}
-                className="px-2.5 py-1.5 text-sm rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] focus:outline-none focus:border-brand/40"
-              >
-                <option value="High">High</option>
-                <option value="Medium">Medium</option>
-                <option value="Low">Low</option>
-              </select>
-            </label>
-            <label className="flex flex-col gap-1 flex-1">
-              <span className="text-2xs font-semibold uppercase tracking-wide text-muted">Due Date</span>
+    function render() {
+      openDrawer({
+        title: 'New Task',
+        subtitle: 'Create a task and assign to team members',
+        body: (
+          <div className="flex flex-col gap-3">
+            <label className="flex flex-col gap-1">
+              <span className="text-2xs font-semibold uppercase tracking-wide text-muted">Title *</span>
               <input
-                type="date"
-                defaultValue={defaultDue}
-                onChange={e => { state.dueDate = e.target.value; }}
-                className="px-2.5 py-1.5 text-sm rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] focus:outline-none focus:border-brand/40"
+                autoFocus
+                defaultValue={state.title}
+                onChange={e => { state.title = e.target.value; }}
+                placeholder="e.g. Follow up with Ørsted on PPA terms"
+                className="px-2.5 py-1.5 text-sm rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] placeholder:text-muted focus:outline-none focus:border-brand/40"
               />
             </label>
-          </div>
-          <label className="flex flex-col gap-1">
-            <span className="text-2xs font-semibold uppercase tracking-wide text-muted">Account (optional)</span>
-            <input
-              onChange={e => { state.accountName = e.target.value; }}
-              placeholder="e.g. Ørsted, Vattenfall"
-              className="px-2.5 py-1.5 text-sm rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] placeholder:text-muted focus:outline-none focus:border-brand/40"
-            />
-          </label>
-          {goals.length > 0 && (
-            <label className="flex flex-col gap-1">
-              <span className="text-2xs font-semibold uppercase tracking-wide text-muted">Goal (optional)</span>
+            <div className="flex gap-2">
+              <label className="flex flex-col gap-1 flex-1">
+                <span className="text-2xs font-semibold uppercase tracking-wide text-muted">Priority</span>
+                <select
+                  defaultValue={state.priority}
+                  onChange={e => { state.priority = e.target.value as TaskPriority; }}
+                  className="px-2.5 py-1.5 text-sm rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] focus:outline-none focus:border-brand/40"
+                >
+                  <option value="High">High</option>
+                  <option value="Medium">Medium</option>
+                  <option value="Low">Low</option>
+                </select>
+              </label>
+              <label className="flex flex-col gap-1 flex-1">
+                <span className="text-2xs font-semibold uppercase tracking-wide text-muted">Due Date</span>
+                <input
+                  type="date"
+                  defaultValue={state.dueDate}
+                  onChange={e => { state.dueDate = e.target.value; }}
+                  className="px-2.5 py-1.5 text-sm rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] focus:outline-none focus:border-brand/40"
+                />
+              </label>
+            </div>
+
+            {/* Assignees */}
+            <div className="flex flex-col gap-1">
+              <span className="text-2xs font-semibold uppercase tracking-wide text-muted">Assign To</span>
+              <div className="flex flex-wrap gap-1.5">
+                {state.assigneeNames.map(u => (
+                  <span key={u.id} className="inline-flex items-center gap-1 px-2 py-0.5 text-xs rounded-full bg-[var(--surface)] border border-[var(--border)] text-[var(--text)]">
+                    <Avatar initials={u.initials} color={u.color} size="xs" />
+                    {u.name}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        state.assigneeIds = state.assigneeIds.filter(id => id !== u.id);
+                        state.assigneeNames = state.assigneeNames.filter(a => a.id !== u.id);
+                        render();
+                      }}
+                      className="ml-0.5 text-[var(--muted)] hover:text-[var(--text)]"
+                    >×</button>
+                  </span>
+                ))}
+              </div>
               <select
-                defaultValue=""
-                onChange={e => { state.goalId = e.target.value; }}
+                value=""
+                onChange={e => {
+                  const userId = e.target.value;
+                  if (!userId || state.assigneeIds.includes(userId)) return;
+                  const user = teamMembers.find((u: any) => u.id === userId);
+                  if (user) {
+                    state.assigneeIds.push(userId);
+                    state.assigneeNames.push({
+                      id: user.id,
+                      name: user.name,
+                      initials: user.name?.split(/\s+/).map((p: string) => p[0]).join('').toUpperCase().slice(0, 2) ?? '??',
+                      color: user.color ?? 'green',
+                    });
+                    render();
+                  }
+                }}
                 className="px-2.5 py-1.5 text-sm rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] focus:outline-none focus:border-brand/40"
               >
-                <option value="">No goal</option>
-                {goals.map(g => (
-                  <option key={g.id} value={g.id}>{g.title}{g.accountName ? ` (${g.accountName})` : ''}</option>
-                ))}
+                <option value="">+ Add team member...</option>
+                {teamMembers
+                  .filter((u: any) => !state.assigneeIds.includes(u.id))
+                  .map((u: any) => (
+                    <option key={u.id} value={u.id}>{u.name}</option>
+                  ))}
               </select>
+              <span className="text-2xs text-[var(--muted)]">{state.assigneeIds.length === 0 ? 'Defaults to you if none selected' : ''}</span>
+            </div>
+
+            {/* Subtasks */}
+            <div className="flex flex-col gap-1">
+              <span className="text-2xs font-semibold uppercase tracking-wide text-muted">Subtasks</span>
+              {state.subtasks.length > 0 && (
+                <div className="flex flex-col gap-1">
+                  {state.subtasks.map((sub, i) => (
+                    <div key={i} className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-[var(--surface)] border border-[var(--border)]">
+                      <span className="text-xs text-[var(--muted)]">{i + 1}.</span>
+                      <span className="text-xs flex-1 text-[var(--text)]">{sub}</span>
+                      <button
+                        type="button"
+                        onClick={() => { state.subtasks.splice(i, 1); render(); }}
+                        className="text-[var(--muted)] hover:text-red-500 text-xs"
+                      >×</button>
+                    </div>
+                  ))}
+                </div>
+              )}
+              <div className="flex gap-1.5">
+                <input
+                  id="subtask-input"
+                  placeholder="Add a subtask..."
+                  className="flex-1 px-2.5 py-1.5 text-sm rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] placeholder:text-muted focus:outline-none focus:border-brand/40"
+                  onKeyDown={e => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      const input = e.currentTarget;
+                      if (input.value.trim()) {
+                        state.subtasks.push(input.value.trim());
+                        input.value = '';
+                        render();
+                      }
+                    }
+                  }}
+                />
+                <button
+                  type="button"
+                  className="px-2.5 py-1.5 text-xs font-medium bg-[var(--surface)] border border-[var(--border)] rounded-md hover:bg-[var(--hover)] transition-colors"
+                  onClick={() => {
+                    const input = document.getElementById('subtask-input') as HTMLInputElement;
+                    if (input?.value.trim()) {
+                      state.subtasks.push(input.value.trim());
+                      input.value = '';
+                      render();
+                    }
+                  }}
+                >
+                  Add
+                </button>
+              </div>
+            </div>
+
+            <label className="flex flex-col gap-1">
+              <span className="text-2xs font-semibold uppercase tracking-wide text-muted">Account (optional)</span>
+              <input
+                defaultValue={state.accountName}
+                onChange={e => { state.accountName = e.target.value; }}
+                placeholder="e.g. Ørsted, Vattenfall"
+                className="px-2.5 py-1.5 text-sm rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] placeholder:text-muted focus:outline-none focus:border-brand/40"
+              />
             </label>
-          )}
-        </div>
-      ),
-      footer: (
-        <>
-          <button
-            className="px-3.5 py-1.5 text-sm text-sub bg-[var(--surface)] border border-[var(--border)] rounded-md hover:bg-[var(--hover)] transition-colors"
-            onClick={closeDrawer}
-          >
-            Cancel
-          </button>
-          <button
-            disabled={createTask.isPending}
-            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-sm font-medium bg-brand text-brand-on rounded-md hover:brightness-110 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            onClick={() => {
-              if (!state.title.trim()) {
-                addToast({ type: 'error', message: 'Title is required' });
-                return;
-              }
-              createTask.mutate(
-                {
-                  title: state.title.trim(),
-                  priority: state.priority,
-                  dueDate: state.dueDate || undefined,
-                  goalId: state.goalId || undefined,
-                },
-                {
-                  onSuccess: () => {
-                    addToast({ type: 'success', message: `Task created: ${state.title}` });
-                    closeDrawer();
-                  },
-                  onError: (err: unknown) => addToast({ type: 'error', message: `Failed: ${err instanceof Error ? err.message : 'Unknown error'}` }),
+            {goals.length > 0 && (
+              <label className="flex flex-col gap-1">
+                <span className="text-2xs font-semibold uppercase tracking-wide text-muted">Goal (optional)</span>
+                <select
+                  defaultValue={state.goalId}
+                  onChange={e => { state.goalId = e.target.value; }}
+                  className="px-2.5 py-1.5 text-sm rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] focus:outline-none focus:border-brand/40"
+                >
+                  <option value="">No goal</option>
+                  {goals.map(g => (
+                    <option key={g.id} value={g.id}>{g.title}{g.accountName ? ` (${g.accountName})` : ''}</option>
+                  ))}
+                </select>
+              </label>
+            )}
+          </div>
+        ),
+        footer: (
+          <>
+            <button
+              className="px-3.5 py-1.5 text-sm text-sub bg-[var(--surface)] border border-[var(--border)] rounded-md hover:bg-[var(--hover)] transition-colors"
+              onClick={closeDrawer}
+            >
+              Cancel
+            </button>
+            <button
+              disabled={createTask.isPending}
+              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-sm font-medium bg-brand text-brand-on rounded-md hover:brightness-110 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              onClick={() => {
+                if (!state.title.trim()) {
+                  addToast({ type: 'error', message: 'Title is required' });
+                  return;
                 }
-              );
-            }}
-          >
-            {createTask.isPending && <Spinner className="h-3 w-3" />}Create Task
-          </button>
-        </>
-      ),
-    });
+                createTask.mutate(
+                  {
+                    title: state.title.trim(),
+                    priority: state.priority,
+                    dueDate: state.dueDate || undefined,
+                    goalId: state.goalId || undefined,
+                    assigneeIds: state.assigneeIds.length > 0 ? state.assigneeIds : undefined,
+                  },
+                  {
+                    onSuccess: (result: any) => {
+                      addToast({ type: 'success', message: `Task created: ${state.title}` });
+                      closeDrawer();
+                      if (state.subtasks.length > 0 && result?.data?.id) {
+                        const subtaskData = state.subtasks.map((title, i) => ({
+                          title, done: false, position: i,
+                        }));
+                        api.tasks.update(result.data.id, { subtasks: subtaskData }).catch(() => {
+                          addToast({ type: 'error', message: 'Task created but failed to add subtasks' });
+                        });
+                      }
+                    },
+                    onError: (err: unknown) => addToast({ type: 'error', message: `Failed: ${err instanceof Error ? err.message : 'Unknown error'}` }),
+                  }
+                );
+              }}
+            >
+              {createTask.isPending && <Spinner className="h-3 w-3" />}Create Task
+            </button>
+          </>
+        ),
+      });
+    }
+
+    render();
   }
 
   function openCompleteDrawer(t: Task) {

@@ -46,6 +46,8 @@ export interface Lead {
   id: ID; company: string; domain: string; source: string; signalId: ID | null;
   type: string; country: string; region: string; stage: LeadStage;
   pain: string; moduleFit: string[]; scores: FIUACScores; confidence: number;
+  certMgmtType?: string; etrmSystem?: string; gtrmSystem?: string;
+  certRegistries?: string[]; itIntegrations?: string[]; certPainPoints?: string;
   owner: User; createdAt: string;
   opportunityId?: ID | null; convertedAt?: string | null;
   disqualifyReason?: string | null; pausedUntil?: string | null;
@@ -68,6 +70,8 @@ export interface Account {
   id: ID; name: string; type: string; country: string; countryCode: string;
   region: string; status: AccountStatus; schemes: CertScheme[];
   scores: FIUACScores; ownerId: string; owner: User; pipelineValue: number; lastActivityAt: string;
+  certMgmtType?: string; etrmSystem?: string; gtrmSystem?: string;
+  certRegistries?: string[]; itIntegrations?: string[]; certPainPoints?: string;
   pain: string; whyNow: string; moduleFit: string[];
   aiConfidence: number | string; competitors?: string;
   contacts: Contact[];

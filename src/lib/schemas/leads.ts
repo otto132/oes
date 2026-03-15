@@ -8,6 +8,12 @@ export const leadActionSchema = z.discriminatedUnion('action', [
     country: z.string().trim().optional(),
     pain: z.string().trim().optional(),
     ownerId: z.string().optional(),
+    certMgmtType: z.string().trim().optional(),
+    etrmSystem: z.string().trim().optional(),
+    gtrmSystem: z.string().trim().optional(),
+    certRegistries: z.array(z.string()).optional(),
+    itIntegrations: z.array(z.string()).optional(),
+    certPainPoints: z.string().trim().optional(),
   }),
   z.object({ action: z.literal('advance'), id: z.string().min(1) }),
   z.object({

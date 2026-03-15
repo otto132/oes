@@ -1,4 +1,5 @@
 'use client';
+import type React from 'react';
 import { useStore } from '@/lib/store';
 import { useLeadsQuery, useCreateLead, useAdvanceLead, useDisqualifyLead, useConvertLead, usePauseLead, useRequalifyLead, usePausedLeadsQuery } from '@/lib/queries/leads';
 import { Badge, Avatar, FIUACBars, ScorePill, EmptyState, Skeleton, SkeletonCard, SkeletonText, ErrorState, Spinner, HelpTip, BulkActionBar } from '@/components/ui';
@@ -122,10 +123,10 @@ function ConvertModal({ lead, onClose }: { lead: Lead; onClose: () => void }) {
             >
               <option value="Unknown">Unknown</option>
               <option value="Utility">Utility</option>
-              <option value="IPP">IPP</option>
-              <option value="Corporate">Corporate</option>
               <option value="Trader">Trader</option>
-              <option value="Registry">Registry</option>
+              <option value="Retailer">Retailer</option>
+              <option value="Industrial">Industrial</option>
+              <option value="Developer">Developer</option>
             </select>
           </label>
           <label className="flex flex-col gap-1">
@@ -321,6 +322,154 @@ function PausedLeadsView() {
   );
 }
 
+// ── Lead Detail Drawer ────────────────────────────────────────────────────────
+function openLeadDetail(lead: Lead, opts: {
+  openDrawer: (c: { title: string; subtitle: string; body: React.ReactNode; footer: React.ReactNode }) => void;
+  closeDrawer: () => void;
+  onAdvance: () => void;
+  onDisqualify: () => void;
+  onPause: () => void;
+  onConvert: () => void;
+}) {
+  const { openDrawer, closeDrawer } = opts;
+  openDrawer({
+    title: lead.company,
+    subtitle: `${lead.type || 'Unknown'} · ${lead.country || 'No country'} · ${lead.stage}`,
+    body: (
+      <div className="flex flex-col gap-4">
+        {/* Domain */}
+        {lead.domain && (
+          <div>
+            <span className="text-2xs font-semibold uppercase tracking-wide text-[var(--muted)]">Domain</span>
+            <p className="text-sm text-[var(--text)] mt-0.5">{lead.domain}</p>
+          </div>
+        )}
+        {/* Pain */}
+        <div>
+          <span className="text-2xs font-semibold uppercase tracking-wide text-[var(--muted)]">Pain Hypothesis</span>
+          <p className="text-sm text-[var(--text)] mt-0.5">{lead.pain || 'No pain hypothesis yet'}</p>
+        </div>
+        {/* Source */}
+        <div>
+          <span className="text-2xs font-semibold uppercase tracking-wide text-[var(--muted)]">Source</span>
+          <p className="text-sm text-[var(--text)] mt-0.5">{lead.source}</p>
+        </div>
+        {/* Module Fit */}
+        {lead.moduleFit.length > 0 && (
+          <div>
+            <span className="text-2xs font-semibold uppercase tracking-wide text-[var(--muted)]">Module Fit</span>
+            <div className="flex flex-wrap gap-1 mt-1">
+              {lead.moduleFit.map(f => <Badge key={f} variant="ok">{f}</Badge>)}
+            </div>
+          </div>
+        )}
+        {/* Cert Management Landscape */}
+        {(lead.certMgmtType || (lead.certRegistries && lead.certRegistries.length > 0) || lead.certPainPoints) && (
+          <div className="rounded-md border border-[var(--border)] p-3 bg-[var(--surface)]">
+            <span className="text-2xs font-semibold uppercase tracking-wide text-[var(--muted)]">Cert Management</span>
+            <div className="mt-2 space-y-2">
+              {lead.certMgmtType && (
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-[var(--sub)]">System:</span>
+                  <Badge variant={lead.certMgmtType === 'ETRM' ? 'info' : lead.certMgmtType === 'GTRM' ? 'ok' : lead.certMgmtType === 'Excel' ? 'warn' : 'neutral'}>
+                    {lead.certMgmtType}
+                  </Badge>
+                  {lead.certMgmtType === 'ETRM' && lead.etrmSystem && (
+                    <span className="text-xs text-[var(--text)]">{lead.etrmSystem}</span>
+                  )}
+                  {lead.certMgmtType === 'GTRM' && lead.gtrmSystem && (
+                    <span className="text-xs text-[var(--text)]">{lead.gtrmSystem}</span>
+                  )}
+                </div>
+              )}
+              {lead.certRegistries && lead.certRegistries.length > 0 && (
+                <div>
+                  <span className="text-xs text-[var(--sub)]">Registries:</span>
+                  <div className="flex flex-wrap gap-1 mt-0.5">
+                    {lead.certRegistries.map(r => <Badge key={r} variant="neutral">{r}</Badge>)}
+                  </div>
+                </div>
+              )}
+              {lead.itIntegrations && lead.itIntegrations.length > 0 && (
+                <div>
+                  <span className="text-xs text-[var(--sub)]">IT Integrations:</span>
+                  <div className="flex flex-wrap gap-1 mt-0.5">
+                    {lead.itIntegrations.map(i => <Badge key={i} variant="neutral">{i}</Badge>)}
+                  </div>
+                </div>
+              )}
+              {lead.certPainPoints && (
+                <div>
+                  <span className="text-xs text-[var(--sub)]">Pain Points:</span>
+                  <p className="text-xs text-[var(--text)] mt-0.5">{lead.certPainPoints}</p>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+        {/* FIUAC Scores */}
+        <div>
+          <span className="text-2xs font-semibold uppercase tracking-wide text-[var(--muted)]">FIUAC Scores</span>
+          <div className="mt-1.5 flex items-center gap-2">
+            <FIUACBars scores={lead.scores} />
+            <ScorePill scores={lead.scores} />
+          </div>
+          <div className="grid grid-cols-5 gap-1 mt-2 text-2xs text-center">
+            {([['F', 'scoreFit'], ['I', 'scoreIntent'], ['U', 'scoreUrgency'], ['A', 'scoreAccess'], ['C', 'scoreCommercial']] as const).map(([label, key]) => (
+              <div key={key}>
+                <div className="text-[var(--muted)] uppercase">{label}</div>
+                <div className="font-mono text-[var(--text)]">{lead.scores[key]}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+        {/* Owner */}
+        <div className="flex items-center gap-2">
+          <span className="text-2xs font-semibold uppercase tracking-wide text-[var(--muted)]">Owner</span>
+          <Avatar initials={lead.owner.initials} color={lead.owner.color} size="xs" />
+          <span className="text-sm text-[var(--text)]">{lead.owner.name ?? lead.owner.initials}</span>
+        </div>
+        {/* Created */}
+        <div>
+          <span className="text-2xs font-semibold uppercase tracking-wide text-[var(--muted)]">Created</span>
+          <p className="text-sm text-[var(--text)] mt-0.5">{new Date(lead.createdAt).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}</p>
+        </div>
+      </div>
+    ),
+    footer: (
+      <div className="flex flex-wrap gap-1.5 w-full">
+        {lead.stage === 'Qualified' ? (
+          <button
+            onClick={() => { closeDrawer(); opts.onConvert(); }}
+            className="flex-1 px-3 py-1.5 text-sm font-medium bg-green-600 text-white rounded-md hover:bg-green-500 transition-colors"
+          >
+            Create Deal
+          </button>
+        ) : (
+          <button
+            onClick={() => { closeDrawer(); opts.onAdvance(); }}
+            className="flex-1 px-3 py-1.5 text-sm font-medium bg-brand text-brand-on rounded-md hover:brightness-110 transition-colors"
+          >
+            Advance
+          </button>
+        )}
+        <button
+          onClick={() => { closeDrawer(); opts.onPause(); }}
+          className="px-3 py-1.5 text-sm text-[var(--sub)] bg-[var(--surface)] border border-[var(--border)] rounded-md hover:bg-[var(--hover)] transition-colors"
+        >
+          Pause
+        </button>
+        <button
+          onClick={() => { closeDrawer(); opts.onDisqualify(); }}
+          className="px-3 py-1.5 text-sm text-red-500 bg-[var(--surface)] border border-[var(--border)] rounded-md hover:bg-[var(--hover)] transition-colors"
+        >
+          Disqualify
+        </button>
+      </div>
+    ),
+  });
+}
+
 // ── Main Page ─────────────────────────────────────────────────────────────────
 export default function LeadsPage() {
   const { data: resp, isLoading, isError, refetch } = useLeadsQuery();
@@ -364,8 +513,29 @@ export default function LeadsPage() {
     });
   }
 
+  function handleAdvance(lead: Lead) {
+    advance.mutate({ id: lead.id }, {
+      onSuccess: (data: any) => {
+        const newStage = data?.data?.stage;
+        if (newStage === 'Qualified') {
+          addToast({ type: 'success', message: `${lead.company} qualified! Create a deal to add to pipeline.` });
+          setConvertLead({ ...lead, stage: 'Qualified' as any });
+        } else {
+          addToast({ type: 'success', message: `Lead advanced to ${newStage || 'next stage'}` });
+        }
+      },
+      onError: (err: any) => addToast({ type: 'error', message: err.message }),
+    });
+  }
+
   function openCreateLeadDrawer() {
-    const state = { company: '', type: 'Unknown', country: '', pain: '' };
+    const state = {
+      company: '', type: 'Unknown', country: '', pain: '',
+      certMgmtType: '', etrmSystem: '', gtrmSystem: '',
+      certRegistries: '' as string, itIntegrations: '' as string, certPainPoints: '',
+    };
+
+    const inputCls = "px-2.5 py-1.5 text-sm rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] placeholder:text-[var(--muted)] focus:outline-none focus:border-brand/40";
 
     openDrawer({
       title: 'New Lead',
@@ -374,50 +544,79 @@ export default function LeadsPage() {
         <div className="flex flex-col gap-3">
           <label className="flex flex-col gap-1">
             <span className="text-2xs font-semibold uppercase tracking-wide text-[var(--muted)]">Company *</span>
-            <input
-              autoFocus
-              defaultValue={state.company}
-              onChange={e => { state.company = e.target.value; }}
-              placeholder="e.g. Ørsted Energy"
-              className="px-2.5 py-1.5 text-sm rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] placeholder:text-[var(--muted)] focus:outline-none focus:border-brand/40"
-            />
+            <input autoFocus defaultValue={state.company} onChange={e => { state.company = e.target.value; }} placeholder="e.g. Ørsted Energy" className={inputCls} />
           </label>
           <div className="flex gap-2">
             <label className="flex flex-col gap-1 flex-1">
               <span className="text-2xs font-semibold uppercase tracking-wide text-[var(--muted)]">Type</span>
-              <select
-                defaultValue={state.type}
-                onChange={e => { state.type = e.target.value; }}
-                className="px-2.5 py-1.5 text-sm rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] focus:outline-none focus:border-brand/40"
-              >
+              <select defaultValue={state.type} onChange={e => { state.type = e.target.value; }} className={inputCls}>
                 <option value="Unknown">Unknown</option>
                 <option value="Utility">Utility</option>
-                <option value="IPP">IPP</option>
-                <option value="Corporate">Corporate</option>
                 <option value="Trader">Trader</option>
-                <option value="Registry">Registry</option>
+                <option value="Retailer">Retailer</option>
+                <option value="Industrial">Industrial</option>
+                <option value="Developer">Developer</option>
               </select>
             </label>
             <label className="flex flex-col gap-1 flex-1">
               <span className="text-2xs font-semibold uppercase tracking-wide text-[var(--muted)]">Country</span>
-              <input
-                defaultValue={state.country}
-                onChange={e => { state.country = e.target.value; }}
-                placeholder="e.g. Norway"
-                className="px-2.5 py-1.5 text-sm rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] placeholder:text-[var(--muted)] focus:outline-none focus:border-brand/40"
-              />
+              <input defaultValue={state.country} onChange={e => { state.country = e.target.value; }} placeholder="e.g. Norway" className={inputCls} />
             </label>
           </div>
           <label className="flex flex-col gap-1">
             <span className="text-2xs font-semibold uppercase tracking-wide text-[var(--muted)]">Pain Point</span>
-            <textarea
-              defaultValue={state.pain}
-              onChange={e => { state.pain = e.target.value; }}
-              rows={2}
-              placeholder="What problem does this lead have?"
-              className="px-2.5 py-1.5 text-sm rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] placeholder:text-[var(--muted)] focus:outline-none focus:border-brand/40 resize-none"
-            />
+            <textarea defaultValue={state.pain} onChange={e => { state.pain = e.target.value; }} rows={2} placeholder="What problem does this lead have?" className={inputCls + " resize-none"} />
           </label>
+
+          {/* Cert Management Section */}
+          <div className="border-t border-[var(--border)] pt-3 mt-1">
+            <span className="text-2xs font-semibold uppercase tracking-wide text-[var(--muted)]">Certificate Management</span>
+            <div className="flex gap-2 mt-2">
+              <label className="flex flex-col gap-1 flex-1">
+                <span className="text-2xs text-[var(--sub)]">Current System</span>
+                <select defaultValue={state.certMgmtType} onChange={e => { state.certMgmtType = e.target.value; }} className={inputCls}>
+                  <option value="">Unknown</option>
+                  <option value="ETRM">ETRM</option>
+                  <option value="GTRM">GTRM</option>
+                  <option value="Excel">Excel</option>
+                  <option value="None">None</option>
+                </select>
+              </label>
+              <label className="flex flex-col gap-1 flex-1">
+                <span className="text-2xs text-[var(--sub)]">ETRM System</span>
+                <select defaultValue={state.etrmSystem} onChange={e => { state.etrmSystem = e.target.value; }} className={inputCls}>
+                  <option value="">—</option>
+                  <option value="Molecule">Molecule</option>
+                  <option value="Brady">Brady</option>
+                  <option value="OpenLink Endur">OpenLink Endur</option>
+                  <option value="Allegro">Allegro</option>
+                  <option value="FIS Aligne">FIS Aligne</option>
+                </select>
+              </label>
+            </div>
+            <div className="flex gap-2 mt-2">
+              <label className="flex flex-col gap-1 flex-1">
+                <span className="text-2xs text-[var(--sub)]">GTRM System</span>
+                <select defaultValue={state.gtrmSystem} onChange={e => { state.gtrmSystem = e.target.value; }} className={inputCls}>
+                  <option value="">—</option>
+                  <option value="CerQlar">CerQlar</option>
+                  <option value="Unicorn">Unicorn</option>
+                </select>
+              </label>
+              <label className="flex flex-col gap-1 flex-1">
+                <span className="text-2xs text-[var(--sub)]">Cert Registries</span>
+                <input defaultValue={state.certRegistries} onChange={e => { state.certRegistries = e.target.value; }} placeholder="Grexel, Statnett, UBA…" className={inputCls} />
+              </label>
+            </div>
+            <label className="flex flex-col gap-1 mt-2">
+              <span className="text-2xs text-[var(--sub)]">IT Integrations</span>
+              <input defaultValue={state.itIntegrations} onChange={e => { state.itIntegrations = e.target.value; }} placeholder="SAP, Bloomberg, custom…" className={inputCls} />
+            </label>
+            <label className="flex flex-col gap-1 mt-2">
+              <span className="text-2xs text-[var(--sub)]">Cert Pain Points</span>
+              <textarea defaultValue={state.certPainPoints} onChange={e => { state.certPainPoints = e.target.value; }} rows={2} placeholder="Pain points related to cert management…" className={inputCls + " resize-none"} />
+            </label>
+          </div>
         </div>
       ),
       footer: (
@@ -428,8 +627,19 @@ export default function LeadsPage() {
             className="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-sm font-medium bg-brand text-brand-on rounded-md hover:brightness-110 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             onClick={() => {
               if (!state.company.trim()) { addToast({ type: 'error', message: 'Company name is required' }); return; }
+              const registries = state.certRegistries.split(',').map(s => s.trim()).filter(Boolean);
+              const integrations = state.itIntegrations.split(',').map(s => s.trim()).filter(Boolean);
               createLead.mutate(
-                { company: state.company.trim(), type: state.type || undefined, country: state.country || undefined, pain: state.pain || undefined },
+                {
+                  company: state.company.trim(), type: state.type || undefined,
+                  country: state.country || undefined, pain: state.pain || undefined,
+                  certMgmtType: state.certMgmtType || undefined,
+                  etrmSystem: state.etrmSystem || undefined,
+                  gtrmSystem: state.gtrmSystem || undefined,
+                  certRegistries: registries.length ? registries : undefined,
+                  itIntegrations: integrations.length ? integrations : undefined,
+                  certPainPoints: state.certPainPoints || undefined,
+                },
                 {
                   onSuccess: () => { addToast({ type: 'success', message: `Lead created: ${state.company}` }); closeDrawer(); },
                   onError: (err: unknown) => addToast({ type: 'error', message: err instanceof Error ? err.message : 'An error occurred' }),
@@ -514,7 +724,13 @@ export default function LeadsPage() {
                       const isPending = pendingIds.has(l.id);
                       const failedInfo = failedMutations.get(l.id);
                       return (
-                      <div key={l.id} className={cn('group rounded-lg p-3 mb-1.5 bg-[var(--elevated)] border border-[var(--border)] cursor-pointer hover:-translate-y-px hover:border-[var(--border-strong)] transition-all relative', isPending && 'opacity-60 animate-pulse', failedInfo && 'border-l-2 border-l-red-500', selected.has(l.id) && 'ring-1 ring-brand/40')}>
+                      <div key={l.id} onClick={() => openLeadDetail(l, {
+                        openDrawer, closeDrawer,
+                        onAdvance: () => handleAdvance(l),
+                        onDisqualify: () => setDisqualifyId(l.id),
+                        onPause: () => setPauseId(l.id),
+                        onConvert: () => setConvertLead(l),
+                      })} className={cn('group rounded-lg p-3 mb-1.5 bg-[var(--elevated)] border border-[var(--border)] cursor-pointer hover:-translate-y-px hover:border-[var(--border-strong)] transition-all relative', isPending && 'opacity-60 animate-pulse', failedInfo && 'border-l-2 border-l-red-500', selected.has(l.id) && 'ring-1 ring-brand/40')}>
                         <label className="absolute top-2 left-2 z-10" onClick={(e) => e.stopPropagation()}>
                           <input
                             type="checkbox"
@@ -556,10 +772,7 @@ export default function LeadsPage() {
                           {l.stage !== 'Qualified' && (
                             <button
                               disabled={advance.isPending}
-                              onClick={() => advance.mutate({ id: l.id }, {
-                                onSuccess: (data: any) => addToast({ type: 'success', message: `Lead advanced to ${data?.data?.stage || 'next stage'}` }),
-                                onError: (err: any) => addToast({ type: 'error', message: err.message }),
-                              })}
+                              onClick={() => handleAdvance(l)}
                               className="inline-flex items-center justify-center gap-1 flex-1 px-2 py-1 text-2xs font-medium rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] hover:bg-[var(--hover)] transition-colors disabled:opacity-50"
                             >
                               {advance.isPending && <Spinner className="h-3 w-3" />}Advance
@@ -592,7 +805,13 @@ export default function LeadsPage() {
             {leads.length === 0 ? (
               <EmptyState icon="🎯" title="No active leads" description="Convert signals or add leads manually." action={{ label: 'Create Lead', onClick: () => openCreateLeadDrawer() }} />
             ) : [...leads].sort((a, b) => compositeScore(b.scores) - compositeScore(a.scores)).map(l => (
-              <div key={l.id} className="rounded-lg p-3 bg-[var(--elevated)] border border-[var(--border)] cursor-pointer hover:bg-[var(--hover)] hover:border-[var(--border-strong)] transition-colors">
+              <div key={l.id} onClick={() => openLeadDetail(l, {
+                openDrawer, closeDrawer,
+                onAdvance: () => handleAdvance(l),
+                onDisqualify: () => setDisqualifyId(l.id),
+                onPause: () => setPauseId(l.id),
+                onConvert: () => setConvertLead(l),
+              })} className="rounded-lg p-3 bg-[var(--elevated)] border border-[var(--border)] cursor-pointer hover:bg-[var(--hover)] hover:border-[var(--border-strong)] transition-colors">
                 <div className="flex items-center justify-between mb-1">
                   <span className="text-sm font-medium">{l.company}</span>
                   <Badge variant={stageMeta[l.stage]?.variant || 'neutral'} className="!text-3xs">{l.stage}</Badge>
@@ -611,10 +830,7 @@ export default function LeadsPage() {
                   ) : (
                     <button
                       disabled={advance.isPending}
-                      onClick={() => advance.mutate({ id: l.id }, {
-                        onSuccess: (data: any) => addToast({ type: 'success', message: `Lead advanced to ${data?.data?.stage || 'next stage'}` }),
-                        onError: (err: any) => addToast({ type: 'error', message: err.message }),
-                      })}
+                      onClick={() => handleAdvance(l)}
                       className="inline-flex items-center justify-center gap-1 flex-1 px-2 py-1 text-2xs font-medium rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] hover:bg-[var(--hover)] transition-colors disabled:opacity-50"
                     >
                       {advance.isPending && <Spinner className="h-3 w-3" />}Advance

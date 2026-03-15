@@ -43,7 +43,16 @@ export const POST = withHandler(leadActionSchema, async (req, ctx) => {
     const ownerId = body.ownerId || session.user.id;
     if (!company) return badRequest('Company required');
     const lead = await ctx.db.lead.create({
-      data: { company, source: 'Manual', type: (type || 'Unknown') as AccountType, country: country || '', pain: pain || '', ownerId },
+      data: {
+        company, source: 'Manual', type: (type || 'Unknown') as AccountType,
+        country: country || '', pain: pain || '', ownerId,
+        certMgmtType: body.certMgmtType || '',
+        etrmSystem: body.etrmSystem || '',
+        gtrmSystem: body.gtrmSystem || '',
+        certRegistries: body.certRegistries || [],
+        itIntegrations: body.itIntegrations || [],
+        certPainPoints: body.certPainPoints || '',
+      },
       include: { owner: true },
     });
     return NextResponse.json({ data: adaptLead(lead) }, { status: 201 });
@@ -101,6 +110,12 @@ export const POST = withHandler(leadActionSchema, async (req, ctx) => {
           pain: lead.pain,
           whyNow: 'Converted from lead',
           moduleFit: lead.moduleFit,
+          certMgmtType: lead.certMgmtType,
+          etrmSystem: lead.etrmSystem,
+          gtrmSystem: lead.gtrmSystem,
+          certRegistries: lead.certRegistries,
+          itIntegrations: lead.itIntegrations,
+          certPainPoints: lead.certPainPoints,
           aiConfidence: lead.confidence,
         },
       });

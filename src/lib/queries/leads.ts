@@ -84,7 +84,7 @@ export function useRequalifyLead() {
 }
 
 export function useCreateLead() {
-  return useOptimisticMutation<{ data: any }, { company: string; type?: string; country?: string; pain?: string }>({
+  return useOptimisticMutation<{ data: any }, { company: string; type?: string; country?: string; pain?: string; certMgmtType?: string; etrmSystem?: string; gtrmSystem?: string; certRegistries?: string[]; itIntegrations?: string[]; certPainPoints?: string }>({
     mutationKey: ['leads', 'create'],
     mutationFn: (data) => api.leads.create(data),
     queryKey: leadKeys.all,

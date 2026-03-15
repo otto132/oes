@@ -29,7 +29,14 @@ export function useCreateAccount() {
     name: string;
     type?: string;
     country?: string;
+    region?: string;
     notes?: string;
+    certMgmtType?: string;
+    etrmSystem?: string;
+    gtrmSystem?: string;
+    certRegistries?: string[];
+    itIntegrations?: string[];
+    certPainPoints?: string;
   }>({
     mutationKey: ['accounts', 'create'],
     mutationFn: (data) => api.accounts.create(data),

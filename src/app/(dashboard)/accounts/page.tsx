@@ -84,8 +84,16 @@ function AccountsPageInner() {
   ];
   const COUNTRIES = ['Finland', 'Denmark', 'Sweden', 'Norway', 'Germany', 'Netherlands', 'UK', 'US'];
 
+  const REGIONS = ['Nordics', 'DACH', 'Benelux', 'Iberia', 'UK & Ireland', 'CEE', 'SEE', 'North America', 'APAC'];
+
   function openNewAccountDrawer() {
-    const state = { name: '', type: 'Unknown', country: '', notes: '' };
+    const state = {
+      name: '', type: 'Unknown', country: '', region: '', notes: '',
+      certMgmtType: '', etrmSystem: '', gtrmSystem: '',
+      certRegistries: '' as string, itIntegrations: '' as string, certPainPoints: '',
+    };
+
+    const inputCls = "px-2.5 py-1.5 text-sm rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] placeholder:text-[var(--muted)] focus:outline-none focus:border-brand/40";
 
     openDrawer({
       title: 'New Account',
@@ -97,32 +105,19 @@ function AccountsPageInner() {
         >
           <label className="flex flex-col gap-1">
             <span className="text-2xs font-semibold uppercase tracking-wide text-[var(--muted)]">Company Name *</span>
-            <input
-              autoFocus
-              onChange={e => { state.name = e.target.value; }}
-              placeholder="e.g. Ørsted, Vattenfall"
-              className="px-2.5 py-1.5 text-sm rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] placeholder:text-[var(--muted)] focus:outline-none focus:border-brand/40"
-            />
+            <input autoFocus onChange={e => { state.name = e.target.value; }} placeholder="e.g. Ørsted, Vattenfall" className={inputCls} />
           </label>
 
           <div className="flex gap-2">
             <label className="flex flex-col gap-1 flex-1">
               <span className="text-2xs font-semibold uppercase tracking-wide text-[var(--muted)]">Type</span>
-              <select
-                defaultValue="Unknown"
-                onChange={e => { state.type = e.target.value; }}
-                className="px-2.5 py-1.5 text-sm rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] focus:outline-none focus:border-brand/40"
-              >
+              <select defaultValue="Unknown" onChange={e => { state.type = e.target.value; }} className={inputCls}>
                 {ACCOUNT_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
               </select>
             </label>
             <label className="flex flex-col gap-1 flex-1">
               <span className="text-2xs font-semibold uppercase tracking-wide text-[var(--muted)]">Country</span>
-              <select
-                defaultValue=""
-                onChange={e => { state.country = e.target.value; }}
-                className="px-2.5 py-1.5 text-sm rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] focus:outline-none focus:border-brand/40"
-              >
+              <select defaultValue="" onChange={e => { state.country = e.target.value; }} className={inputCls}>
                 <option value="">Select...</option>
                 {COUNTRIES.map(c => <option key={c} value={c}>{c}</option>)}
                 <option value="Other">Other</option>
@@ -131,14 +126,67 @@ function AccountsPageInner() {
           </div>
 
           <label className="flex flex-col gap-1">
-            <span className="text-2xs font-semibold uppercase tracking-wide text-[var(--muted)]">Notes / Pain Hypothesis</span>
-            <textarea
-              rows={3}
-              onChange={e => { state.notes = e.target.value; }}
-              placeholder="Initial pain hypothesis or notes..."
-              className="px-2.5 py-1.5 text-sm rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] placeholder:text-[var(--muted)] focus:outline-none focus:border-brand/40 resize-none"
-            />
+            <span className="text-2xs font-semibold uppercase tracking-wide text-[var(--muted)]">Region</span>
+            <select defaultValue="" onChange={e => { state.region = e.target.value; }} className={inputCls}>
+              <option value="">Select...</option>
+              {REGIONS.map(r => <option key={r} value={r}>{r}</option>)}
+            </select>
           </label>
+
+          <label className="flex flex-col gap-1">
+            <span className="text-2xs font-semibold uppercase tracking-wide text-[var(--muted)]">Notes / Pain Hypothesis</span>
+            <textarea rows={2} onChange={e => { state.notes = e.target.value; }} placeholder="Initial pain hypothesis or notes..." className={inputCls + " resize-none"} />
+          </label>
+
+          {/* Cert Management Section */}
+          <div className="border-t border-[var(--border)] pt-3 mt-1">
+            <span className="text-2xs font-semibold uppercase tracking-wide text-[var(--muted)]">Certificate Management</span>
+            <div className="flex gap-2 mt-2">
+              <label className="flex flex-col gap-1 flex-1">
+                <span className="text-2xs text-[var(--sub)]">Current System</span>
+                <select defaultValue="" onChange={e => { state.certMgmtType = e.target.value; }} className={inputCls}>
+                  <option value="">Unknown</option>
+                  <option value="ETRM">ETRM</option>
+                  <option value="GTRM">GTRM</option>
+                  <option value="Excel">Excel</option>
+                  <option value="None">None</option>
+                </select>
+              </label>
+              <label className="flex flex-col gap-1 flex-1">
+                <span className="text-2xs text-[var(--sub)]">ETRM System</span>
+                <select defaultValue="" onChange={e => { state.etrmSystem = e.target.value; }} className={inputCls}>
+                  <option value="">—</option>
+                  <option value="Molecule">Molecule</option>
+                  <option value="Brady">Brady</option>
+                  <option value="OpenLink Endur">OpenLink Endur</option>
+                  <option value="Allegro">Allegro</option>
+                  <option value="FIS Aligne">FIS Aligne</option>
+                </select>
+              </label>
+            </div>
+            <div className="flex gap-2 mt-2">
+              <label className="flex flex-col gap-1 flex-1">
+                <span className="text-2xs text-[var(--sub)]">GTRM System</span>
+                <select defaultValue="" onChange={e => { state.gtrmSystem = e.target.value; }} className={inputCls}>
+                  <option value="">—</option>
+                  <option value="CerQlar">CerQlar</option>
+                  <option value="Unicorn">Unicorn</option>
+                </select>
+              </label>
+              <label className="flex flex-col gap-1 flex-1">
+                <span className="text-2xs text-[var(--sub)]">Cert Registries</span>
+                <input onChange={e => { state.certRegistries = e.target.value; }} placeholder="Grexel, Statnett, UBA…" className={inputCls} />
+              </label>
+            </div>
+            <label className="flex flex-col gap-1 mt-2">
+              <span className="text-2xs text-[var(--sub)]">IT Integrations</span>
+              <input onChange={e => { state.itIntegrations = e.target.value; }} placeholder="SAP, Bloomberg, custom…" className={inputCls} />
+            </label>
+            <label className="flex flex-col gap-1 mt-2">
+              <span className="text-2xs text-[var(--sub)]">Cert Pain Points</span>
+              <textarea onChange={e => { state.certPainPoints = e.target.value; }} rows={2} placeholder="Pain points related to cert management…" className={inputCls + " resize-none"} />
+            </label>
+          </div>
         </div>
       ),
       footer: (
@@ -153,8 +201,19 @@ function AccountsPageInner() {
                 addToast({ type: 'error', message: 'Company name is required' });
                 return;
               }
+              const registries = state.certRegistries.split(',').map(s => s.trim()).filter(Boolean);
+              const integrations = state.itIntegrations.split(',').map(s => s.trim()).filter(Boolean);
               createAccount.mutate(
-                { name: state.name.trim(), type: state.type, country: state.country || undefined, notes: state.notes || undefined },
+                {
+                  name: state.name.trim(), type: state.type, country: state.country || undefined,
+                  region: state.region || undefined, notes: state.notes || undefined,
+                  certMgmtType: state.certMgmtType || undefined,
+                  etrmSystem: state.etrmSystem || undefined,
+                  gtrmSystem: state.gtrmSystem || undefined,
+                  certRegistries: registries.length ? registries : undefined,
+                  itIntegrations: integrations.length ? integrations : undefined,
+                  certPainPoints: state.certPainPoints || undefined,
+                },
                 {
                   onSuccess: () => { addToast({ type: 'success', message: `Account created: ${state.name}` }); closeDrawer(); },
                   onError: (err: unknown) => addToast({ type: 'error', message: err instanceof Error ? err.message : 'An error occurred' }),
