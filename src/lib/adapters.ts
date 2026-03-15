@@ -25,6 +25,7 @@ import type {
   Meeting as UIMeeting,
   Activity as UIActivity,
   Subtask as UISubtask,
+  WeeklyDigest,
 } from './types';
 
 // ── Composite Type Helpers ───────────────────────────────────
@@ -403,6 +404,12 @@ export function adaptEmail(e: {
   accountId: string | null;
   accountName: string | null;
   domain: string | null;
+  body?: string | null;
+  bodyHtml?: string | null;
+  messageId?: string | null;
+  inReplyTo?: string | null;
+  threadId?: string | null;
+  snoozedUntil?: Date | null;
   [k: string]: unknown;
 }): UIEmail {
   return {
@@ -421,6 +428,12 @@ export function adaptEmail(e: {
     ...(e.accountId != null ? { accountId: e.accountId } : {}),
     ...(e.domain != null ? { domain: e.domain } : {}),
     classifierAgent: e.classifierAgent,
+    body: e.body ?? undefined,
+    bodyHtml: e.bodyHtml ?? undefined,
+    messageId: e.messageId ?? undefined,
+    inReplyTo: e.inReplyTo ?? undefined,
+    threadId: e.threadId ?? undefined,
+    snoozedUntil: e.snoozedUntil?.toISOString() ?? undefined,
   };
 }
 
@@ -434,6 +447,11 @@ export function adaptMeeting(m: {
   prepStatus: string;
   accountId: string | null;
   accountName: string | null;
+  rawNotes?: string | null;
+  outcomeSummary?: string | null;
+  outcomeRecordedAt?: Date | null;
+  sentimentTag?: string | null;
+  noShow?: boolean | null;
   [k: string]: unknown;
 }): UIMeeting {
   // Format DateTime in user's local timezone
@@ -463,6 +481,11 @@ export function adaptMeeting(m: {
     accountId: m.accountId ?? '',
     attendees: m.attendees,
     prepStatus: m.prepStatus as UIMeeting['prepStatus'],
+    rawNotes: m.rawNotes ?? undefined,
+    outcomeSummary: m.outcomeSummary ?? undefined,
+    outcomeRecordedAt: m.outcomeRecordedAt?.toISOString() ?? undefined,
+    sentimentTag: m.sentimentTag ?? undefined,
+    noShow: m.noShow ?? false,
   };
 }
 
@@ -488,6 +511,19 @@ export function adaptActivity(a: {
     detail: a.detail,
     author: adaptUser(a.author),
     source: a.source,
+  };
+}
+
+export function adaptDigest(d: any): WeeklyDigest {
+  return {
+    id: d.id,
+    weekStart: d.weekStart.toISOString(),
+    weekEnd: d.weekEnd.toISOString(),
+    pipelineSnapshot: d.pipelineSnapshot as WeeklyDigest['pipelineSnapshot'],
+    accountHighlights: d.accountHighlights as WeeklyDigest['accountHighlights'],
+    weekAhead: d.weekAhead as WeeklyDigest['weekAhead'],
+    renderedHtml: d.renderedHtml,
+    createdAt: d.createdAt.toISOString(),
   };
 }
 
