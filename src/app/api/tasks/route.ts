@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { Prisma, OppStage } from '@prisma/client';
+import { Prisma } from '@prisma/client';
 import type { Task } from '@prisma/client';
 import { resolveTenantDb } from '@/lib/tenant';
 import { db as rawDb } from '@/lib/db';

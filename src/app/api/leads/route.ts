@@ -19,8 +19,8 @@ export async function GET(req: NextRequest) {
   const showPaused = req.nextUrl.searchParams.get('paused') === 'true';
 
   const where = showPaused
-    ? { stage: 'Paused' as const }
-    : { stage: { notIn: ['Converted', 'Disqualified', 'Paused'] as const } };
+    ? { stage: 'Paused' as LeadStage }
+    : { stage: { notIn: ['Converted', 'Disqualified', 'Paused'] as LeadStage[] } };
 
   const leads = await scoped.lead.findMany({
     where,
@@ -31,7 +31,7 @@ export async function GET(req: NextRequest) {
   });
 
   const { data, meta } = paginate(leads, pagination.limit);
-  return NextResponse.json({ data: data.map(adaptLead), meta });
+  return NextResponse.json({ data: data.map((l: any) => adaptLead(l)), meta });
 }
 
 export const POST = withHandler(leadActionSchema, async (req, ctx) => {
@@ -159,7 +159,7 @@ export const POST = withHandler(leadActionSchema, async (req, ctx) => {
     if (['Converted', 'Disqualified'].includes(lead.stage)) return badRequest('Cannot pause terminal leads');
     const updated = await ctx.db.lead.update({
       where: { id },
-      data: { stage: 'Paused', pausedUntil: new Date(pausedUntil) },
+      data: { stage: 'Paused' as LeadStage, pausedUntil: new Date(pausedUntil) },
       include: { owner: true },
     });
     return NextResponse.json({ data: adaptLead(updated) });

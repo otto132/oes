@@ -78,6 +78,7 @@ export function useRequalifyLead() {
     mutationKey: ['leads', 'requalify'],
     mutationFn: ({ id }) => api.leads.requalify(id),
     queryKey: leadKeys.all,
+    updater: updateById((lead) => ({ ...lead, stage: 'Researching' })),
     invalidateKeys: [leadKeys.paused()],
   });
 }
