@@ -23,7 +23,7 @@ export const GRAPH_CONFIG = {
   clientId: process.env.MICROSOFT_CLIENT_ID || '',
   clientSecret: process.env.MICROSOFT_CLIENT_SECRET || '',
   redirectUri: process.env.MICROSOFT_REDIRECT_URI || 'http://localhost:3000/api/auth/callback',
-  scopes: ['openid', 'profile', 'email', 'Mail.Read', 'Calendars.Read', 'User.Read', 'offline_access'],
+  scopes: ['openid', 'profile', 'email', 'Mail.Read', 'Mail.Send', 'Calendars.Read', 'User.Read', 'offline_access'],
 };
 
 // ── Auth URLs ────────────────────────────────────
@@ -139,4 +139,36 @@ export async function fetchUpcomingEvents(accessToken: string, days: number = 7)
 
 export async function getGraphUser(accessToken: string): Promise<{ displayName: string; mail: string }> {
   return graphGet('/me?$select=displayName,mail', accessToken);
+}
+
+// ── Send Mail ─────────────────────────────────────
+
+export async function sendMail(
+  accessToken: string,
+  to: string[],
+  subject: string,
+  bodyHtml: string,
+): Promise<void> {
+  const message = {
+    subject,
+    body: { contentType: 'HTML', content: bodyHtml },
+    toRecipients: to.map((email) => ({ emailAddress: { address: email } })),
+  };
+
+  const res = await fetch('https://graph.microsoft.com/v1.0/me/sendMail', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ message, saveToSentItems: true }),
+  });
+
+  if (res.status === 401) {
+    throw new Error('TOKEN_EXPIRED');
+  }
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`Graph sendMail failed: ${res.status} ${text}`);
+  }
 }
