@@ -1,5 +1,6 @@
 import { Prisma } from '@prisma/client';
 import { db as prisma } from '@/lib/db';
+import { sendMail } from '@/lib/integrations/microsoft-graph';
 import { zodOutputFormat } from '@anthropic-ai/sdk/helpers/zod';
 import { getAnthropicClient, MODEL_SONNET } from './ai';
 import { DigestNarrativeSchema } from './schemas';
@@ -352,6 +353,27 @@ Write pipelineSummary (2-3 sentences), accountParagraphs for any notable account
         message: `Failed to persist digest: ${err instanceof Error ? err.message : String(err)}`,
         recoverable: false,
       });
+    }
+
+    // Send digest email to all active users
+    try {
+      const users = await prisma.user.findMany({
+        where: { role: { not: 'VIEWER' } },
+        include: { integrationTokens: { where: { provider: 'microsoft' } } },
+      });
+
+      for (const user of users) {
+        const token = (user as any).integrationTokens?.[0];
+        if (!token?.accessToken || !user.email) continue;
+
+        try {
+          await sendMail(token.accessToken, [user.email], `Weekly Digest — ${weekStart.toLocaleDateString()} to ${weekEnd.toLocaleDateString()}`, renderedHtml);
+        } catch (err) {
+          console.error(`Failed to send digest email to ${user.email}:`, err);
+        }
+      }
+    } catch (err) {
+      console.error('Failed to query users for digest delivery:', err);
     }
 
     return {
