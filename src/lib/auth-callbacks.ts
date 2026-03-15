@@ -46,8 +46,28 @@ export async function testSignInCallback({ user }: { user: { email?: string | nu
     return true;
   }
 
-  // No existing user and no invitation → reject sign-in.
-  // Users must be added manually to the database or invited.
-  logger.warn('[auth] Sign-in rejected: unknown user', { email: user.email });
-  return false;
+  // Auto-provision: first unknown user becomes ADMIN, subsequent become MEMBER
+  const userCount = await db.user.count();
+  const role = userCount === 0 ? 'ADMIN' : 'MEMBER';
+
+  // Find or create default tenant
+  let tenant = await db.tenant.findFirst();
+  if (!tenant) {
+    tenant = await db.tenant.create({ data: { id: 'tenant-default', name: 'Default' } });
+  }
+
+  await db.user.create({
+    data: {
+      email: user.email,
+      name: user.name || user.email,
+      initials: user.name
+        ? user.name.split(/\s+/).filter(Boolean).map((w) => w[0]!.toUpperCase()).slice(0, 2).join('')
+        : user.email.slice(0, 2).toUpperCase(),
+      role,
+      lastLoginAt: new Date(),
+      tenantId: tenant.id,
+    },
+  });
+  logger.info('[auth] Auto-provisioned user', { email: user.email, role });
+  return true;
 }
