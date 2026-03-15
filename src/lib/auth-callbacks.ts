@@ -53,7 +53,7 @@ export async function testSignInCallback({ user }: { user: { email?: string | nu
   // Find or create default tenant
   let tenant = await db.tenant.findFirst();
   if (!tenant) {
-    tenant = await db.tenant.create({ data: { id: 'tenant-default', name: 'Default' } });
+    tenant = await db.tenant.create({ data: { id: 'tenant-default', name: 'Default', slug: 'default' } });
   }
 
   await db.user.create({
