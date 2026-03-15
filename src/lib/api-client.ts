@@ -224,6 +224,8 @@ export const api = {
     outcome: (id: string, data: {
       summary: string;
       sentiment: 'positive' | 'neutral' | 'negative';
+      actionItems?: { description: string; assignee?: string; dueDate?: string }[];
+      attendeeNotes?: { contactId: string; note: string }[];
       nextSteps?: string;
       createFollowUp?: boolean;
       followUpTitle?: string;
