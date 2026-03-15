@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { AccountType } from '@prisma/client';
 import { auth } from '@/lib/auth';
 import { scopedDb } from '@/lib/scoped-db';
 import { db as rawDb } from '@/lib/db';
@@ -54,7 +55,7 @@ export async function POST(req: NextRequest) {
       const { company, type, country, pain, source } = validatedRow.data;
       const existing = await rawDb.lead.findFirst({ where: { company: { equals: company, mode: 'insensitive' } } });
       if (existing) { results.push({ row: i + 2, status: 'skipped', name: company, error: 'Lead already exists' }); skipped++; continue; }
-      await db.lead.create({ data: { company, type: type || 'Unknown', country: country || '', pain: pain || '', source: source || 'Import', stage: 'New', ownerId: session.user.id } });
+      await db.lead.create({ data: { company, type: (type || 'Unknown') as AccountType, country: country || '', pain: pain || '', source: source || 'Import', stage: 'New', ownerId: session.user.id } });
       results.push({ row: i + 2, status: 'created', name: company });
       created++;
     } catch (err) {
