@@ -2,6 +2,7 @@
 import { useState } from 'react';
 import { useMeetingsQuery } from '@/lib/queries/meetings';
 import { CalendarGrid } from '@/components/meetings/CalendarGrid';
+import { MeetingDrawer } from '@/components/meetings/MeetingDrawer';
 import { EmptyState, ErrorState, Skeleton } from '@/components/ui';
 import { ChevronLeft, ChevronRight, Calendar } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -111,15 +112,11 @@ export default function MeetingsPage() {
         />
       )}
 
-      {/* Meeting drawer will be added in Task 15 */}
       {selectedMeetingId && (
-        <div className="fixed inset-y-0 right-0 w-[480px] bg-[var(--elevated)] border-l border-[var(--border)] shadow-xl z-50 p-4">
-          <div className="flex items-center justify-between mb-4">
-            <span className="text-sm font-semibold">Meeting Details</span>
-            <button onClick={() => setSelectedMeetingId(null)} className="text-xs text-muted hover:text-[var(--text)]">Close</button>
-          </div>
-          <p className="text-sm text-muted">Full drawer with Prep + Outcome tabs coming in Task 15.</p>
-        </div>
+        <MeetingDrawer
+          meetingId={selectedMeetingId}
+          onClose={() => setSelectedMeetingId(null)}
+        />
       )}
     </div>
   );
