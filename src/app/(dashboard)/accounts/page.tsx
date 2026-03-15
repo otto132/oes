@@ -278,7 +278,8 @@ function AccountsPageInner() {
 
   const accounts: Account[] = resp?.data ?? [];
 
-  const sorted = [...accounts].sort((a, b) => compositeScore(b.scores) - compositeScore(a.scores));
+  const defaultScores = { scoreFit: 0, scoreIntent: 0, scoreUrgency: 0, scoreAccess: 0, scoreCommercial: 0 };
+  const sorted = [...accounts].sort((a, b) => compositeScore(b.scores ?? defaultScores) - compositeScore(a.scores ?? defaultScores));
   const types = [...new Set(accounts.map(a => a.type))];
 
   return (
@@ -361,7 +362,7 @@ function AccountsPageInner() {
                   <td className="px-3.5 py-2.5 border-b border-[var(--border)]"><FIUACBars scores={a.scores} /></td>
                   <td className="px-3.5 py-2.5 border-b border-[var(--border)]"><span className="font-mono font-semibold text-sm">{a.pipelineValue > 0 ? fmt(a.pipelineValue) : '\u2014'}</span></td>
                   <td className="px-3.5 py-2.5 border-b border-[var(--border)]"><span className={cn('text-xs', stale ? 'text-warn' : 'text-[var(--sub)]')}>{fRelative(a.lastActivityAt)}</span></td>
-                  <td className="px-3.5 py-2.5 border-b border-[var(--border)]"><Avatar initials={a.owner.initials} color={a.owner.color} size="xs" /></td>
+                  <td className="px-3.5 py-2.5 border-b border-[var(--border)]">{a.owner ? <Avatar initials={a.owner.initials} color={a.owner.color} size="xs" /> : <span className="text-[var(--muted)]">—</span>}</td>
                   <td className="px-3.5 py-2.5 border-b border-[var(--border)] text-[var(--muted)] text-xs">{'\u2192'}</td>
                 </tr>
               );

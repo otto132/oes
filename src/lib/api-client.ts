@@ -104,7 +104,7 @@ export const api = {
       const qs = params.toString();
       return get<any>(`/leads${qs ? `?${qs}` : ''}`);
     },
-    create: (data: { company: string; type?: string; country?: string; pain?: string }) =>
+    create: (data: Record<string, unknown>) =>
       post<any>('/leads', { action: 'create', ...data }),
     advance: (id: string) => post<any>('/leads', { action: 'advance', id }),
     disqualify: (id: string, reason: string) => post<any>('/leads', { action: 'disqualify', id, reason }),
@@ -129,7 +129,7 @@ export const api = {
       return get<any>(`/accounts?${params}`);
     },
     detail: (id: string) => get<any>(`/accounts?id=${id}`),
-    create: (data: { name: string; type?: string; country?: string; notes?: string }) =>
+    create: (data: Record<string, unknown>) =>
       post<any>('/accounts', data),
     update: (id: string, data: Record<string, unknown>) =>
       patch<any>(`/accounts/${id}`, data),
