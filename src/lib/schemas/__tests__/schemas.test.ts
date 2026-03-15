@@ -53,14 +53,39 @@ describe('leadActionSchema', () => {
   it('accepts advance', () => {
     expect(leadActionSchema.safeParse({ action: 'advance', id: 'l1' }).success).toBe(true);
   });
-  it('accepts convert', () => {
-    expect(leadActionSchema.safeParse({ action: 'convert', id: 'l1', accountName: 'Acme' }).success).toBe(true);
+  it('rejects convert without oppName', () => {
+    expect(leadActionSchema.safeParse({ action: 'convert', id: 'l1', accountName: 'Acme' }).success).toBe(false);
   });
   it('accepts convert with opp fields', () => {
     const result = leadActionSchema.safeParse({
-      action: 'convert', id: 'l1', accountName: 'Acme', oppName: 'Deal', oppAmount: 1000, oppStage: 'Discovery',
+      action: 'convert', id: 'l1', accountName: 'Acme', oppName: 'Deal', oppAmount: 1000,
+      closeDate: '2026-06-30',
     });
     expect(result.success).toBe(true);
+  });
+  it('accepts disqualify with reason', () => {
+    expect(leadActionSchema.safeParse({ action: 'disqualify', id: 'l1', reason: 'No Budget' }).success).toBe(true);
+  });
+  it('rejects disqualify without reason', () => {
+    expect(leadActionSchema.safeParse({ action: 'disqualify', id: 'l1' }).success).toBe(false);
+  });
+  it('rejects disqualify with empty reason', () => {
+    expect(leadActionSchema.safeParse({ action: 'disqualify', id: 'l1', reason: '' }).success).toBe(false);
+  });
+  it('accepts pause with pausedUntil', () => {
+    expect(leadActionSchema.safeParse({ action: 'pause', id: 'l1', pausedUntil: '2026-06-01' }).success).toBe(true);
+  });
+  it('rejects pause without pausedUntil', () => {
+    expect(leadActionSchema.safeParse({ action: 'pause', id: 'l1' }).success).toBe(false);
+  });
+  it('accepts requalify', () => {
+    expect(leadActionSchema.safeParse({ action: 'requalify', id: 'l1' }).success).toBe(true);
+  });
+  it('requires oppName on convert', () => {
+    expect(leadActionSchema.safeParse({ action: 'convert', id: 'l1', accountName: 'Acme' }).success).toBe(false);
+  });
+  it('accepts convert with required oppName', () => {
+    expect(leadActionSchema.safeParse({ action: 'convert', id: 'l1', accountName: 'Acme', oppName: 'Deal' }).success).toBe(true);
   });
 });
 
