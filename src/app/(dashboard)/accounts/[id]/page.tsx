@@ -34,7 +34,7 @@ function OpportunityCreateForm({
   const [accountResults, setAccountResults] = useState<Account[]>([]);
   const [showDropdown, setShowDropdown] = useState(false);
   const [selectedAccountName, setSelectedAccountName] = useState(prefilledAccountName || '');
-  const [stage, setStage] = useState('Contacted');
+  const [stage, setStage] = useState('Discovery');
   const [amount, setAmount] = useState(0);
   const defaultClose = new Date(Date.now() + 90 * 864e5).toISOString().split('T')[0];
   const [closeDate, setCloseDate] = useState(defaultClose);
@@ -257,7 +257,7 @@ export default function AccountDetailPage() {
   const accActs: Activity[] = (data.activities ?? []).sort((x: Activity, y: Activity) => new Date(y.createdAt).getTime() - new Date(x.createdAt).getTime());
   const accTasks: Task[] = data.tasks ?? [];
   const accGoals: Goal[] = data.goals ?? [];
-  const openPipe = accOpps.filter(o => !['ClosedWon', 'ClosedLost'].includes(o.stage)).reduce((s, o) => s + o.amount, 0);
+  const openPipe = accOpps.filter(o => !['Won', 'Lost'].includes(o.stage)).reduce((s, o) => s + o.amount, 0);
   const stale = (Date.now() - new Date(a.lastActivityAt).getTime()) / 864e5 > 14;
   const conf = confNum(a.aiConfidence);
 
@@ -820,10 +820,19 @@ export default function AccountDetailPage() {
               </button>
             </div>
             <div className="flex items-center gap-1 mt-1 flex-wrap">
-              <Badge variant={a.status === 'Active' ? 'ok' : a.status === 'Partner' ? 'purple' : 'info'}>{a.status}</Badge>
+              <Badge variant={a.status === 'Active' || a.status === 'Customer' ? 'ok' : a.status === 'Partner' ? 'purple' : a.status === 'Churned' ? 'err' : 'info'}>{a.status}</Badge>
               <Badge variant="neutral">{a.type} · {a.country}</Badge>
               {a.schemes.map(s => <Badge key={s} variant="neutral" className="!text-3xs">{s}</Badge>)}
             </div>
+            {/* Sourced from: show unique opportunity sources that indicate lead conversion */}
+            {accOpps.some(o => o.source) && (
+              <div className="flex items-center gap-1 mt-1 flex-wrap">
+                <span className="text-2xs text-muted">Sourced from:</span>
+                {Array.from(new Set(accOpps.map(o => o.source).filter(Boolean))).map(src => (
+                  <Badge key={src} variant="info" className="!text-3xs">{src}</Badge>
+                ))}
+              </div>
+            )}
           </div>
           <div className="text-right flex-shrink-0">
             <div className="flex items-center gap-1 justify-end">
@@ -841,7 +850,7 @@ export default function AccountDetailPage() {
         <div className="flex gap-2 mt-3.5 pt-3 border-t border-[var(--border)] flex-wrap">
           {[
             { l: 'Pipeline', v: fmt(openPipe) },
-            { l: 'Open Opps', v: accOpps.filter(o => !['ClosedWon', 'ClosedLost'].includes(o.stage)).length },
+            { l: 'Open Opps', v: accOpps.filter(o => !['Won', 'Lost'].includes(o.stage)).length },
             { l: 'Contacts', v: a.contacts.length },
             { l: 'Confidence', v: `${Math.round(conf * 100)}%` },
             { l: 'Owner', v: a.owner?.name ?? 'Unassigned' },
