@@ -11,6 +11,8 @@ import { usePendingMutations, useFailedMutations } from '@/hooks/use-mutation-st
 import { useState } from 'react';
 import { RotateCw } from 'lucide-react';
 
+const defaultScores = { scoreFit: 0, scoreIntent: 0, scoreUrgency: 0, scoreAccess: 0, scoreCommercial: 0 };
+
 function LeadsSkeleton() {
   return (
     <div className="page-enter space-y-4">
@@ -411,14 +413,14 @@ function openLeadDetail(lead: Lead, opts: {
         <div>
           <span className="text-2xs font-semibold uppercase tracking-wide text-[var(--muted)]">FIUAC Scores</span>
           <div className="mt-1.5 flex items-center gap-2">
-            <FIUACBars scores={lead.scores} />
-            <ScorePill scores={lead.scores} />
+            <FIUACBars scores={lead.scores ?? defaultScores} />
+            <ScorePill scores={lead.scores ?? defaultScores} />
           </div>
           <div className="grid grid-cols-5 gap-1 mt-2 text-2xs text-center">
             {([['F', 'scoreFit'], ['I', 'scoreIntent'], ['U', 'scoreUrgency'], ['A', 'scoreAccess'], ['C', 'scoreCommercial']] as const).map(([label, key]) => (
               <div key={key}>
                 <div className="text-[var(--muted)] uppercase">{label}</div>
-                <div className="font-mono text-[var(--text)]">{lead.scores[key]}</div>
+                <div className="font-mono text-[var(--text)]">{(lead.scores ?? defaultScores)[key]}</div>
               </div>
             ))}
           </div>
@@ -426,8 +428,8 @@ function openLeadDetail(lead: Lead, opts: {
         {/* Owner */}
         <div className="flex items-center gap-2">
           <span className="text-2xs font-semibold uppercase tracking-wide text-[var(--muted)]">Owner</span>
-          <Avatar initials={lead.owner.initials} color={lead.owner.color} size="xs" />
-          <span className="text-sm text-[var(--text)]">{lead.owner.name ?? lead.owner.initials}</span>
+          {lead.owner ? <><Avatar initials={lead.owner.initials} color={lead.owner.color} size="xs" />
+          <span className="text-sm text-[var(--text)]">{lead.owner.name ?? lead.owner.initials}</span></> : <span className="text-sm text-[var(--muted)]">—</span>}
         </div>
         {/* Created */}
         <div>
@@ -753,9 +755,9 @@ export default function LeadsPage() {
                         <div className="text-xs text-sub leading-tight line-clamp-2 mb-2">{l.pain || 'No pain hypothesis yet'}</div>
                         <div className="flex items-center justify-between mb-1">
                           <div className="flex items-center gap-1">{(l.moduleFit || []).slice(0, 2).map(f => <Badge key={f} variant="ok" className="!text-3xs">{f}</Badge>)}</div>
-                          <Avatar initials={l.owner.initials} color={l.owner.color} size="xs" />
+                          {l.owner && <Avatar initials={l.owner.initials} color={l.owner.color} size="xs" />}
                         </div>
-                        <div className="flex items-center gap-1.5"><FIUACBars scores={l.scores} /><ScorePill scores={l.scores} /></div>
+                        <div className="flex items-center gap-1.5"><FIUACBars scores={l.scores ?? defaultScores} /><ScorePill scores={l.scores ?? defaultScores} /></div>
 
                         {/* Prominent CTA for Qualified cards */}
                         {l.stage === 'Qualified' && (
@@ -804,7 +806,7 @@ export default function LeadsPage() {
           <div className="md:hidden flex flex-col gap-1.5">
             {leads.length === 0 ? (
               <EmptyState icon="🎯" title="No active leads" description="Convert signals or add leads manually." action={{ label: 'Create Lead', onClick: () => openCreateLeadDrawer() }} />
-            ) : [...leads].sort((a, b) => compositeScore(b.scores) - compositeScore(a.scores)).map(l => (
+            ) : [...leads].sort((a, b) => compositeScore(b.scores ?? defaultScores) - compositeScore(a.scores ?? defaultScores)).map(l => (
               <div key={l.id} onClick={() => openLeadDetail(l, {
                 openDrawer, closeDrawer,
                 onAdvance: () => handleAdvance(l),
@@ -817,7 +819,7 @@ export default function LeadsPage() {
                   <Badge variant={stageMeta[l.stage]?.variant || 'neutral'} className="!text-3xs">{l.stage}</Badge>
                 </div>
                 <div className="text-xs text-sub mb-1.5">{l.type} · {l.country || '—'}</div>
-                <div className="flex items-center gap-1.5 mb-2"><FIUACBars scores={l.scores} /><ScorePill scores={l.scores} /></div>
+                <div className="flex items-center gap-1.5 mb-2"><FIUACBars scores={l.scores ?? defaultScores} /><ScorePill scores={l.scores ?? defaultScores} /></div>
                 {/* Action buttons — always visible on mobile */}
                 <div className="flex flex-wrap items-center gap-1 pt-2 border-t border-[var(--border)]">
                   {l.stage === 'Qualified' ? (

@@ -95,6 +95,7 @@ export function useCreateLead() {
       country: vars.country || '',
       stage: 'New',
       pain: vars.pain || '',
+      scores: { scoreFit: 50, scoreIntent: 50, scoreUrgency: 50, scoreAccess: 30, scoreCommercial: 50 },
       scoreFit: 50,
       scoreIntent: 50,
       scoreUrgency: 50,
