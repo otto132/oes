@@ -12,14 +12,28 @@ export async function GET(req: NextRequest) {
   const userId = session.user.id;
 
   const cursor = req.nextUrl.searchParams.get('cursor') ?? undefined;
+  const readStatus = req.nextUrl.searchParams.get('readStatus') ?? undefined;
+  const typeParam = req.nextUrl.searchParams.get('type') ?? undefined;
   const limit = 20;
+
+  // Build where clause
+  const where: any = { userId };
+  if (readStatus === 'unread') {
+    where.readAt = null;
+  }
+  if (typeParam) {
+    const types = typeParam.split(',').filter(Boolean);
+    if (types.length > 0) {
+      where.type = { in: types };
+    }
+  }
 
   // Cleanup: delete notifications older than 90 days (fire-and-forget)
   const cutoff = new Date(Date.now() - RETENTION_DAYS * 24 * 60 * 60 * 1000);
   db.notification.deleteMany({ where: { userId, createdAt: { lt: cutoff } } }).catch(() => {});
 
   const notifications = await db.notification.findMany({
-    where: { userId },
+    where,
     orderBy: { createdAt: 'desc' },
     take: limit + 1,
     ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
