@@ -73,14 +73,6 @@ enum OppStage {
   ClosedLost
 }
 
-enum ContactRole {
-  Champion
-  EconomicBuyer
-  TechnicalBuyer
-  Influencer
-  Blocker
-}
-
 enum ContactWarmth {
   Strong
   Warm
@@ -374,7 +366,7 @@ model Contact {
   id          String        @id @default(cuid())
   name        String
   title       String        @default("")
-  role        ContactRole   @default(Champion)
+  role        String        @default("Champion")
   warmth      ContactWarmth @default(Cold)
   email       String        @default("")
   phone       String?
@@ -390,6 +382,16 @@ model Contact {
 
   @@index([accountId])
   @@map("contacts")
+}
+
+model ContactRoleOption {
+  id         String   @id @default(cuid())
+  label      String   @unique
+  sortOrder  Int      @default(0)
+  isDefault  Boolean  @default(false)
+  isArchived Boolean  @default(false)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 }
 
 // ═══════════════════════════════════════════════════════════════

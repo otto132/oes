@@ -267,6 +267,11 @@ export const api = {
     profile: () => get<any>('/settings/profile'),
     updateProfile: (data: { name?: string; initials?: string; notificationPrefs?: { emailAlerts: boolean; queueAlerts: boolean } }) =>
       patch<any>('/settings/profile', data),
+    contactRoles: () => get<any>('/settings/contact-roles'),
+    createContactRole: (data: { label: string; sortOrder?: number }) =>
+      post<any>('/settings/contact-roles', data),
+    updateContactRole: (data: { id: string; label?: string; sortOrder?: number; isArchived?: boolean }) =>
+      patch<any>('/settings/contact-roles', data),
   },
 
   // ── Admin ───────────────────────────────────────

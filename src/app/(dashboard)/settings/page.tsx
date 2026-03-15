@@ -18,8 +18,13 @@ import {
   usePatchAgent,
   useSyncMutation,
 } from '@/lib/queries/settings';
+import {
+  useContactRolesQuery,
+  useCreateContactRole,
+  useUpdateContactRole,
+} from '@/lib/queries/contact-roles';
 
-const TABS = ['Team', 'Integrations', 'Agents', 'Profile', 'Appearance'] as const;
+const TABS = ['Team', 'Integrations', 'Agents', 'Profile', 'Roles', 'Appearance'] as const;
 type Tab = (typeof TABS)[number];
 
 export default function SettingsPage() {
@@ -53,6 +58,7 @@ export default function SettingsPage() {
       {activeTab === 'Integrations' && <IntegrationsTab />}
       {activeTab === 'Agents' && <AgentsTab />}
       {activeTab === 'Profile' && <ProfileTab />}
+      {activeTab === 'Roles' && <RolesTab isAdmin={isAdmin} />}
       {activeTab === 'Appearance' && <AppearanceTab />}
     </div>
   );
@@ -599,6 +605,133 @@ function AppearanceTab() {
           );
         })}
       </div>
+    </div>
+  );
+}
+
+// ─── Roles Tab ───────────────────────────────────────────────
+
+function RolesTab({ isAdmin }: { isAdmin: boolean }) {
+  const { data: rolesData, isLoading, isError } = useContactRolesQuery();
+  const createRole = useCreateContactRole();
+  const updateRole = useUpdateContactRole();
+  const { addToast } = useStore();
+  const [newLabel, setNewLabel] = useState('');
+
+  const roles: any[] = rolesData?.data ?? [];
+  const activeRoles = roles.filter((r: any) => !r.isArchived);
+  const archivedRoles = roles.filter((r: any) => r.isArchived);
+
+  function handleAdd() {
+    const label = newLabel.trim();
+    if (!label) return;
+    createRole.mutate(
+      { label },
+      {
+        onSuccess: () => {
+          addToast({ type: 'success', message: `Role "${label}" added` });
+          setNewLabel('');
+        },
+        onError: (err: any) => addToast({ type: 'error', message: err.message }),
+      },
+    );
+  }
+
+  function handleArchive(role: any) {
+    updateRole.mutate(
+      { id: role.id, isArchived: true },
+      {
+        onSuccess: () => addToast({ type: 'success', message: `"${role.label}" archived` }),
+        onError: (err: any) => addToast({ type: 'error', message: err.message }),
+      },
+    );
+  }
+
+  function handleRestore(role: any) {
+    updateRole.mutate(
+      { id: role.id, isArchived: false },
+      {
+        onSuccess: () => addToast({ type: 'success', message: `"${role.label}" restored` }),
+        onError: (err: any) => addToast({ type: 'error', message: err.message }),
+      },
+    );
+  }
+
+  if (isLoading) return <div className="animate-pulse space-y-2">{[...Array(4)].map((_, i) => <div key={i} className="h-10 bg-[var(--card-hover)] rounded" />)}</div>;
+  if (isError) return <div className="text-xs text-red-400 py-4">Failed to load roles</div>;
+
+  return (
+    <div className="flex flex-col gap-4">
+      <div className="flex items-center justify-between">
+        <span className="text-3xs font-semibold tracking-wide uppercase text-[var(--muted)]">Contact Roles ({activeRoles.length})</span>
+      </div>
+
+      {/* Active roles list */}
+      <div className="rounded-lg bg-[var(--elevated)] border border-[var(--border)] divide-y divide-[var(--border)]">
+        {activeRoles.map((role: any) => (
+          <div key={role.id} className="flex items-center justify-between px-4 py-2.5">
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-[var(--text)]">{role.label}</span>
+              {role.isDefault && (
+                <span className="text-3xs font-semibold px-1.5 py-[1px] rounded border border-brand/30 text-brand bg-brand/[.06]">Default</span>
+              )}
+            </div>
+            {isAdmin && !role.isDefault && (
+              <button
+                onClick={() => handleArchive(role)}
+                disabled={updateRole.isPending}
+                className="px-2 py-1 text-2xs font-medium text-[var(--muted)] border border-[var(--border)] rounded-md hover:bg-[var(--hover)] transition-colors disabled:opacity-50"
+              >
+                Archive
+              </button>
+            )}
+          </div>
+        ))}
+      </div>
+
+      {/* Add new role (admin only) */}
+      {isAdmin && (
+        <div className="flex gap-2">
+          <input
+            value={newLabel}
+            onChange={(e) => setNewLabel(e.target.value)}
+            onKeyDown={(e) => { if (e.key === 'Enter') handleAdd(); }}
+            placeholder="New role name..."
+            maxLength={50}
+            className="flex-1 px-2.5 py-1.5 text-sm rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] placeholder:text-[var(--muted)] focus:outline-none focus:border-brand/40"
+          />
+          <button
+            onClick={handleAdd}
+            disabled={createRole.isPending || !newLabel.trim()}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium bg-brand text-brand-on rounded-md hover:brightness-110 transition-colors disabled:opacity-50"
+          >
+            {createRole.isPending && <Spinner className="h-3 w-3" />}Add
+          </button>
+        </div>
+      )}
+
+      {/* Archived roles */}
+      {archivedRoles.length > 0 && (
+        <>
+          <span className="text-3xs font-semibold tracking-wide uppercase text-[var(--muted)] mt-2">Archived ({archivedRoles.length})</span>
+          <div className="rounded-lg bg-[var(--elevated)] border border-[var(--border)] divide-y divide-[var(--border)]">
+            {archivedRoles.map((role: any) => (
+              <div key={role.id} className="flex items-center justify-between px-4 py-2.5">
+                <span className="text-sm text-[var(--muted)]">{role.label}</span>
+                {isAdmin && (
+                  <button
+                    onClick={() => handleRestore(role)}
+                    disabled={updateRole.isPending}
+                    className="px-2 py-1 text-2xs font-medium text-brand border border-brand/30 rounded-md hover:bg-brand/[.06] transition-colors disabled:opacity-50"
+                  >
+                    Restore
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
+        </>
+      )}
     </div>
   );
 }
