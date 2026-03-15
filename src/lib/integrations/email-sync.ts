@@ -10,6 +10,45 @@ import { db } from '@/lib/db';
 import { fetchRecentEmails, type GraphEmail } from './microsoft-graph';
 import { runSync } from './run-sync';
 
+// ── HTML Strip ───────────────────────────────────
+// Remove HTML tags to produce plain-text body.
+
+function stripHtml(html: string): string {
+  return html
+    .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
+    .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/&nbsp;/gi, ' ')
+    .replace(/&amp;/gi, '&')
+    .replace(/&lt;/gi, '<')
+    .replace(/&gt;/gi, '>')
+    .replace(/&quot;/gi, '"')
+    .replace(/&#39;/gi, "'")
+    .replace(/\s{2,}/g, ' ')
+    .trim();
+}
+
+// ── Threading Helpers ─────────────────────────────
+
+async function computeThreadId(email: { messageId?: string; inReplyTo?: string }): Promise<string> {
+  if (email.inReplyTo) {
+    const parent = await db.inboxEmail.findFirst({
+      where: { messageId: email.inReplyTo },
+      select: { threadId: true },
+    });
+    if (parent?.threadId) return parent.threadId;
+  }
+  return email.messageId ?? crypto.randomUUID();
+}
+
+async function reconcileThreads(newEmail: { messageId?: string; threadId: string }) {
+  if (!newEmail.messageId) return;
+  await db.inboxEmail.updateMany({
+    where: { inReplyTo: newEmail.messageId, threadId: { not: newEmail.threadId } },
+    data: { threadId: newEmail.threadId },
+  });
+}
+
 // ── Domain Matching ──────────────────────────────
 // Match sender domain to existing account contacts
 
@@ -113,6 +152,24 @@ export async function syncEmails(): Promise<{ synced: number; errors: string[] }
             cls = 'new_domain';
           }
 
+          // Extract body
+          const bodyHtml = ge.body?.content ?? null;
+          const body = bodyHtml ? stripHtml(bodyHtml) : null;
+
+          // Extract threading headers
+          const headers = ge.internetMessageHeaders ?? [];
+          const messageId = ge.internetMessageId ?? null;
+          const inReplyTo =
+            headers.find((h) => h.name.toLowerCase() === 'in-reply-to')?.value ?? null;
+          const referencesHeader =
+            headers.find((h) => h.name.toLowerCase() === 'references')?.value ?? null;
+          const references = referencesHeader
+            ? referencesHeader.trim().split(/\s+/).filter(Boolean)
+            : [];
+
+          // Compute thread ID
+          const threadId = await computeThreadId({ messageId: messageId ?? undefined, inReplyTo: inReplyTo ?? undefined });
+
           const emailData = {
             subject: ge.subject,
             fromEmail: ge.from.emailAddress.address,
@@ -126,6 +183,12 @@ export async function syncEmails(): Promise<{ synced: number; errors: string[] }
             accountId: match?.accountId || null,
             accountName: match?.accountName || null,
             domain: !match ? domain : null,
+            body,
+            bodyHtml,
+            messageId,
+            inReplyTo,
+            references,
+            threadId,
           };
 
           // Dedup by externalId using upsert (race-condition safe)
@@ -136,8 +199,10 @@ export async function syncEmails(): Promise<{ synced: number; errors: string[] }
               create: { externalId: graphId, ...emailData },
             });
             // upsert returns existing record on duplicate — only count new ones
-            if (result.createdAt.getTime() >= new Date(Date.now() - 5000).getTime()) {
+            const isNew = result.createdAt.getTime() >= new Date(Date.now() - 5000).getTime();
+            if (isNew) {
               synced++;
+              await reconcileThreads({ messageId: messageId ?? undefined, threadId });
             }
           } else {
             // Fallback dedup for emails without Graph ID (backward compat)
@@ -152,6 +217,7 @@ export async function syncEmails(): Promise<{ synced: number; errors: string[] }
 
             await db.inboxEmail.create({ data: emailData });
             synced++;
+            await reconcileThreads({ messageId: messageId ?? undefined, threadId });
           }
         } catch (err) {
           errors.push(`Failed to sync email "${ge.subject}": ${err}`);

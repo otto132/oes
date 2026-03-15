@@ -101,6 +101,9 @@ export interface GraphEmail {
   receivedDateTime: string;
   bodyPreview: string;
   isRead: boolean;
+  body?: { contentType: string; content: string };
+  internetMessageId?: string;
+  internetMessageHeaders?: { name: string; value: string }[];
 }
 
 export async function fetchRecentEmails(accessToken: string, since?: Date): Promise<GraphEmail[]> {
@@ -108,7 +111,7 @@ export async function fetchRecentEmails(accessToken: string, since?: Date): Prom
     ? `&$filter=receivedDateTime ge ${since.toISOString()}`
     : '';
   const data = await graphGet(
-    `/me/messages?$top=50&$orderby=receivedDateTime desc&$select=id,subject,from,receivedDateTime,bodyPreview,isRead${filter}`,
+    `/me/messages?$top=50&$orderby=receivedDateTime desc&$select=id,subject,from,receivedDateTime,bodyPreview,isRead,body,internetMessageId,internetMessageHeaders${filter}`,
     accessToken
   );
   return data.value || [];
