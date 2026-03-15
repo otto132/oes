@@ -1,6 +1,6 @@
 import { Prisma } from '@prisma/client';
 import { db as prisma } from '@/lib/db';
-import { getAnthropicClient, MODEL_SONNET } from './ai';
+import { getAnthropicClient, MODEL_SONNET, getModelForAgent, logUsage } from './ai';
 import { EnrichmentResultSchema } from './schemas';
 import type { Agent, AgentContext, AgentResult, AgentError, NewQueueItem } from './types';
 
@@ -35,6 +35,7 @@ export const accountEnricherAgent: Agent = {
     const params = { ...DEFAULT_PARAMS, ...(ctx.config.parameters as Record<string, unknown>) };
     const staleDays = Number(params.stalenessThresholdDays) || 30;
     const staleCutoff = new Date(Date.now() - staleDays * 24 * 60 * 60 * 1000);
+    const model = getModelForAgent(ctx.config, MODEL_SONNET);
 
     let client: ReturnType<typeof getAnthropicClient>;
     try {
@@ -128,9 +129,10 @@ ${primaryContact && domain ? `Generate email pattern guesses for ${primaryContac
 Search the web for information about ${primaryContact?.name || account.name} to build a personal profile including interests, values, communication style, and rapport hooks.`;
 
         // Use messages.create with web search tool for personal profile research
+        const callStart = Date.now();
         const response = await Promise.race([
           client.messages.create({
-            model: MODEL_SONNET,
+            model,
             max_tokens: 4096,
             system: SYSTEM_PROMPT,
             messages: [{ role: 'user', content: userPrompt }],
@@ -142,6 +144,7 @@ Search the web for information about ${primaryContact?.name || account.name} to 
             setTimeout(() => reject(new Error('Stage timeout')), STAGE_TIMEOUT_MS * 2)
           ),
         ]);
+        await logUsage('account_enricher', model, response, Date.now() - callStart);
 
         // Extract JSON from response (may include text + tool use blocks)
         const textBlock = response.content.find((b) => b.type === 'text');

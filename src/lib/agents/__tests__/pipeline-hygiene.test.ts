@@ -20,6 +20,8 @@ vi.mock('../ai', () => ({
     messages: { parse: mockParse },
   }),
   MODEL_HAIKU: 'claude-haiku-4-5',
+  getModelForAgent: (_config: unknown, defaultModel: string) => defaultModel,
+  logUsage: vi.fn(),
 }));
 
 const ctx: AgentContext = {

@@ -1,6 +1,6 @@
 import { db as prisma } from '@/lib/db';
 import { zodOutputFormat } from '@anthropic-ai/sdk/helpers/zod';
-import { getAnthropicClient, MODEL_HAIKU } from './ai';
+import { getAnthropicClient, MODEL_HAIKU, getModelForAgent, logUsage } from './ai';
 import { EmailClassificationSchema } from './schemas';
 import type { Agent, AgentContext, AgentResult, AgentError, NewQueueItem } from './types';
 
@@ -11,6 +11,8 @@ export const inboxClassifierAgent: Agent = {
   triggers: [{ type: 'event', event: 'emails_synced' }],
 
   async analyze(ctx: AgentContext): Promise<AgentResult> {
+    const model = getModelForAgent(ctx.config, MODEL_HAIKU);
+
     let client: ReturnType<typeof getAnthropicClient>;
     try {
       client = getAnthropicClient();
@@ -66,14 +68,16 @@ ${emailDescriptions}
 ${account ? `\nAccount: ${account.name}` : `\nDomain: ${accountKey || 'unknown'}`}
 ${previousSentiment ? `\nSentiment history: ${previousSentiment.slice(-5).map((s) => `${s.date}: ${s.sentiment}`).join(', ')}` : ''}`;
 
+        const callStart = Date.now();
         const response = await client.messages.parse({
-          model: MODEL_HAIKU,
+          model,
           max_tokens: 1024,
           cache_control: { type: 'ephemeral' },
           system: SYSTEM_PROMPT,
           output_config: { format: zodOutputFormat(EmailClassificationSchema) },
           messages: [{ role: 'user', content: userPrompt }],
         });
+        await logUsage('inbox_classifier', model, response, Date.now() - callStart, 'event:emails_synced');
 
         for (const classification of response.parsed_output!.classifications) {
           if (classification.emailIndex >= accountEmails.length) continue;

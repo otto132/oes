@@ -1,6 +1,6 @@
 import { db as prisma } from '@/lib/db';
 import { zodOutputFormat } from '@anthropic-ai/sdk/helpers/zod';
-import { getAnthropicClient, MODEL_HAIKU } from './ai';
+import { getAnthropicClient, MODEL_HAIKU, getModelForAgent, logUsage } from './ai';
 import { LeadQualificationSchema } from './schemas';
 import type { Agent, AgentContext, AgentResult, AgentError, NewQueueItem } from './types';
 
@@ -21,6 +21,8 @@ export const leadQualifierAgent: Agent = {
   async analyze(ctx: AgentContext): Promise<AgentResult> {
     const params = { ...DEFAULT_PARAMS, ...(ctx.config.parameters as Record<string, unknown>) };
     const learnings = (ctx.config.parameters as Record<string, unknown>)?.learnings as string | undefined;
+
+    const model = getModelForAgent(ctx.config, MODEL_HAIKU);
 
     let client: ReturnType<typeof getAnthropicClient>;
     try {
@@ -90,14 +92,16 @@ ${upstreamContext ? `\nUpstream context: ${JSON.stringify(upstreamContext)}` : '
 
 Qualify threshold: ${params.autoQualifyThreshold}, Disqualify threshold: ${params.autoDisqualifyThreshold}`;
 
+        const callStart = Date.now();
         const response = await client.messages.parse({
-          model: MODEL_HAIKU,
+          model,
           max_tokens: 1024,
           cache_control: { type: 'ephemeral' },
           system: systemPrompt,
           output_config: { format: zodOutputFormat(LeadQualificationSchema) },
           messages: [{ role: 'user', content: userPrompt }],
         });
+        await logUsage('lead_qualifier', model, response, Date.now() - callStart);
 
         const qual = response.parsed_output;
         if (!qual) throw new Error('No parsed output from AI');

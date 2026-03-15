@@ -5,12 +5,15 @@ import type { Agent, AgentResult } from '../types';
 const mockAgentRunCreate = vi.fn();
 const mockAgentRunUpdate = vi.fn();
 const mockAgentRunFindFirst = vi.fn();
+const mockAgentRunCount = vi.fn();
+const mockAgentRunFindMany = vi.fn();
 const mockAgentConfigUpdate = vi.fn();
 const mockAgentConfigFindUnique = vi.fn();
 const mockQueueItemCreateMany = vi.fn();
 const mockUserFindMany = vi.fn();
 const mockNotificationFindFirst = vi.fn();
 const mockNotificationCreate = vi.fn();
+const mockAiUsageLogAggregate = vi.fn();
 
 vi.mock('@/lib/db', () => ({
   db: {
@@ -18,6 +21,8 @@ vi.mock('@/lib/db', () => ({
       create: (...args: unknown[]) => mockAgentRunCreate(...args),
       update: (...args: unknown[]) => mockAgentRunUpdate(...args),
       findFirst: (...args: unknown[]) => mockAgentRunFindFirst(...args),
+      count: (...args: unknown[]) => mockAgentRunCount(...args),
+      findMany: (...args: unknown[]) => mockAgentRunFindMany(...args),
     },
     agentConfig: {
       update: (...args: unknown[]) => mockAgentConfigUpdate(...args),
@@ -32,6 +37,9 @@ vi.mock('@/lib/db', () => ({
     notification: {
       findFirst: (...args: unknown[]) => mockNotificationFindFirst(...args),
       create: (...args: unknown[]) => mockNotificationCreate(...args),
+    },
+    aiUsageLog: {
+      aggregate: (...args: unknown[]) => mockAiUsageLogAggregate(...args),
     },
   },
 }));
@@ -78,6 +86,10 @@ describe('Agent Runner', () => {
     mockUserFindMany.mockResolvedValue([{ id: 'admin1' }]);
     mockNotificationFindFirst.mockResolvedValue(null);
     mockNotificationCreate.mockResolvedValue({ id: 'notif1' });
+    // Guard defaults: spend under cap, no run limit hit, circuit breaker closed
+    mockAiUsageLogAggregate.mockResolvedValue({ _sum: { estimatedCostUsd: 0 } });
+    mockAgentRunCount.mockResolvedValue(0);
+    mockAgentRunFindMany.mockResolvedValue([]);
   });
 
   it('runs an agent and creates queue items', async () => {

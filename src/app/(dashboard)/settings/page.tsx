@@ -10,6 +10,7 @@ import {
   useInvitationsQuery,
   useProfileQuery,
   useAgentsQuery,
+  useAgentUsageQuery,
   useIntegrationsQuery,
   useUpdateTeamMember,
   useInviteUser,
@@ -581,15 +582,44 @@ function AgentPerformanceSection() {
   );
 }
 
+// ─── Schedule presets ────────────────────────────────────────
+
+const SCHEDULE_PRESETS = [
+  { label: 'Every 4 hours', cron: '0 */4 * * *' },
+  { label: 'Daily at 9am', cron: '0 9 * * *' },
+  { label: 'Weekly Monday', cron: '0 6 * * 1' },
+  { label: 'Manual only', cron: '' },
+] as const;
+
+function cronToLabel(cron: string | undefined): string {
+  if (!cron) return 'Default';
+  const match = SCHEDULE_PRESETS.find((p) => p.cron === cron);
+  return match?.label ?? cron;
+}
+
 // ─── Agents Tab ─────────────────────────────────────────────
 
 function AgentsTab() {
-  const { openDrawer, closeDrawer } = useStore();
+  const { openDrawer, closeDrawer, addToast } = useStore();
   const agents = useAgentsQuery();
   const patchAgent = usePatchAgent();
+  const { data: usageData } = useAgentUsageQuery('today');
 
-  function openAgentConfig(agent: { name: string; displayName: string; description: string; status: string; parameters: Record<string, string> }) {
+  const capUsedPercent = usageData?.capUsedPercent ?? 0;
+  const totalCostToday = usageData?.totalCostUsd ?? 0;
+  const dailyCapUsd = usageData?.dailyCapUsd ?? 10;
+
+  function openAgentConfig(agent: { name: string; displayName: string; description: string; status: string; parameters: Record<string, unknown>; lastRunAt?: string }) {
     const isPaused = agent.status === 'paused';
+    const params = agent.parameters ?? {};
+    const agentUsage = usageData?.byAgent?.find((a: any) => a.agent === agent.name);
+
+    const state = {
+      schedule: (params.schedule as string) ?? '',
+      model: (params.model as string) ?? '',
+      maxRunsPerDay: params.maxRunsPerDay ? String(params.maxRunsPerDay) : '',
+    };
+
     openDrawer({
       title: `${agent.displayName} — Configuration`,
       subtitle: 'AI Agent',
@@ -599,26 +629,139 @@ function AgentsTab() {
             <div className="text-3xs font-semibold tracking-widest uppercase text-brand mb-1">{agent.displayName}</div>
             <p className="text-sm text-sub">{agent.description}</p>
           </div>
+
+          {/* Guardrail settings */}
           <div>
-            <div className="text-3xs font-semibold tracking-wide uppercase text-muted mb-2">Parameters</div>
-            <div className="flex flex-col gap-1.5">
-              {Object.entries(agent.parameters).map(([k, v]) => (
-                <div key={k} className="flex items-center justify-between py-1.5 px-2 border border-[var(--border)] rounded-md">
-                  <span className="text-xs text-sub">{k.replace(/_/g, ' ')}</span>
-                  <span className="text-xs font-medium text-[var(--text)]">{v}</span>
-                </div>
-              ))}
+            <div className="text-3xs font-semibold tracking-wide uppercase text-muted mb-2">Agent Settings</div>
+            <div className="flex flex-col gap-2.5">
+              <label className="flex flex-col gap-1">
+                <span className="text-2xs font-semibold uppercase tracking-wide text-[var(--muted)]">Schedule</span>
+                <select
+                  defaultValue={state.schedule}
+                  onChange={(e) => { state.schedule = e.target.value; }}
+                  className="px-2.5 py-1.5 text-sm rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] focus:outline-none focus:border-brand/40"
+                >
+                  <option value="">Default (agent built-in)</option>
+                  {SCHEDULE_PRESETS.map((p) => (
+                    <option key={p.cron} value={p.cron}>{p.label}</option>
+                  ))}
+                </select>
+              </label>
+              <label className="flex flex-col gap-1">
+                <span className="text-2xs font-semibold uppercase tracking-wide text-[var(--muted)]">Model</span>
+                <select
+                  defaultValue={state.model}
+                  onChange={(e) => { state.model = e.target.value; }}
+                  className="px-2.5 py-1.5 text-sm rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] focus:outline-none focus:border-brand/40"
+                >
+                  <option value="">Default (agent built-in)</option>
+                  <option value="claude-sonnet-4-6">Sonnet (higher quality)</option>
+                  <option value="claude-haiku-4-5">Haiku (faster, cheaper)</option>
+                </select>
+              </label>
+              <label className="flex flex-col gap-1">
+                <span className="text-2xs font-semibold uppercase tracking-wide text-[var(--muted)]">Max runs/day</span>
+                <input
+                  type="number"
+                  min={1}
+                  max={100}
+                  defaultValue={state.maxRunsPerDay}
+                  placeholder="No limit"
+                  onChange={(e) => { state.maxRunsPerDay = e.target.value; }}
+                  className="px-2.5 py-1.5 text-sm rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] placeholder:text-[var(--muted)] focus:outline-none focus:border-brand/40 w-28"
+                />
+              </label>
             </div>
           </div>
+
+          {/* Cost / usage display */}
+          {agentUsage && (
+            <div>
+              <div className="text-3xs font-semibold tracking-wide uppercase text-muted mb-2">Today&apos;s Usage</div>
+              <div className="flex flex-col gap-1.5">
+                <div className="flex items-center justify-between py-1.5 px-2 border border-[var(--border)] rounded-md">
+                  <span className="text-xs text-sub">API calls</span>
+                  <span className="text-xs font-medium text-[var(--text)] tabular-nums">{agentUsage.calls}</span>
+                </div>
+                <div className="flex items-center justify-between py-1.5 px-2 border border-[var(--border)] rounded-md">
+                  <span className="text-xs text-sub">Tokens (in/out)</span>
+                  <span className="text-xs font-medium text-[var(--text)] tabular-nums">
+                    {(agentUsage.inputTokens / 1000).toFixed(1)}k / {(agentUsage.outputTokens / 1000).toFixed(1)}k
+                  </span>
+                </div>
+                <div className="flex items-center justify-between py-1.5 px-2 border border-[var(--border)] rounded-md">
+                  <span className="text-xs text-sub">Cost today</span>
+                  <span className="text-xs font-semibold text-brand tabular-nums">${agentUsage.costUsd.toFixed(2)}</span>
+                </div>
+                {agentUsage.maxRunsPerDay && (
+                  <div className="flex items-center justify-between py-1.5 px-2 border border-[var(--border)] rounded-md">
+                    <span className="text-xs text-sub">Runs today</span>
+                    <span className="text-xs font-medium text-[var(--text)] tabular-nums">{agentUsage.runsToday} / {agentUsage.maxRunsPerDay}</span>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Other parameters (read-only) */}
+          {Object.entries(params).filter(([k]) => !['schedule', 'model', 'maxRunsPerDay'].includes(k)).length > 0 && (
+            <div>
+              <div className="text-3xs font-semibold tracking-wide uppercase text-muted mb-2">Other Parameters</div>
+              <div className="flex flex-col gap-1.5">
+                {Object.entries(params)
+                  .filter(([k]) => !['schedule', 'model', 'maxRunsPerDay'].includes(k))
+                  .map(([k, v]) => (
+                    <div key={k} className="flex items-center justify-between py-1.5 px-2 border border-[var(--border)] rounded-md">
+                      <span className="text-xs text-sub">{k.replace(/_/g, ' ')}</span>
+                      <span className="text-xs font-medium text-[var(--text)]">{typeof v === 'object' ? JSON.stringify(v) : String(v)}</span>
+                    </div>
+                  ))}
+              </div>
+            </div>
+          )}
+
           <div className="flex items-center gap-1.5">
             <Badge variant={isPaused ? 'neutral' : 'ok'}>{isPaused ? 'Paused' : 'Active'}</Badge>
-            <span className="text-2xs text-muted">Last run: —</span>
+            <span className="text-2xs text-muted">
+              {params.schedule ? `Schedule: ${cronToLabel(params.schedule as string)}` : 'Default schedule'}
+            </span>
           </div>
         </div>
       ),
       footer: (
         <>
           <button className="px-3.5 py-1.5 text-sm text-sub hover:bg-[var(--hover)] rounded-md transition-colors" onClick={closeDrawer}>Close</button>
+          <button
+            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-sm font-medium bg-brand text-brand-on rounded-md hover:brightness-110 transition-colors disabled:opacity-50"
+            disabled={patchAgent.isPending}
+            onClick={() => {
+              const newParams: Record<string, unknown> = {};
+              if (state.schedule !== (params.schedule ?? '')) newParams.schedule = state.schedule || undefined;
+              if (state.model !== (params.model ?? '')) newParams.model = state.model || undefined;
+              if (state.maxRunsPerDay !== (params.maxRunsPerDay ? String(params.maxRunsPerDay) : '')) {
+                newParams.maxRunsPerDay = state.maxRunsPerDay ? Number(state.maxRunsPerDay) : undefined;
+              }
+
+              const hasParamChanges = Object.keys(newParams).length > 0;
+              patchAgent.mutate(
+                {
+                  name: agent.name,
+                  data: {
+                    ...(hasParamChanges ? { parameters: newParams } : {}),
+                  },
+                },
+                {
+                  onSuccess: () => {
+                    addToast({ type: 'success', message: 'Agent settings saved' });
+                    closeDrawer();
+                  },
+                  onError: (err: any) => addToast({ type: 'error', message: err.message }),
+                },
+              );
+            }}
+          >
+            {patchAgent.isPending && <Spinner className="h-3 w-3" />}Save Settings
+          </button>
           <button
             className="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-sm font-medium bg-[var(--surface)] text-[var(--text)] border border-[var(--border)] rounded-md hover:bg-[var(--hover)] transition-colors disabled:opacity-50"
             disabled={patchAgent.isPending}
@@ -629,7 +772,7 @@ function AgentsTab() {
               );
             }}
           >
-            {patchAgent.isPending && <Spinner className="h-3 w-3" />}{isPaused ? 'Resume Agent' : 'Pause Agent'}
+            {isPaused ? 'Resume Agent' : 'Pause Agent'}
           </button>
         </>
       ),
@@ -638,6 +781,25 @@ function AgentsTab() {
 
   return (
     <div className="flex flex-col gap-4">
+      {/* Global spend cap banner */}
+      <div className="rounded-lg bg-[var(--elevated)] border border-[var(--border)] p-3">
+        <div className="flex items-center justify-between mb-1.5">
+          <span className="text-3xs font-semibold tracking-wide uppercase text-[var(--muted)]">Daily Spend</span>
+          <span className="text-xs font-semibold tabular-nums text-[var(--text)]">
+            ${totalCostToday.toFixed(2)} / ${dailyCapUsd.toFixed(2)}
+          </span>
+        </div>
+        <div className="h-1.5 rounded-full bg-[var(--surface)] overflow-hidden">
+          <div
+            className={`h-full rounded-full transition-all ${capUsedPercent >= 90 ? 'bg-red-400' : capUsedPercent >= 70 ? 'bg-amber-400' : 'bg-brand'}`}
+            style={{ width: `${Math.min(capUsedPercent, 100)}%` }}
+          />
+        </div>
+        <span className="text-3xs text-[var(--muted)] mt-1 block">
+          Set via AI_DAILY_SPEND_CAP_USD environment variable
+        </span>
+      </div>
+
       <span className="text-3xs font-semibold tracking-wide uppercase text-[var(--muted)]">AI Agents</span>
       <div className="rounded-lg bg-[var(--elevated)] border border-[var(--border)] divide-y divide-[var(--border)]">
         {agents.isLoading ? (
@@ -645,22 +807,30 @@ function AgentsTab() {
         ) : agents.isError ? (
           <div className="text-xs text-red-400 py-4 px-4">Failed to load agents</div>
         ) : (
-          agents.data?.data?.map((a: any) => (
-            <div key={a.name} className="flex items-center justify-between px-4 py-2.5">
-              <div className="flex flex-col">
-                <span className="text-sm font-medium text-[var(--text)]">{a.displayName}</span>
-                <span className={`text-2xs ${a.status === 'paused' ? 'text-muted' : 'text-brand'}`}>
-                  {a.status === 'paused' ? 'Paused' : 'Active'}
-                </span>
+          agents.data?.data?.map((a: any) => {
+            const agentCost = usageData?.byAgent?.find((u: any) => u.agent === a.name);
+            return (
+              <div key={a.name} className="flex items-center justify-between px-4 py-2.5">
+                <div className="flex flex-col">
+                  <span className="text-sm font-medium text-[var(--text)]">{a.displayName}</span>
+                  <div className="flex items-center gap-2">
+                    <span className={`text-2xs ${a.status === 'paused' ? 'text-muted' : 'text-brand'}`}>
+                      {a.status === 'paused' ? 'Paused' : 'Active'}
+                    </span>
+                    {agentCost && agentCost.costUsd > 0 && (
+                      <span className="text-2xs text-[var(--muted)] tabular-nums">${agentCost.costUsd.toFixed(2)} today</span>
+                    )}
+                  </div>
+                </div>
+                <button
+                  className="px-2 py-1 text-xs text-[var(--text)] bg-[var(--surface)] border border-[var(--border)] rounded-md hover:bg-[var(--hover)] transition-colors"
+                  onClick={() => openAgentConfig(a)}
+                >
+                  Configure
+                </button>
               </div>
-              <button
-                className="px-2 py-1 text-xs text-[var(--text)] bg-[var(--surface)] border border-[var(--border)] rounded-md hover:bg-[var(--hover)] transition-colors"
-                onClick={() => openAgentConfig(a)}
-              >
-                Configure
-              </button>
-            </div>
-          ))
+            );
+          })
         )}
       </div>
 

@@ -35,6 +35,8 @@ vi.mock('../ai', () => ({
     messages: { parse: mockParse },
   }),
   MODEL_SONNET: 'claude-sonnet-4-6',
+  getModelForAgent: (_config: unknown, defaultModel: string) => defaultModel,
+  logUsage: vi.fn(),
 }));
 
 const ctx: AgentContext = {

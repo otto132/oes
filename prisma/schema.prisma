@@ -784,6 +784,28 @@ model WinLossAnalysis {
 }
 
 // ═══════════════════════════════════════════════════════════════
+// AI USAGE LOG
+// ═══════════════════════════════════════════════════════════════
+
+model AiUsageLog {
+  id              String   @id @default(cuid())
+  agentName       String
+  model           String                  // "claude-sonnet-4-6" or "claude-haiku-4-5"
+  inputTokens     Int
+  outputTokens    Int
+  cacheRead       Int      @default(0)    // cached input tokens
+  cacheCreation   Int      @default(0)
+  estimatedCostUsd Float                  // computed from token counts + model pricing
+  durationMs      Int
+  trigger         String?                 // "cron", "chain:xxx", "event:xxx"
+  createdAt       DateTime @default(now())
+
+  @@index([agentName, createdAt(sort: Desc)])
+  @@index([createdAt(sort: Desc)])
+  @@map("ai_usage_logs")
+}
+
+// ═══════════════════════════════════════════════════════════════
 // INVITATIONS
 // ═══════════════════════════════════════════════════════════════
 

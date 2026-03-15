@@ -6,6 +6,7 @@ export const settingsKeys = {
   all: ['settings'] as const,
   team: () => ['settings', 'team'] as const,
   agents: () => ['settings', 'agents'] as const,
+  agentUsage: (range: string) => ['settings', 'agentUsage', range] as const,
   integrations: () => ['settings', 'integrations'] as const,
   invitations: () => ['settings', 'invitations'] as const,
   profile: () => ['settings', 'profile'] as const,
@@ -50,8 +51,15 @@ export function useProfileQuery() {
   });
 }
 
+export function useAgentUsageQuery(range: 'today' | '7d' | '30d' = 'today') {
+  return useQuery({
+    queryKey: settingsKeys.agentUsage(range),
+    queryFn: () => api.settings.agentUsage(range),
+  });
+}
+
 export function usePatchAgent() {
-  return useOptimisticMutation<unknown, { name: string; data: { status?: string; parameters?: Record<string, string> } }>({
+  return useOptimisticMutation<unknown, { name: string; data: { status?: string; parameters?: Record<string, unknown> } }>({
     mutationKey: ['settings', 'patchAgent'],
     mutationFn: ({ name, data }) => api.settings.patchAgent(name, data),
     queryKey: settingsKeys.agents(),

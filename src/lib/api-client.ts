@@ -290,9 +290,10 @@ export const api = {
   settings: {
     team: () => get<any>('/settings/team'),
     agents: () => get<any>('/settings/agents'),
-    patchAgent: (name: string, data: { status?: string; parameters?: Record<string, string> }) =>
+    patchAgent: (name: string, data: { status?: string; parameters?: Record<string, unknown> }) =>
       patch<any>(`/settings/agents/${name}`, data),
     agentAnalytics: (period = 30) => get<any>(`/agents/analytics?period=${period}d`),
+    agentUsage: (range: 'today' | '7d' | '30d' = 'today') => get<any>(`/settings/agents/usage?range=${range}`),
     integrations: () => get<any>('/settings/integrations'),
     invitations: () => get<any>('/settings/team/invitations'),
     invite: (data: { email: string; role?: string }) => post<any>('/settings/team/invite', data),

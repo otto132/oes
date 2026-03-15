@@ -1,6 +1,6 @@
 import { db as prisma } from '@/lib/db';
 import { zodOutputFormat } from '@anthropic-ai/sdk/helpers/zod';
-import { getAnthropicClient, MODEL_SONNET } from './ai';
+import { getAnthropicClient, MODEL_SONNET, getModelForAgent, logUsage } from './ai';
 import { OutreachDraftSchema } from './schemas';
 import type { Agent, AgentContext, AgentResult, AgentError, NewQueueItem } from './types';
 
@@ -22,6 +22,7 @@ export const outreachDrafterAgent: Agent = {
   async analyze(ctx: AgentContext): Promise<AgentResult> {
     const params = { ...DEFAULT_PARAMS, ...(ctx.config.parameters as Record<string, unknown>) };
     const learnings = (ctx.config.parameters as Record<string, unknown>)?.learnings as string | undefined;
+    const model = getModelForAgent(ctx.config, MODEL_SONNET);
 
     let client: ReturnType<typeof getAnthropicClient>;
     try {
@@ -80,8 +81,9 @@ ${upstreamContext ? `\nUpstream context: ${JSON.stringify(upstreamContext)}` : '
 
 Generate the outreach email with two subject line variants.`;
 
+        const callStart = Date.now();
         const response = await client.messages.parse({
-          model: MODEL_SONNET,
+          model,
           max_tokens: 1024,
           thinking: { type: 'adaptive' },
           cache_control: { type: 'ephemeral' },
@@ -89,6 +91,7 @@ Generate the outreach email with two subject line variants.`;
           output_config: { format: zodOutputFormat(OutreachDraftSchema) },
           messages: [{ role: 'user', content: userPrompt }],
         });
+        await logUsage('outreach_drafter', model, response, Date.now() - callStart);
 
         const draft = response.parsed_output;
         if (!draft) throw new Error('No parsed output from AI');

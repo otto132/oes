@@ -22,6 +22,8 @@ vi.mock('../ai', () => ({
     },
   }),
   MODEL_SONNET: 'claude-sonnet-4-6',
+  getModelForAgent: (_config: unknown, defaultModel: string) => defaultModel,
+  logUsage: vi.fn(),
 }));
 
 const ctx: AgentContext = {
@@ -51,6 +53,8 @@ describe('Outreach Drafter Agent (upgraded)', () => {
     vi.doMock('../ai', () => ({
       getAnthropicClient: () => { throw new Error('ANTHROPIC_API_KEY not configured'); },
       MODEL_SONNET: 'claude-sonnet-4-6',
+  getModelForAgent: (_config: unknown, defaultModel: string) => defaultModel,
+  logUsage: vi.fn(),
     }));
 
     const { outreachDrafterAgent: agent } = await import('../outreach-drafter');

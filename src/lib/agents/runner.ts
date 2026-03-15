@@ -4,6 +4,14 @@ import type { Agent, AgentEventData } from './types';
 import { consumePendingEvents, markProcessed, expireOldEvents } from './events';
 import { getAgentsByTrigger } from './registry';
 import { notifyUsers } from '@/lib/notifications';
+import {
+  checkSpendCap,
+  checkRunLimit,
+  checkCircuitBreaker,
+  SpendCapExceededError,
+  RunLimitExceededError,
+  CircuitBreakerOpenError,
+} from './ai';
 
 const STALE_RUN_TIMEOUT_MS = 10 * 60 * 1000; // 10 minutes
 
@@ -20,7 +28,24 @@ export async function runAgent(
     return null;
   }
 
-  // 2. Concurrency guard
+  // 2. Guardrails: spend cap, run limit, circuit breaker
+  try {
+    await checkSpendCap();
+    await checkRunLimit(agent.name);
+    await checkCircuitBreaker(agent.name);
+  } catch (err) {
+    if (
+      err instanceof SpendCapExceededError ||
+      err instanceof RunLimitExceededError ||
+      err instanceof CircuitBreakerOpenError
+    ) {
+      console.warn(`[agent-guard] ${agent.name} skipped: ${err.message}`);
+      return null;
+    }
+    throw err;
+  }
+
+  // 3. Concurrency guard
   const existingRun = await prisma.agentRun.findFirst({
     where: { agentName: agent.name, status: 'running' },
     orderBy: { startedAt: 'desc' },
@@ -43,7 +68,7 @@ export async function runAgent(
     });
   }
 
-  // 3. Create run record
+  // 4. Create run record
   const run = await prisma.agentRun.create({
     data: {
       agentName: agent.name,
@@ -55,14 +80,14 @@ export async function runAgent(
   const startTime = Date.now();
 
   try {
-    // 4. Execute agent
+    // 5. Execute agent
     const result = await agent.analyze({
       config,
       userId: 'system',
       triggerEvent: event,
     });
 
-    // 5. Create queue items
+    // 6. Create queue items
     if (result.items.length > 0) {
       await prisma.queueItem.createMany({
         data: result.items.map((item) => ({
@@ -95,7 +120,7 @@ export async function runAgent(
       });
     }
 
-    // 6. Update run record
+    // 7. Update run record
     const durationMs = Date.now() - startTime;
     await prisma.agentRun.update({
       where: { id: run.id },
@@ -110,7 +135,7 @@ export async function runAgent(
       },
     });
 
-    // 7. Update lastRunAt
+    // 8. Update lastRunAt
     await prisma.agentConfig.update({
       where: { name: agent.name },
       data: { lastRunAt: new Date() },
@@ -182,11 +207,18 @@ export async function runDueAgents(): Promise<AgentRun[]> {
   return results;
 }
 
-function isDue(config: { lastRunAt: Date | null }, agent: Agent): boolean {
+function isDue(config: { lastRunAt: Date | null; parameters: unknown }, agent: Agent): boolean {
   if (!config.lastRunAt) return true;
+
+  // Check for user-configured schedule override first
+  const params = (config.parameters as Record<string, unknown>) ?? {};
+  const scheduleOverride = params.schedule as string | undefined;
+
   const cronTrigger = agent.triggers.find((t) => t.type === 'cron');
   if (!cronTrigger || cronTrigger.type !== 'cron') return false;
-  const intervalMs = parseCronIntervalMs(cronTrigger.schedule);
+
+  const schedule = scheduleOverride || cronTrigger.schedule;
+  const intervalMs = parseCronIntervalMs(schedule);
   return Date.now() - config.lastRunAt.getTime() >= intervalMs;
 }
 

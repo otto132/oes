@@ -1,7 +1,7 @@
 import { db as prisma } from '@/lib/db';
 import RSSParser from 'rss-parser';
 import { zodOutputFormat } from '@anthropic-ai/sdk/helpers/zod';
-import { getAnthropicClient, MODEL_SONNET } from './ai';
+import { getAnthropicClient, MODEL_SONNET, getModelForAgent, logUsage } from './ai';
 import { SignalScoreSchema } from './schemas';
 import type { Agent, AgentContext, AgentResult, AgentError, NewQueueItem } from './types';
 
@@ -25,6 +25,8 @@ export const signalHunterAgent: Agent = {
     const sources = (params.rssSources as typeof DEFAULT_PARAMS.rssSources) || [];
     const dismissBelow = Number(params.autoDismissBelow) || 30;
     const competitors = (params.competitors as string[]) || [];
+
+    const model = getModelForAgent(ctx.config, MODEL_SONNET);
 
     if (sources.length === 0) {
       return { items: [], metrics: { scanned: 0, matched: 0, skipped: 0 }, errors: [] };
@@ -90,14 +92,16 @@ export const signalHunterAgent: Agent = {
 
         const userPrompt = `Score these ${candidates.length} signals for relevance to their matched accounts:\n\n${signalDescriptions}${competitors.length > 0 ? `\n\nKnown competitors: ${competitors.join(', ')}` : ''}`;
 
+        const callStart = Date.now();
         const response = await client.messages.parse({
-          model: MODEL_SONNET,
+          model,
           max_tokens: 2048,
           cache_control: { type: 'ephemeral' },
           system: SYSTEM_PROMPT,
           output_config: { format: zodOutputFormat(SignalScoreSchema) },
           messages: [{ role: 'user', content: userPrompt }],
         });
+        await logUsage('signal_hunter', model, response, Date.now() - callStart, 'cron');
 
         for (const score of response.parsed_output!.scores) {
           if (score.signalIndex >= candidates.length) continue;

@@ -1,6 +1,6 @@
 import { db as prisma } from '@/lib/db';
 import { zodOutputFormat } from '@anthropic-ai/sdk/helpers/zod';
-import { getAnthropicClient, MODEL_HAIKU } from './ai';
+import { getAnthropicClient, MODEL_HAIKU, getModelForAgent, logUsage } from './ai';
 import { RecoveryPlaybookSchema } from './schemas';
 import type { Agent, AgentContext, AgentResult, AgentError, NewQueueItem } from './types';
 
@@ -19,6 +19,7 @@ export const pipelineHygieneAgent: Agent = {
     const params = { ...DEFAULT_PARAMS, ...(ctx.config.parameters as Record<string, unknown>) };
     const staleThreshold = Number(params.staleThresholdDays) || 7;
     const healthThreshold = Number(params.healthAlertThreshold) || 40;
+    const model = getModelForAgent(ctx.config, MODEL_HAIKU);
 
     let client: ReturnType<typeof getAnthropicClient>;
     try {
@@ -100,14 +101,16 @@ ${recentActivities.map((a) => `- ${a.type}: ${a.summary || 'No summary'} (${a.cr
 Recent signals:
 ${competitorSignals.map((s) => `- ${s.title}: ${s.summary || ''}`).join('\n') || 'None'}`;
 
+        const callStart = Date.now();
         const response = await client.messages.parse({
-          model: MODEL_HAIKU,
+          model,
           max_tokens: 1024,
           cache_control: { type: 'ephemeral' },
           system: SYSTEM_PROMPT,
           output_config: { format: zodOutputFormat(RecoveryPlaybookSchema) },
           messages: [{ role: 'user', content: userPrompt }],
         });
+        await logUsage('pipeline_hygiene', model, response, Date.now() - callStart);
 
         const playbook = response.parsed_output;
         if (!playbook) throw new Error('No parsed output from AI');
