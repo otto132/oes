@@ -149,6 +149,23 @@ export interface Email {
   classification: EmailClassification; classificationConf: number;
   isLinked: boolean; accountName?: string; accountId?: ID;
   domain?: string; classifierAgent: string;
+  body?: string;
+  bodyHtml?: string;
+  messageId?: string;
+  inReplyTo?: string;
+  threadId?: string;
+  snoozedUntil?: string; // ISO string
+}
+
+export interface EmailThread {
+  threadId: string;
+  emails: Email[];
+  latestEmail: Email;
+  accountName?: string;
+  accountId?: string;
+  isUnread: boolean;
+  classification?: string;
+  snoozedUntil?: string;
 }
 
 // ── Meetings ─────────────────────────────────────
@@ -156,6 +173,41 @@ export interface Meeting {
   id: ID; title: string; startTime: string; duration: string;
   accountName: string; accountId: ID; attendees: string[];
   prepStatus: 'draft' | 'ready'; date: string;
+  rawNotes?: string;
+  outcomeSummary?: string;
+  outcomeRecordedAt?: string;
+  sentimentTag?: string;
+  noShow?: boolean;
+}
+
+// ── Weekly Digest ─────────────────────────────────
+export interface WeeklyDigest {
+  id: string;
+  weekStart: string;
+  weekEnd: string;
+  pipelineSnapshot: {
+    totalValue: number;
+    valueDelta: number;
+    valueDeltaPct: number;
+    stageChanges: { name: string; from: string; to: string }[];
+    closedWon: { name: string; amount: number; context: string }[];
+    closedLost: { name: string; amount: number; context: string }[];
+    newOpps: { name: string; accountName: string; amount: number }[];
+    atRisk: { name: string; healthDrop: number }[];
+  };
+  accountHighlights: {
+    accountName: string;
+    accountId: string;
+    narrative: string;
+    activityCount: number;
+  }[];
+  weekAhead: {
+    meetings: { id: string; title: string; date: string; accountName?: string; prepStatus: string }[];
+    tasksDue: { id: string; title: string; dueDate: string; accountName?: string }[];
+    overdue: { id: string; title: string; dueDate: string; accountName?: string }[];
+  };
+  renderedHtml: string;
+  createdAt: string;
 }
 
 // ── Agent Config ─────────────────────────────────

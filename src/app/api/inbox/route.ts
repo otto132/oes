@@ -83,5 +83,14 @@ export const POST = withHandler(inboxActionSchema, async (req, ctx) => {
     return NextResponse.json({ data: { account, email: updatedEmail ? adaptEmail(updatedEmail) : null } }, { status: 201 });
   }
 
+  if (action === 'snooze') {
+    const snoozedUntil = (body as any).snoozedUntil ? new Date((body as any).snoozedUntil) : null;
+    const updated = await ctx.db.inboxEmail.update({
+      where: { id },
+      data: { snoozedUntil },
+    });
+    return NextResponse.json({ data: adaptEmail(updated) });
+  }
+
   return NextResponse.json({ error: 'Invalid action' }, { status: 400 });
 });

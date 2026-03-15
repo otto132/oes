@@ -12,6 +12,14 @@
     {
       "path": "/api/retention",
       "schedule": "0 3 * * 0"
+    },
+    {
+      "path": "/api/cron/meeting-nudge",
+      "schedule": "0 18 * * *"
+    },
+    {
+      "path": "/api/cron/no-show-check",
+      "schedule": "0 9 * * *"
     }
   ]
 }
