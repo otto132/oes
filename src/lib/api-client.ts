@@ -237,6 +237,8 @@ export const api = {
       followUpTitle?: string;
       followUpDue?: string;
     }) => post<any>(`/meetings/${id}/outcome`, data),
+    processOutcome: (id: string, rawNotes: string) => post<any>(`/meetings/${id}/outcome`, { rawNotes }),
+    prep: (id: string) => get<any>(`/meetings/${id}/prep`),
   },
 
   // ── Search ─────────────────────────────────────

@@ -1,98 +1,33 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { scopedDb } from '@/lib/scoped-db';
-import { auth } from '@/lib/auth';
-import { meetingOutcomeSchema } from '@/lib/schemas/outcome';
-import { adaptActivity } from '@/lib/adapters';
-import { unauthorized, notFound, zodError } from '@/lib/api-errors';
+import { withHandler } from '@/lib/api-handler';
+import { runAgent } from '@/lib/agents/runner';
+import { getAgent } from '@/lib/agents/registry';
+import { z } from 'zod';
 
-export async function POST(
-  req: NextRequest,
-  { params }: { params: Promise<{ id: string }> },
-) {
-  const session = await auth();
-  if (!session?.user?.id) return unauthorized();
+const outcomeSchema = z.object({
+  rawNotes: z.string().min(1).max(10000),
+});
 
-  const db = scopedDb(session.user.id, (session.user as any).role ?? 'MEMBER');
-  const { id } = await params;
+export const POST = withHandler(outcomeSchema, async (req, ctx) => {
+  const id = req.nextUrl.pathname.split('/').at(-2)!; // Extract [id] from URL
 
-  const meeting = await db.meeting.findUnique({ where: { id } });
-  if (!meeting) return notFound('Meeting not found');
+  const meeting = await ctx.db.meeting.findUnique({ where: { id } });
+  if (!meeting) {
+    return NextResponse.json({ error: 'Meeting not found' }, { status: 404 });
+  }
 
-  const raw = await req.json();
-  const parsed = meetingOutcomeSchema.safeParse(raw);
-  if (!parsed.success) return zodError(parsed.error);
-
-  const body = parsed.data;
-
-  // Idempotency: check for existing outcome for this meeting
-  const existing = await db.activity.findFirst({
-    where: {
-      type: 'Meeting',
-      source: 'Meeting Outcome',
-      detail: { startsWith: `[meeting:${id}]` },
-    },
-    include: { author: true },
-  });
-  if (existing) {
-    return NextResponse.json({
-      data: adaptActivity({ ...existing, account: meeting.accountId ? { id: meeting.accountId, name: '' } : null }),
+  // Run meeting-analyst agent synchronously (user is waiting for results in the UI)
+  const agent = getAgent('meeting_analyst');
+  if (agent) {
+    await runAgent(agent, 'event', {
+      id: crypto.randomUUID(),
+      event: 'meeting_outcome_pasted',
+      payload: { meetingId: id, rawNotes: ctx.body.rawNotes },
     });
   }
 
-  const detail = `[meeting:${id}] ${body.summary}${body.nextSteps ? `\n\nNext steps: ${body.nextSteps}` : ''}`;
+  // Refetch the updated meeting with outcome summary
+  const updated = await ctx.db.meeting.findUnique({ where: { id } });
 
-  // Create activity — include author for adaptActivity
-  const activity = await db.activity.create({
-    data: {
-      type: 'Meeting',
-      source: 'Meeting Outcome',
-      summary: body.summary.slice(0, 80),
-      detail,
-      accountId: meeting.accountId,
-      authorId: session.user.id,
-    },
-    include: { author: true },
-  });
-
-  // Update account sentiment + lastActivityAt
-  if (meeting.accountId) {
-    const account = await db.account.findUnique({
-      where: { id: meeting.accountId },
-      select: { sentimentTrajectory: true },
-    });
-    const trajectory = (account?.sentimentTrajectory as Array<{ date: string; sentiment: string }>) ?? [];
-    trajectory.push({ date: new Date().toISOString(), sentiment: body.sentiment });
-
-    await db.account.update({
-      where: { id: meeting.accountId },
-      data: {
-        lastActivityAt: new Date(),
-        sentimentTrajectory: trajectory,
-      },
-    });
-  }
-
-  // Create follow-up task if requested
-  let task = null;
-  if (body.createFollowUp && body.followUpTitle) {
-    task = await db.task.create({
-      data: {
-        title: body.followUpTitle,
-        status: 'Open',
-        priority: 'Medium',
-        due: body.followUpDue ? new Date(body.followUpDue) : undefined,
-        source: 'Meeting Outcome',
-        accountId: meeting.accountId,
-        ownerId: session.user.id,
-      },
-    });
-  }
-
-  return NextResponse.json(
-    {
-      data: adaptActivity({ ...activity, account: meeting.accountId ? { id: meeting.accountId, name: '' } : null }),
-      ...(task ? { task } : {}),
-    },
-    { status: 201 },
-  );
-}
+  return NextResponse.json({ data: { status: 'complete', meeting: updated } });
+});
