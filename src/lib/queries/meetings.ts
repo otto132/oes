@@ -61,6 +61,31 @@ export function useUpdateMeeting() {
   });
 }
 
+export function useMeetingPrep(meetingId: string) {
+  return useQuery({
+    queryKey: [...meetingKeys.detail(meetingId), 'prep'] as const,
+    queryFn: () => api.meetings.prep(meetingId),
+    enabled: !!meetingId,
+  });
+}
+
+export function useSubmitOutcome(meetingId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (rawNotes: string) =>
+      api.meetings.processOutcome(meetingId, rawNotes),
+    onSuccess: () => qc.invalidateQueries({ queryKey: meetingKeys.detail(meetingId) }),
+  });
+}
+
+export function useMarkNoShow(meetingId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () => api.meetings.update(meetingId, { noShow: true }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: meetingKeys.all }),
+  });
+}
+
 export function useLogOutcome(meetingId: string) {
   const qc = useQueryClient();
   return useMutation({

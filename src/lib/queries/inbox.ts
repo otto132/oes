@@ -7,6 +7,7 @@ import { taskKeys } from './tasks';
 export const inboxKeys = {
   all: ['inbox'] as const,
   list: () => ['inbox', 'list'] as const,
+  threads: (filter?: string) => ['inbox', 'threads', filter] as const,
 };
 
 export function useInboxQuery() {
@@ -44,6 +45,23 @@ export function useCreateTaskFromEmail() {
       qc.invalidateQueries({ queryKey: inboxKeys.all });
       qc.invalidateQueries({ queryKey: taskKeys.all });
     },
+  });
+}
+
+export function useInboxThreadsQuery(filter?: string) {
+  return useQuery({
+    queryKey: inboxKeys.threads(filter),
+    queryFn: () => api.inbox.threads(filter),
+    placeholderData: keepPreviousData,
+  });
+}
+
+export function useSnoozeEmail() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, snoozedUntil }: { id: string; snoozedUntil: string }) =>
+      api.inbox.snooze(id, snoozedUntil),
+    onSuccess: () => qc.invalidateQueries({ queryKey: inboxKeys.all }),
   });
 }
 
