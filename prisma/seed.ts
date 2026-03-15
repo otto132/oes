@@ -15,6 +15,10 @@ async function main() {
   console.log('🌱 Seeding Eco-Insight Revenue OS...');
 
   // ── Clean slate ────────────────────────────────
+  await prisma.notification.deleteMany();
+  await prisma.accessLog.deleteMany();
+  await prisma.aiUsageLog.deleteMany();
+  await prisma.syncLog.deleteMany();
   await prisma.weeklyDigest.deleteMany();
   await prisma.taskComment.deleteMany();
   await prisma.task.deleteMany();
@@ -28,6 +32,8 @@ async function main() {
   await prisma.lead.deleteMany();
   await prisma.signal.deleteMany();
   await prisma.account.deleteMany();
+  await prisma.invitation.deleteMany();
+  await prisma.integrationToken.deleteMany();
   await prisma.user.deleteMany();
   await prisma.agentConfig.deleteMany();
   await prisma.tenant.deleteMany();
