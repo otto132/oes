@@ -93,6 +93,7 @@ enum QueueItemType {
   enrichment
   task_creation
   signal_review
+  meeting_scheduling
 }
 
 enum QueueItemStatus {
@@ -193,6 +194,7 @@ model Tenant {
   updatedAt          DateTime @updatedAt
   users              User[]
   invitations        Invitation[]
+  weeklyDigests  WeeklyDigest[]
 
   @@map("tenants")
 }
@@ -613,11 +615,20 @@ model InboxEmail {
   accountName String? // denormalized
   domain      String? // sender domain for new-domain detection
   externalId  String?  @unique // Microsoft Graph message ID
+  body          String?   @db.Text
+  bodyHtml      String?   @db.Text
+  messageId     String?
+  inReplyTo     String?
+  references    String[]
+  threadId      String?
+  snoozedUntil  DateTime?
 
   createdAt DateTime @default(now())
 
   @@index([isArchived, isUnread, receivedAt(sort: Desc)])
   @@index([accountId])
+  @@index([threadId])
+  @@index([snoozedUntil])
   @@map("inbox_emails")
 }
 
@@ -662,9 +673,30 @@ model Meeting {
 
   accountId   String?
   accountName String?
+  rawNotes          String?    @db.Text
+  outcomeSummary    String?    @db.Text
+  outcomeRecordedAt DateTime?
+  sentimentTag      String?
+  noShow            Boolean    @default(false)
 
   @@index([date])
+  @@index([accountId, date(sort: Desc)])
   @@map("meetings")
+}
+
+model WeeklyDigest {
+  id                String   @id @default(cuid())
+  weekStart         DateTime
+  weekEnd           DateTime
+  pipelineSnapshot  Json
+  accountHighlights Json
+  weekAhead         Json
+  renderedHtml      String   @db.Text
+  tenantId          String
+  tenant            Tenant   @relation(fields: [tenantId], references: [id])
+  createdAt         DateTime @default(now())
+
+  @@index([tenantId, weekStart])
 }
 
 model SyncLog {
