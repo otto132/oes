@@ -6,6 +6,7 @@ import { db as rawDb } from '@/lib/db';
 import { unauthorized, badRequest } from '@/lib/api-errors';
 import { logger } from '@/lib/logger';
 import { csvRowSchema } from '@/lib/schemas/import';
+import { rateLimit, rateLimitResponse } from '@/lib/rate-limit';
 
 const MAX_ROWS = 500;
 
@@ -57,6 +58,10 @@ export async function POST(req: NextRequest) {
   try {
     const session = await auth();
     if (!session?.user?.id) return unauthorized();
+
+    const rl = rateLimit(`acct-import:${session.user.id}`, { limit: 5, windowSec: 60 });
+    if (!rl.success) return rateLimitResponse(rl);
+
     const db = scopedDb(session.user.id, (session.user as any).role ?? 'MEMBER');
 
     const contentType = req.headers.get('content-type') || '';
@@ -77,9 +82,11 @@ export async function POST(req: NextRequest) {
       }
     } else {
       const body = await req.json();
+      if (typeof body?.csv !== 'string' || !body.csv) return badRequest('No CSV data provided');
       csvText = body.csv;
-      fieldMap = body.fieldMap;
-      if (!csvText) return badRequest('No CSV data provided');
+      if (body.fieldMap && typeof body.fieldMap === 'object' && !Array.isArray(body.fieldMap)) {
+        fieldMap = body.fieldMap as Record<string, string>;
+      }
     }
 
     const { headers, rows } = parseCSV(csvText);

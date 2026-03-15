@@ -1,6 +1,6 @@
 import { db as prisma } from '@/lib/db';
 import { zodOutputFormat } from '@anthropic-ai/sdk/helpers/zod';
-import { getAnthropicClient, MODEL_SONNET, getModelForAgent, logUsage } from './ai';
+import { getAnthropicClient, MODEL_SONNET, getModelForAgent, logUsage, sanitizeForPrompt } from './ai';
 import { OutreachDraftSchema } from './schemas';
 import type { Agent, AgentContext, AgentResult, AgentError, NewQueueItem } from './types';
 
@@ -70,11 +70,11 @@ export const outreachDrafterAgent: Agent = {
         const userPrompt = `Write a ${params.templateStyle} email.
 
 Context:
-- Company: ${lead.company}
-- Pain: ${account?.pain || lead.pain || 'Unknown'}
-- Why Now: ${account?.whyNow || 'Not specified'}
-- Contact: ${contact ? `${contact.name}, ${contact.title}` : 'Unknown'}
-- Recent signals: ${signals.map((s) => s.title).join('; ') || 'None'}
+- Company: ${sanitizeForPrompt(lead.company)}
+- Pain: ${sanitizeForPrompt(account?.pain || lead.pain) || 'Unknown'}
+- Why Now: ${sanitizeForPrompt(account?.whyNow) || 'Not specified'}
+- Contact: ${contact ? `${sanitizeForPrompt(contact.name)}, ${sanitizeForPrompt(contact.title)}` : 'Unknown'}
+- Recent signals: ${signals.map((s) => sanitizeForPrompt(s.title)).join('; ') || 'None'}
 - Sequence step: 1 of ${params.maxSequenceLength}
 - Max words: ${params.maxEmailWords}
 ${upstreamContext ? `\nUpstream context: ${JSON.stringify(upstreamContext)}` : ''}

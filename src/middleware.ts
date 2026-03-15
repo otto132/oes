@@ -14,9 +14,17 @@ export default auth((req) => {
   }
 
   // Cron routes — allow with CRON_SECRET header (skip session + CSRF checks)
+  // Uses constant-time comparison to prevent timing attacks
   if (pathname.startsWith("/api/sync")) {
     const cronSecret = req.headers.get("x-cron-secret")
-    if (cronSecret === process.env.CRON_SECRET) return
+    const expected = process.env.CRON_SECRET
+    if (cronSecret && expected && cronSecret.length === expected.length) {
+      const a = new TextEncoder().encode(cronSecret)
+      const b = new TextEncoder().encode(expected)
+      let diff = 0
+      for (let i = 0; i < a.length; i++) diff |= a[i] ^ b[i]
+      if (diff === 0) return
+    }
   }
 
   // No session → respond appropriately

@@ -1,6 +1,6 @@
 import { db as prisma } from '@/lib/db';
 import { zodOutputFormat } from '@anthropic-ai/sdk/helpers/zod';
-import { getAnthropicClient, MODEL_HAIKU, getModelForAgent, logUsage } from './ai';
+import { getAnthropicClient, MODEL_HAIKU, getModelForAgent, logUsage, sanitizeForPrompt } from './ai';
 import { LeadQualificationSchema } from './schemas';
 import type { Agent, AgentContext, AgentResult, AgentError, NewQueueItem } from './types';
 
@@ -78,16 +78,16 @@ export const leadQualifierAgent: Agent = {
 
         const userPrompt = `Evaluate this lead:
 
-Company: ${lead.company}
+Company: ${sanitizeForPrompt(lead.company)}
 Current stage: ${lead.stage}
-Type: ${lead.type || 'Unknown'}
-Pain: ${lead.pain || account?.pain || 'Unknown'}
-WhyNow: ${account?.whyNow || 'Unknown'}
+Type: ${sanitizeForPrompt(lead.type) || 'Unknown'}
+Pain: ${sanitizeForPrompt(lead.pain || account?.pain) || 'Unknown'}
+WhyNow: ${sanitizeForPrompt(account?.whyNow) || 'Unknown'}
 Existing FIUAC scores: F=${lead.scoreFit || 0}, I=${lead.scoreIntent || 0}, U=${lead.scoreUrgency || 0}, A=${lead.scoreAccess || 0}, C=${lead.scoreCommercial || 0}
 (Scores of 0 likely mean unscored, not a zero score)
 
-Recent signals: ${signals.map((s) => `"${s.title}": ${s.summary || ''}`).join('\n') || 'None'}
-Recent emails: ${emails.map((e) => `"${e.subject}": ${e.preview || ''}`).join('\n') || 'None'}
+Recent signals: ${signals.map((s) => `"${sanitizeForPrompt(s.title)}": ${sanitizeForPrompt(s.summary)}`).join('\n') || 'None'}
+Recent emails: ${emails.map((e) => `"${sanitizeForPrompt(e.subject)}": ${sanitizeForPrompt(e.preview)}`).join('\n') || 'None'}
 ${upstreamContext ? `\nUpstream context: ${JSON.stringify(upstreamContext)}` : ''}
 
 Qualify threshold: ${params.autoQualifyThreshold}, Disqualify threshold: ${params.autoDisqualifyThreshold}`;
