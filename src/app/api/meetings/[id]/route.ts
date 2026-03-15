@@ -52,7 +52,7 @@ export async function GET(
       const opportunities = await db.opportunity.findMany({
         where: {
           accountId: account.id,
-          stage: { notIn: ['ClosedWon', 'ClosedLost'] },
+          stage: { notIn: ['Won', 'Lost'] },
         },
         include: { owner: true },
       });

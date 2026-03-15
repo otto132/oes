@@ -34,7 +34,7 @@ describe('Win/Loss Analysis', () => {
 
   it('analyzes a won deal and stores results', async () => {
     mockOppFindUnique.mockResolvedValue({
-      id: 'opp1', name: 'Acme GoO Deal', stage: 'ClosedWon',
+      id: 'opp1', name: 'Acme GoO Deal', stage: 'Won',
       account: { id: 'acc1', name: 'Acme Corp', pain: 'High costs' },
       createdAt: new Date(Date.now() - 90 * 24 * 60 * 60 * 1000),
     });

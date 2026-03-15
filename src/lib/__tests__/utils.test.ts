@@ -137,16 +137,16 @@ describe('isOverdue', () => {
 
 describe('weightedValue', () => {
   it('calculates weighted value for known stage', () => {
-    // Solution Fit = 50%
-    expect(weightedValue(100_000, 'SolutionFit')).toBe(50_000);
+    // Evaluation = 35%
+    expect(weightedValue(100_000, 'Evaluation')).toBe(35_000);
   });
 
-  it('returns 0 for Closed Lost (0%)', () => {
-    expect(weightedValue(200_000, 'ClosedLost')).toBe(0);
+  it('returns 0 for Lost (0%)', () => {
+    expect(weightedValue(200_000, 'Lost')).toBe(0);
   });
 
-  it('returns full amount for Closed Won (100%)', () => {
-    expect(weightedValue(200_000, 'ClosedWon')).toBe(200_000);
+  it('returns full amount for Won (100%)', () => {
+    expect(weightedValue(200_000, 'Won')).toBe(200_000);
   });
 
   it('returns 0 for unknown stage', () => {
@@ -158,8 +158,8 @@ describe('weightedValue', () => {
   });
 
   it('rounds to nearest integer', () => {
-    // Discovery = 20%, 333 * 20/100 = 66.6 → 67
-    expect(weightedValue(333, 'Discovery')).toBe(67);
+    // Discovery = 15%, 333 * 15/100 = 49.95 → 50
+    expect(weightedValue(333, 'Discovery')).toBe(50);
   });
 });
 

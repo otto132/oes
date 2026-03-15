@@ -100,7 +100,7 @@ export const POST = withHandler(taskActionSchema, async (req, ctx) => {
     if (task.accountId) {
       await ctx.db.account.update({ where: { id: task.accountId }, data: { lastActivityAt: new Date() } });
       const opp = await ctx.db.opportunity.findFirst({
-        where: { accountId: task.accountId, stage: { notIn: [OppStage.ClosedWon, OppStage.ClosedLost] } },
+        where: { accountId: task.accountId, stage: { notIn: ['Won', 'Lost'] as any } },
       });
       if (opp) {
         await ctx.db.opportunity.update({

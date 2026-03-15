@@ -16,7 +16,7 @@ export async function analyzeWinLoss(opportunityId: string): Promise<void> {
     },
   });
 
-  if (!opp || !['ClosedWon', 'ClosedLost'].includes(opp.stage)) return;
+  if (!opp || !['Won', 'Lost'].includes(opp.stage)) return;
 
   const signals = opp.account
     ? await prisma.signal.findMany({
@@ -40,7 +40,7 @@ export async function analyzeWinLoss(opportunityId: string): Promise<void> {
     take: 20,
   });
 
-  const outcome = opp.stage === 'ClosedWon' ? 'won' : 'lost';
+  const outcome = opp.stage === 'Won' ? 'won' : 'lost';
   const dealDuration = opp.createdAt
     ? Math.floor((Date.now() - opp.createdAt.getTime()) / (24 * 60 * 60 * 1000))
     : 0;

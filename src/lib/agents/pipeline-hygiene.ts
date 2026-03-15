@@ -32,7 +32,7 @@ export const pipelineHygieneAgent: Agent = {
     }
 
     const opportunities = await prisma.opportunity.findMany({
-      where: { stage: { notIn: ['ClosedWon', 'ClosedLost'] } },
+      where: { stage: { notIn: ['Won', 'Lost'] } },
       include: {
         account: { select: { id: true, name: true, lastActivityAt: true, pain: true, whyNow: true } },
       },
