@@ -15,6 +15,7 @@ const { mockDb, mockAuthFn } = vi.hoisted(() => {
 
 vi.mock('@/lib/auth', () => ({ auth: mockAuthFn }));
 vi.mock('@/lib/scoped-db', () => ({ scopedDb: () => mockDb }));
+vi.mock('@/lib/db', () => ({ db: mockDb }));
 vi.mock('@/lib/notifications', () => ({ notifyUsers: vi.fn() }));
 
 import { PATCH } from '../tasks/[id]/route';
