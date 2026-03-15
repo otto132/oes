@@ -108,6 +108,9 @@ export const api = {
     advance: (id: string) => post<any>('/leads', { action: 'advance', id }),
     disqualify: (id: string) => post<any>('/leads', { action: 'disqualify', id }),
     convert: (id: string, data: any) => post<any>('/leads', { action: 'convert', id, ...data }),
+    bulkAdvance: (ids: string[]) => post<any>('/leads', { action: 'bulk_advance', ids }),
+    bulkDisqualify: (ids: string[]) => post<any>('/leads', { action: 'bulk_disqualify', ids }),
+    bulkAssign: (ids: string[], ownerId: string) => post<any>('/leads', { action: 'bulk_assign', ids, ownerId }),
   },
 
   // ── Accounts ───────────────────────────────────
@@ -155,6 +158,9 @@ export const api = {
     closeLost: (id: string, data: any) => post<any>('/opportunities', { action: 'close_lost', id, ...data }),
     update: (id: string, data: Record<string, unknown>) =>
       patch<any>(`/opportunities/${id}`, data),
+    bulkMove: (ids: string[], stage: string) => post<any>('/opportunities', { action: 'bulk_move', ids, stage }),
+    bulkCloseLost: (ids: string[]) => post<any>('/opportunities', { action: 'bulk_close_lost', ids }),
+    bulkAssign: (ids: string[], ownerId: string) => post<any>('/opportunities', { action: 'bulk_assign', ids, ownerId }),
   },
 
   // ── Inbox ──────────────────────────────────────

@@ -106,5 +106,41 @@ export const POST = withHandler(leadActionSchema, async (req, ctx) => {
     return NextResponse.json({ data: result }, { status: 201 });
   }
 
+  if (body.action === 'bulk_advance') {
+    const { ids } = body;
+    const next: Record<string, LeadStage> = { New: LeadStage.Researching, Researching: LeadStage.Qualified };
+    const results = [];
+    for (const id of ids) {
+      try {
+        const lead = await ctx.db.lead.findUnique({ where: { id } });
+        if (!lead) { results.push({ id, status: 'error', error: 'Not found' }); continue; }
+        if (!next[lead.stage]) { results.push({ id, status: 'skipped', error: 'Cannot advance' }); continue; }
+        await ctx.db.lead.update({ where: { id }, data: { stage: next[lead.stage] } });
+        results.push({ id, status: 'ok', stage: next[lead.stage] });
+      } catch (err) {
+        results.push({ id, status: 'error', error: 'Failed' });
+      }
+    }
+    return NextResponse.json({ data: { results, processed: results.filter(r => r.status === 'ok').length } });
+  }
+
+  if (body.action === 'bulk_disqualify') {
+    const { ids } = body;
+    await ctx.db.lead.updateMany({
+      where: { id: { in: ids } },
+      data: { stage: 'Disqualified' },
+    });
+    return NextResponse.json({ data: { processed: ids.length } });
+  }
+
+  if (body.action === 'bulk_assign') {
+    const { ids, ownerId } = body;
+    await ctx.db.lead.updateMany({
+      where: { id: { in: ids } },
+      data: { ownerId },
+    });
+    return NextResponse.json({ data: { processed: ids.length } });
+  }
+
   return badRequest('Invalid action');
 });

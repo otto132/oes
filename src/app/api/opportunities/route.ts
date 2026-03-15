@@ -133,6 +133,33 @@ export const POST = withHandler(opportunityActionSchema, async (req, ctx) => {
     return NextResponse.json({ data: adaptOpportunity(opp) });
   }
 
+  if (body.action === 'bulk_move') {
+    const { ids, stage } = body;
+    await ctx.db.opportunity.updateMany({
+      where: { id: { in: ids } },
+      data: { stage: stage as OppStage },
+    });
+    return NextResponse.json({ data: { processed: ids.length } });
+  }
+
+  if (body.action === 'bulk_close_lost') {
+    const { ids } = body;
+    await ctx.db.opportunity.updateMany({
+      where: { id: { in: ids } },
+      data: { stage: 'ClosedLost', probability: 0 },
+    });
+    return NextResponse.json({ data: { processed: ids.length } });
+  }
+
+  if (body.action === 'bulk_assign') {
+    const { ids, ownerId } = body;
+    await ctx.db.opportunity.updateMany({
+      where: { id: { in: ids } },
+      data: { ownerId },
+    });
+    return NextResponse.json({ data: { processed: ids.length } });
+  }
+
   // Exhaustive — discriminatedUnion guarantees one of the above matched
   return NextResponse.json({ error: 'Invalid action' }, { status: 400 });
 });

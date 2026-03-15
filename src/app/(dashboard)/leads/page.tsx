@@ -1,7 +1,9 @@
 'use client';
 import { useStore } from '@/lib/store';
 import { useLeadsQuery, useCreateLead, useAdvanceLead, useDisqualifyLead, useConvertLead } from '@/lib/queries/leads';
-import { Badge, Avatar, FIUACBars, ScorePill, EmptyState, Skeleton, SkeletonCard, SkeletonText, ErrorState, Spinner, HelpTip } from '@/components/ui';
+import { Badge, Avatar, FIUACBars, ScorePill, EmptyState, Skeleton, SkeletonCard, SkeletonText, ErrorState, Spinner, HelpTip, BulkActionBar } from '@/components/ui';
+import { useBulkAdvanceLeads, useBulkDisqualifyLeads, useBulkAssignLeads } from '@/lib/queries/bulk';
+import { useTeamQuery } from '@/lib/queries/settings';
 import { compositeScore, cn } from '@/lib/utils';
 import type { Lead } from '@/lib/types';
 import { usePendingMutations, useFailedMutations } from '@/hooks/use-mutation-state';
@@ -52,6 +54,21 @@ export default function LeadsPage() {
   const pendingIds = usePendingMutations(['leads']);
   const failedMutations = useFailedMutations(['leads']);
   const [confirmDisqualify, setConfirmDisqualify] = useState<string | null>(null);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const bulkAdvance = useBulkAdvanceLeads();
+  const bulkDisqualify = useBulkDisqualifyLeads();
+  const bulkAssign = useBulkAssignLeads();
+  const { data: teamData } = useTeamQuery();
+  const [showAssignPicker, setShowAssignPicker] = useState(false);
+
+  function toggleSelect(id: string) {
+    setSelected(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
 
   function openCreateLeadDrawer() {
     const state = { company: '', type: 'Unknown', country: '', pain: '' };
@@ -315,7 +332,15 @@ export default function LeadsPage() {
                   const isPending = pendingIds.has(l.id);
                   const failedInfo = failedMutations.get(l.id);
                   return (
-                  <div key={l.id} className={cn('group rounded-lg p-3 mb-1.5 bg-[var(--elevated)] border border-[var(--border)] cursor-pointer hover:-translate-y-px hover:border-[var(--border-strong)] transition-all relative', isPending && 'opacity-60 animate-pulse', failedInfo && 'border-l-2 border-l-red-500')}>
+                  <div key={l.id} className={cn('group rounded-lg p-3 mb-1.5 bg-[var(--elevated)] border border-[var(--border)] cursor-pointer hover:-translate-y-px hover:border-[var(--border-strong)] transition-all relative', isPending && 'opacity-60 animate-pulse', failedInfo && 'border-l-2 border-l-red-500', selected.has(l.id) && 'ring-1 ring-brand/40')}>
+                    <label className="absolute top-2 left-2 z-10" onClick={(e) => e.stopPropagation()}>
+                      <input
+                        type="checkbox"
+                        checked={selected.has(l.id)}
+                        onChange={() => toggleSelect(l.id)}
+                        className="rounded border-[var(--border)] accent-[var(--brand)]"
+                      />
+                    </label>
                     {failedInfo && (
                       <button
                         onClick={() => advance.mutate((failedInfo.variables as any))}
@@ -416,6 +441,80 @@ export default function LeadsPage() {
           </div>
         ))}
       </div>
+      <BulkActionBar
+        count={selected.size}
+        actions={[
+          {
+            label: 'Advance',
+            variant: 'brand',
+            isPending: bulkAdvance.isPending,
+            onClick: () => {
+              bulkAdvance.mutate([...selected], {
+                onSuccess: () => {
+                  addToast({ type: 'success', message: `Leads advanced` });
+                  setSelected(new Set());
+                },
+              });
+            },
+          },
+          {
+            label: 'Disqualify',
+            variant: 'danger',
+            isPending: bulkDisqualify.isPending,
+            onClick: () => {
+              bulkDisqualify.mutate([...selected], {
+                onSuccess: () => {
+                  addToast({ type: 'info', message: `Leads disqualified` });
+                  setSelected(new Set());
+                },
+              });
+            },
+          },
+          {
+            label: 'Assign Owner',
+            variant: 'default',
+            onClick: () => setShowAssignPicker(true),
+          },
+        ]}
+        onClear={() => setSelected(new Set())}
+      />
+
+      {showAssignPicker && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-[var(--elevated)] border border-[var(--border)] rounded-lg p-4 max-w-xs mx-4">
+            <p className="text-sm font-medium text-[var(--text)] mb-3">Assign {selected.size} leads to:</p>
+            <div className="flex flex-col gap-1 max-h-[200px] overflow-y-auto">
+              {(teamData?.data ?? []).map((user: any) => (
+                <button
+                  key={user.id}
+                  className="text-left px-3 py-2 text-sm rounded-md hover:bg-[var(--hover)] transition-colors"
+                  onClick={() => {
+                    bulkAssign.mutate(
+                      { ids: [...selected], ownerId: user.id },
+                      {
+                        onSuccess: () => {
+                          addToast({ type: 'success', message: `Leads assigned to ${user.name}` });
+                          setSelected(new Set());
+                          setShowAssignPicker(false);
+                        },
+                      }
+                    );
+                  }}
+                >
+                  {user.name}
+                </button>
+              ))}
+            </div>
+            <button
+              className="mt-2 w-full text-center text-sm text-[var(--muted)] hover:text-[var(--text)]"
+              onClick={() => setShowAssignPicker(false)}
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
+
       <ConfirmDialog
         open={!!confirmDisqualify}
         title="Disqualify Lead"
