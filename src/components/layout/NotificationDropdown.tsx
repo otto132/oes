@@ -50,7 +50,7 @@ export default function NotificationDropdown() {
   }
 
   function handleMarkAllRead() {
-    markAllRead.mutate();
+    markAllRead.mutate(undefined);
   }
 
   const notifications = data?.notifications ?? [];
