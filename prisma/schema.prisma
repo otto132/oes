@@ -40,6 +40,7 @@ enum LeadStage {
   New
   Researching
   Qualified
+  Paused
   Converted
   Disqualified
 }
@@ -56,21 +57,19 @@ enum AccountType {
 enum AccountStatus {
   Prospect
   Active
+  Customer
   Partner
   Churned
 }
 
 enum OppStage {
-  Identified
-  Contacted
   Discovery
-  Qualified
-  SolutionFit // Prisma enums can't have spaces
+  Evaluation
   Proposal
   Negotiation
-  VerbalCommit
-  ClosedWon
-  ClosedLost
+  Commit
+  Won
+  Lost
 }
 
 enum ContactWarmth {
@@ -292,13 +291,20 @@ model Lead {
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
+  // v2: Conversion traceability
+  opportunityId    String?       @unique
+  opportunity      Opportunity?  @relation(fields: [opportunityId], references: [id])
+  convertedAt      DateTime?
+  disqualifyReason String?
+  pausedUntil      DateTime?
+
   // Relations
   signalId String?
   signal   Signal? @relation("LeadSignal", fields: [signalId], references: [id])
   ownerId  String
   owner    User    @relation("LeadOwner", fields: [ownerId], references: [id])
 
-  @@unique([company]) // dedup by company name
+  // CHANGED: Removed @@unique([company]) — allow multiple leads per company
   @@index([stage])
   @@index([ownerId])
   @@map("leads")
@@ -401,10 +407,11 @@ model ContactRoleOption {
 model Opportunity {
   id          String    @id @default(cuid())
   name        String
-  stage       OppStage  @default(Identified)
+  stage       OppStage  @default(Discovery)
   amount      Int       @default(0) // euro cents in production; whole euros in seed
-  probability Int       @default(5) // 0–100, auto-set from stage
+  probability Int       @default(15) // 0–100, auto-set from stage
   closeDate   DateTime?
+  source      String    @default("")
 
   // Deal health dimensions (0–100 each)
   healthEngagement   Int @default(50)
@@ -438,6 +445,7 @@ model Opportunity {
   ownerId         String
   owner           User              @relation("OppOwner", fields: [ownerId], references: [id])
   winLossAnalyses WinLossAnalysis[]
+  lead            Lead?
 
   @@index([accountId])
   @@index([ownerId])
