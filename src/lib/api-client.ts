@@ -108,6 +108,9 @@ export const api = {
     advance: (id: string) => post<any>('/leads', { action: 'advance', id }),
     disqualify: (id: string) => post<any>('/leads', { action: 'disqualify', id }),
     convert: (id: string, data: any) => post<any>('/leads', { action: 'convert', id, ...data }),
+    bulkAdvance: (ids: string[]) => post<any>('/leads', { action: 'bulk_advance', ids }),
+    bulkDisqualify: (ids: string[]) => post<any>('/leads', { action: 'bulk_disqualify', ids }),
+    bulkAssign: (ids: string[], ownerId: string) => post<any>('/leads', { action: 'bulk_assign', ids, ownerId }),
   },
 
   // ── Accounts ───────────────────────────────────
@@ -155,6 +158,9 @@ export const api = {
     closeLost: (id: string, data: any) => post<any>('/opportunities', { action: 'close_lost', id, ...data }),
     update: (id: string, data: Record<string, unknown>) =>
       patch<any>(`/opportunities/${id}`, data),
+    bulkMove: (ids: string[], stage: string) => post<any>('/opportunities', { action: 'bulk_move', ids, stage }),
+    bulkCloseLost: (ids: string[]) => post<any>('/opportunities', { action: 'bulk_close_lost', ids }),
+    bulkAssign: (ids: string[], ownerId: string) => post<any>('/opportunities', { action: 'bulk_assign', ids, ownerId }),
   },
 
   // ── Inbox ──────────────────────────────────────
@@ -224,6 +230,8 @@ export const api = {
     outcome: (id: string, data: {
       summary: string;
       sentiment: 'positive' | 'neutral' | 'negative';
+      actionItems?: { description: string; assignee?: string; dueDate?: string }[];
+      attendeeNotes?: { contactId: string; note: string }[];
       nextSteps?: string;
       createFollowUp?: boolean;
       followUpTitle?: string;
@@ -243,6 +251,17 @@ export const api = {
     status: () => get<any>('/sync'),
   },
 
+  // ── Import ──────────────────────────────────────
+  import: {
+    analyze: (headers: string[], sampleRows: string[][]) =>
+      post<any>('/import/analyze', { headers, sampleRows }),
+    execute: (data: {
+      mappings: { sourceColumn: string; targetField: string | null }[];
+      rows: string[][];
+      headers: string[];
+    }) => post<any>('/import/execute', data),
+  },
+
   // ── Auth ───────────────────────────────────────
   auth: {
     connectOutlook: () => window.location.href = '/api/auth/connect',
@@ -259,6 +278,7 @@ export const api = {
     agents: () => get<any>('/settings/agents'),
     patchAgent: (name: string, data: { status?: string; parameters?: Record<string, string> }) =>
       patch<any>(`/settings/agents/${name}`, data),
+    agentAnalytics: (period = 30) => get<any>(`/agents/analytics?period=${period}d`),
     integrations: () => get<any>('/settings/integrations'),
     invitations: () => get<any>('/settings/team/invitations'),
     invite: (data: { email: string; role?: string }) => post<any>('/settings/team/invite', data),

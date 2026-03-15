@@ -3,7 +3,9 @@ import { Suspense, useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useOpportunitiesQuery, useCreateOpportunity, useMoveStage } from '@/lib/queries/opportunities';
-import { Avatar, HealthBar, StageBadge, EmptyState, Skeleton, SkeletonCard, ErrorState, Spinner, HelpTip } from '@/components/ui';
+import { Avatar, HealthBar, StageBadge, EmptyState, Skeleton, SkeletonCard, ErrorState, Spinner, HelpTip, BulkActionBar } from '@/components/ui';
+import { useBulkMoveOpps, useBulkCloseLostOpps, useBulkAssignOpps } from '@/lib/queries/bulk';
+import { useTeamQuery } from '@/lib/queries/settings';
 import { fmt, fDate, isOverdue, cn, displayLabel } from '@/lib/utils';
 import { KANBAN_STAGES, STAGE_COLOR, STAGE_PROB, healthAvg } from '@/lib/types';
 import { useStore } from '@/lib/store';
@@ -216,6 +218,22 @@ function PipelinePageInner() {
   const dragCounter = useRef<Record<string, number>>({});
   const pendingIds = usePendingMutations(['opportunities']);
   const failedMutations = useFailedMutations(['opportunities']);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const bulkMove = useBulkMoveOpps();
+  const bulkCloseLost = useBulkCloseLostOpps();
+  const bulkAssign = useBulkAssignOpps();
+  const { data: teamData } = useTeamQuery();
+  const [showAssignPicker, setShowAssignPicker] = useState(false);
+  const [showStagePicker, setShowStagePicker] = useState(false);
+
+  function toggleSelect(id: string) {
+    setSelected(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
 
   function openNewOppDrawer(prefilledAccountId?: string, prefilledAccountName?: string) {
     const submitRef = { current: () => {} };
@@ -379,10 +397,19 @@ function PipelinePageInner() {
                           'stagger-item rounded-lg mb-1.5 bg-[var(--elevated)] border border-[var(--border)] cursor-grab hover:-translate-y-px hover:border-[var(--border-strong)] transition-all overflow-hidden relative',
                           dragId === o.id && 'opacity-40 scale-[0.97] shadow-lg rotate-[1deg] ring-2 ring-brand/30 !cursor-grabbing',
                           isPending && 'opacity-60 animate-pulse',
-                          failedInfo && 'border-l-2 border-l-red-500'
+                          failedInfo && 'border-l-2 border-l-red-500',
+                          selected.has(o.id) && 'ring-1 ring-brand/40'
                         )}
                         style={failedInfo ? undefined : { borderLeft: `2px solid ${riskHex(o.health)}` }}
                       >
+                        <label className="absolute top-2 left-2 z-10" onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}>
+                          <input
+                            type="checkbox"
+                            checked={selected.has(o.id)}
+                            onChange={() => toggleSelect(o.id)}
+                            className="rounded border-[var(--border)] accent-[var(--brand)]"
+                          />
+                        </label>
                         {failedInfo && (
                           <button
                             onClick={e => { e.preventDefault(); e.stopPropagation(); moveStage.mutate(failedInfo.variables as any); }}
@@ -424,13 +451,23 @@ function PipelinePageInner() {
         <div className="hidden md:block rounded-lg bg-[var(--elevated)] border border-[var(--border)] overflow-hidden">
           <table className="w-full border-collapse">
             <thead>
-              <tr>{['Opportunity', 'Stage', 'Amount', 'Health', 'Close', 'Owner'].map(h => (
+              <tr>
+                <th className="w-8 px-2 py-2 bg-[var(--surface)] border-b border-[var(--border)]" />
+                {['Opportunity', 'Stage', 'Amount', 'Health', 'Close', 'Owner'].map(h => (
                 <th key={h} className="text-3xs font-semibold uppercase tracking-wide text-[var(--muted)] text-left px-3.5 py-2 bg-[var(--surface)] border-b border-[var(--border)] whitespace-nowrap">{h}</th>
               ))}</tr>
             </thead>
             <tbody>
               {open.map(o => (
-                <tr key={o.id} className="hover:bg-[var(--hover)] cursor-pointer transition-colors" onClick={() => router.push(`/pipeline/${o.id}`)}>
+                <tr key={o.id} className={cn('hover:bg-[var(--hover)] cursor-pointer transition-colors', selected.has(o.id) && 'bg-brand/5')} onClick={() => router.push(`/pipeline/${o.id}`)}>
+                  <td className="px-2 py-2.5 border-b border-[var(--border)]" onClick={e => e.stopPropagation()}>
+                    <input
+                      type="checkbox"
+                      checked={selected.has(o.id)}
+                      onChange={() => toggleSelect(o.id)}
+                      className="rounded border-[var(--border)] accent-[var(--brand)]"
+                    />
+                  </td>
                   <td className="px-3.5 py-2.5 border-b border-[var(--border)]"><div className="font-medium text-sm text-[var(--text)]">{o.name}</div><div className="text-2xs text-[var(--muted)]">{o.accountName}</div></td>
                   <td className="px-3.5 py-2.5 border-b border-[var(--border)]"><StageBadge stage={o.stage} /></td>
                   <td className="px-3.5 py-2.5 border-b border-[var(--border)] font-mono font-semibold text-sm text-[var(--text)]">{fmt(o.amount)}</td>
@@ -465,6 +502,108 @@ function PipelinePageInner() {
           </Link>
         ))}
       </div>
+
+      <BulkActionBar
+        count={selected.size}
+        actions={[
+          {
+            label: 'Move Stage',
+            variant: 'brand',
+            onClick: () => setShowStagePicker(true),
+          },
+          {
+            label: 'Close Lost',
+            variant: 'danger',
+            isPending: bulkCloseLost.isPending,
+            onClick: () => {
+              bulkCloseLost.mutate([...selected], {
+                onSuccess: () => {
+                  addToast({ type: 'info', message: `Opportunities closed as lost` });
+                  setSelected(new Set());
+                },
+              });
+            },
+          },
+          {
+            label: 'Assign Owner',
+            variant: 'default',
+            onClick: () => setShowAssignPicker(true),
+          },
+        ]}
+        onClear={() => setSelected(new Set())}
+      />
+
+      {showStagePicker && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-[var(--elevated)] border border-[var(--border)] rounded-lg p-4 max-w-xs mx-4">
+            <p className="text-sm font-medium text-[var(--text)] mb-3">Move {selected.size} opportunities to:</p>
+            <div className="flex flex-col gap-1 max-h-[200px] overflow-y-auto">
+              {KANBAN_STAGES.map((s) => (
+                <button
+                  key={s}
+                  className="text-left px-3 py-2 text-sm rounded-md hover:bg-[var(--hover)] transition-colors"
+                  onClick={() => {
+                    bulkMove.mutate(
+                      { ids: [...selected], stage: s },
+                      {
+                        onSuccess: () => {
+                          addToast({ type: 'success', message: `Opportunities moved to ${displayLabel(s)}` });
+                          setSelected(new Set());
+                          setShowStagePicker(false);
+                        },
+                      }
+                    );
+                  }}
+                >
+                  {displayLabel(s)}
+                </button>
+              ))}
+            </div>
+            <button
+              className="mt-2 w-full text-center text-sm text-[var(--muted)] hover:text-[var(--text)]"
+              onClick={() => setShowStagePicker(false)}
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
+
+      {showAssignPicker && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-[var(--elevated)] border border-[var(--border)] rounded-lg p-4 max-w-xs mx-4">
+            <p className="text-sm font-medium text-[var(--text)] mb-3">Assign {selected.size} opportunities to:</p>
+            <div className="flex flex-col gap-1 max-h-[200px] overflow-y-auto">
+              {(teamData?.data ?? []).map((user: any) => (
+                <button
+                  key={user.id}
+                  className="text-left px-3 py-2 text-sm rounded-md hover:bg-[var(--hover)] transition-colors"
+                  onClick={() => {
+                    bulkAssign.mutate(
+                      { ids: [...selected], ownerId: user.id },
+                      {
+                        onSuccess: () => {
+                          addToast({ type: 'success', message: `Opportunities assigned to ${user.name}` });
+                          setSelected(new Set());
+                          setShowAssignPicker(false);
+                        },
+                      }
+                    );
+                  }}
+                >
+                  {user.name}
+                </button>
+              ))}
+            </div>
+            <button
+              className="mt-2 w-full text-center text-sm text-[var(--muted)] hover:text-[var(--text)]"
+              onClick={() => setShowAssignPicker(false)}
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

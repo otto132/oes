@@ -25,6 +25,9 @@ export default function MeetingDetailPage({
   const [outcomeForm, setOutcomeForm] = useState({
     summary: '',
     sentiment: 'neutral' as 'positive' | 'neutral' | 'negative',
+    actionItems: [] as { description: string; assignee: string; dueDate: string }[],
+    attendeeNotes: [] as { contactId: string; note: string }[],
+    // Legacy fields kept for backward compat
     nextSteps: '',
     createFollowUp: false,
     followUpTitle: '',
@@ -266,6 +269,109 @@ export default function MeetingDetailPage({
                     <option value="negative">Negative</option>
                   </select>
                 </div>
+
+                {/* Action Items */}
+                <div className="mb-3">
+                  <label className="text-3xs font-semibold tracking-[0.1em] uppercase text-muted block mb-1.5">Action Items</label>
+                  {outcomeForm.actionItems.map((item, i) => (
+                    <div key={i} className="flex gap-1.5 mb-1.5">
+                      <input
+                        className="flex-1 rounded-md bg-[var(--surface)] border border-[var(--border)] text-sm p-2 focus:outline-none focus:border-brand/40 placeholder:text-muted/50"
+                        value={item.description}
+                        onChange={(e) => {
+                          const items = [...outcomeForm.actionItems];
+                          items[i] = { ...items[i], description: e.target.value };
+                          setOutcomeForm({ ...outcomeForm, actionItems: items });
+                        }}
+                        placeholder="What needs to happen?"
+                      />
+                      <input
+                        type="date"
+                        className="w-[130px] rounded-md bg-[var(--surface)] border border-[var(--border)] text-sm p-2 focus:outline-none focus:border-brand/40"
+                        value={item.dueDate}
+                        onChange={(e) => {
+                          const items = [...outcomeForm.actionItems];
+                          items[i] = { ...items[i], dueDate: e.target.value };
+                          setOutcomeForm({ ...outcomeForm, actionItems: items });
+                        }}
+                      />
+                      <button
+                        className="px-2 text-muted hover:text-[var(--text)] transition-colors text-sm"
+                        onClick={() => {
+                          const items = outcomeForm.actionItems.filter((_, idx) => idx !== i);
+                          setOutcomeForm({ ...outcomeForm, actionItems: items });
+                        }}
+                      >
+                        ×
+                      </button>
+                    </div>
+                  ))}
+                  <button
+                    className="text-xs text-brand hover:underline"
+                    onClick={() => setOutcomeForm({
+                      ...outcomeForm,
+                      actionItems: [...outcomeForm.actionItems, { description: '', assignee: '', dueDate: '' }],
+                    })}
+                  >
+                    + Add action item
+                  </button>
+                </div>
+
+                {/* Attendee Notes */}
+                {contacts.length > 0 && (
+                  <div className="mb-3">
+                    <label className="text-3xs font-semibold tracking-[0.1em] uppercase text-muted block mb-1.5">Attendee Notes</label>
+                    <div className="flex flex-wrap gap-1.5 mb-2">
+                      {contacts.map((c: any) => {
+                        const hasNote = outcomeForm.attendeeNotes.some(n => n.contactId === c.id);
+                        return (
+                          <button
+                            key={c.id}
+                            className={`px-2 py-1 text-xs rounded-full border transition-colors ${
+                              hasNote
+                                ? 'bg-brand/10 border-brand/30 text-brand'
+                                : 'bg-[var(--surface)] border-[var(--border)] text-[var(--sub)] hover:border-brand/30'
+                            }`}
+                            onClick={() => {
+                              if (hasNote) {
+                                setOutcomeForm({
+                                  ...outcomeForm,
+                                  attendeeNotes: outcomeForm.attendeeNotes.filter(n => n.contactId !== c.id),
+                                });
+                              } else {
+                                setOutcomeForm({
+                                  ...outcomeForm,
+                                  attendeeNotes: [...outcomeForm.attendeeNotes, { contactId: c.id, note: '' }],
+                                });
+                              }
+                            }}
+                          >
+                            {c.name}
+                          </button>
+                        );
+                      })}
+                    </div>
+                    {outcomeForm.attendeeNotes.map((note, i) => {
+                      const contact = contacts.find((c: any) => c.id === note.contactId);
+                      return (
+                        <div key={note.contactId} className="mb-1.5">
+                          <span className="text-2xs font-medium text-[var(--text)] mb-0.5 block">{contact?.name}</span>
+                          <textarea
+                            className="w-full rounded-md bg-[var(--surface)] border border-[var(--border)] text-sm p-2 resize-none focus:outline-none focus:border-brand/40 placeholder:text-muted/50"
+                            rows={2}
+                            value={note.note}
+                            onChange={(e) => {
+                              const notes = [...outcomeForm.attendeeNotes];
+                              notes[i] = { ...notes[i], note: e.target.value };
+                              setOutcomeForm({ ...outcomeForm, attendeeNotes: notes });
+                            }}
+                            placeholder={`Notes about ${contact?.name}...`}
+                          />
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
 
                 <div className="mb-3">
                   <label className="text-3xs font-semibold tracking-[0.1em] uppercase text-muted block mb-1">Next Steps</label>

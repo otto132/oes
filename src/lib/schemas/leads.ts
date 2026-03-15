@@ -21,4 +21,17 @@ export const leadActionSchema = z.discriminatedUnion('action', [
     oppStage: z.string().trim().optional(),
     ownerId: z.string().optional(),
   }),
+  z.object({
+    action: z.literal('bulk_advance'),
+    ids: z.array(z.string().min(1)).min(1).max(50),
+  }),
+  z.object({
+    action: z.literal('bulk_disqualify'),
+    ids: z.array(z.string().min(1)).min(1).max(50),
+  }),
+  z.object({
+    action: z.literal('bulk_assign'),
+    ids: z.array(z.string().min(1)).min(1).max(50),
+    ownerId: z.string().min(1),
+  }),
 ]);

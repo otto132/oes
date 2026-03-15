@@ -39,7 +39,12 @@ export async function POST(
     });
   }
 
-  const detail = `[meeting:${id}] ${body.summary}${body.nextSteps ? `\n\nNext steps: ${body.nextSteps}` : ''}`;
+  // Build detail string with attendee notes
+  const attendeeNotesStr = body.attendeeNotes?.length
+    ? `\n\nAttendee notes:\n${body.attendeeNotes.map(n => `- ${n.contactId}: ${n.note}`).join('\n')}`
+    : '';
+
+  const detail = `[meeting:${id}] ${body.summary}${body.nextSteps ? `\n\nNext steps: ${body.nextSteps}` : ''}${attendeeNotesStr}`;
 
   // Create activity — include author for adaptActivity
   const activity = await db.activity.create({
@@ -88,10 +93,29 @@ export async function POST(
     });
   }
 
+  // Create tasks from action items
+  const createdTasks = [];
+  if (body.actionItems && body.actionItems.length > 0) {
+    for (const item of body.actionItems) {
+      const t = await db.task.create({
+        data: {
+          title: item.description,
+          status: 'Open',
+          priority: 'Medium',
+          due: item.dueDate ? new Date(item.dueDate) : undefined,
+          source: 'Meeting Outcome',
+          accountId: meeting.accountId,
+          ownerId: item.assignee || session.user.id,
+        },
+      });
+      createdTasks.push(t);
+    }
+  }
+
   return NextResponse.json(
     {
       data: adaptActivity({ ...activity, account: meeting.accountId ? { id: meeting.accountId, name: '' } : null }),
-      ...(task ? { task } : {}),
+      tasks: [...(task ? [task] : []), ...createdTasks],
     },
     { status: 201 },
   );

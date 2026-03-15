@@ -213,3 +213,5 @@ export function ErrorState({ message = 'Something went wrong', onRetry }: { mess
 
 export { Button } from './Button';
 export { HelpTip } from './HelpTip';
+export { Sparkline } from './Sparkline';
+export { BulkActionBar } from './BulkActionBar';

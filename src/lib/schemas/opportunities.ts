@@ -20,4 +20,18 @@ export const opportunityActionSchema = z.discriminatedUnion('action', [
     lossNotes: z.string().trim().optional(),
     lessonsLearned: z.string().trim().optional(),
   }),
+  z.object({
+    action: z.literal('bulk_move'),
+    ids: z.array(z.string().min(1)).min(1).max(50),
+    stage: z.string().trim().min(1),
+  }),
+  z.object({
+    action: z.literal('bulk_close_lost'),
+    ids: z.array(z.string().min(1)).min(1).max(50),
+  }),
+  z.object({
+    action: z.literal('bulk_assign'),
+    ids: z.array(z.string().min(1)).min(1).max(50),
+    ownerId: z.string().min(1),
+  }),
 ]);
