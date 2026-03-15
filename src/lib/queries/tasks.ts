@@ -87,7 +87,7 @@ export function useUpdateTask() {
 }
 
 export function useCreateTask() {
-  return useOptimisticMutation<{ data: any }, { title: string; accountId?: string; priority?: string; dueDate?: string; goalId?: string }>({
+  return useOptimisticMutation<{ data: any }, { title: string; accountId?: string; priority?: string; dueDate?: string; goalId?: string; assigneeIds?: string[] }>({
     mutationKey: ['tasks', 'create'],
     mutationFn: (data) => api.tasks.create(data),
     queryKey: taskKeys.all,

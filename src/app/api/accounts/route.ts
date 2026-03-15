@@ -125,9 +125,16 @@ export const POST = withHandler(createAccountSchema, async (req, ctx) => {
       name,
       type: (type && Object.values(AccountType).includes(type as AccountType) ? type : 'Unknown') as AccountType,
       country: country || '',
+      region: body.region || '',
       status: 'Prospect',
       ownerId,
       pain: notes || '',
+      certMgmtType: body.certMgmtType || '',
+      etrmSystem: body.etrmSystem || '',
+      gtrmSystem: body.gtrmSystem || '',
+      certRegistries: body.certRegistries || [],
+      itIntegrations: body.itIntegrations || [],
+      certPainPoints: body.certPainPoints || '',
     },
   });
   return NextResponse.json({ data: account }, { status: 201 });

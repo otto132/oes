@@ -353,7 +353,7 @@ function PipelinePageInner() {
                       const srcIdx = KANBAN_STAGES.indexOf(opp.stage);
                       const tgtIdx = KANBAN_STAGES.indexOf(stage);
                       if (tgtIdx <= srcIdx) {
-                        addToast({ type: 'info', message: 'Use the stage dropdown to move deals back.' });
+                        addToast({ type: 'info', message: 'Drag forward only — use bulk actions to move deals back.' });
                         return;
                       }
                       moveStage.mutate(

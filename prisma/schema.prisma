@@ -289,6 +289,14 @@ model Lead {
   // Module fit as string array
   moduleFit String[]
 
+  // Certificate management landscape
+  certMgmtType    String   @default("") // ETRM, GTRM, Excel, None
+  etrmSystem      String   @default("") // Molecule, Brady, OpenLink Endur, Allegro, FIS Aligne
+  gtrmSystem      String   @default("") // CerQlar, Unicorn
+  certRegistries  String[] // e.g. Grexel, Statnett, Fingrid, NECS, UBA, Ofgem, AIB Hub
+  itIntegrations  String[] // other IT systems/integrations
+  certPainPoints  String   @default("") @db.Text
+
   confidence Float    @default(0.5)
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
@@ -339,6 +347,14 @@ model Account {
   pipelineValue       Int      @default(0) // cached sum of open opp amounts
   lastActivityAt      DateTime @default(now())
   sentimentTrajectory Json?    // Email sentiment over time [{date, sentiment}]
+
+  // Certificate management landscape
+  certMgmtType    String   @default("") // ETRM, GTRM, Excel, None
+  etrmSystem      String   @default("") // Molecule, Brady, OpenLink Endur, Allegro, FIS Aligne
+  gtrmSystem      String   @default("") // CerQlar, Unicorn
+  certRegistries  String[] // e.g. Grexel, Statnett, Fingrid, NECS, UBA, Ofgem, AIB Hub
+  itIntegrations  String[] // other IT systems/integrations
+  certPainPoints  String   @default("") @db.Text
 
   // AI Account Brief
   pain         String   @default("") @db.Text

@@ -4,8 +4,15 @@ export const createAccountSchema = z.object({
   name: z.string().trim().min(1, 'Account name is required'),
   type: z.string().trim().optional(),
   country: z.string().trim().optional(),
+  region: z.string().trim().optional(),
   notes: z.string().trim().optional(),
   ownerId: z.string().optional(),
+  certMgmtType: z.string().trim().optional(),
+  etrmSystem: z.string().trim().optional(),
+  gtrmSystem: z.string().trim().optional(),
+  certRegistries: z.array(z.string()).optional(),
+  itIntegrations: z.array(z.string()).optional(),
+  certPainPoints: z.string().trim().optional(),
 });
 
 export const patchAccountSchema = z.object({
@@ -26,6 +33,12 @@ export const patchAccountSchema = z.object({
   scoreUrgency: z.number().min(0).max(100).optional(),
   scoreAccess: z.number().min(0).max(100).optional(),
   scoreCommercial: z.number().min(0).max(100).optional(),
+  certMgmtType: z.string().trim().optional(),
+  etrmSystem: z.string().trim().optional(),
+  gtrmSystem: z.string().trim().optional(),
+  certRegistries: z.array(z.string()).optional(),
+  itIntegrations: z.array(z.string()).optional(),
+  certPainPoints: z.string().trim().optional(),
 }).superRefine((obj, ctx) => {
   if (!Object.values(obj).some(v => v !== undefined)) {
     ctx.addIssue({ code: 'custom', message: 'At least one field is required' });

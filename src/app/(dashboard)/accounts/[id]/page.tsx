@@ -621,6 +621,12 @@ export default function AccountDetailPage() {
       whyNow: a.whyNow || '',
       moduleFit: (a.moduleFit || []).join(', '),
       competitors: a.competitors || '',
+      certMgmtType: a.certMgmtType || '',
+      etrmSystem: a.etrmSystem || '',
+      gtrmSystem: a.gtrmSystem || '',
+      certRegistries: (a.certRegistries || []).join(', '),
+      itIntegrations: (a.itIntegrations || []).join(', '),
+      certPainPoints: a.certPainPoints || '',
     };
 
     openDrawer({
@@ -649,7 +655,7 @@ export default function AccountDetailPage() {
                 onChange={e => { state.type = e.target.value; }}
                 className="px-2.5 py-1.5 text-sm rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] focus:outline-none focus:border-brand/40"
               >
-                {['Unknown', 'PPA Buyer', 'Certificate Trader', 'Corporate Offtaker'].map(t => (
+                {['Unknown', 'Utility', 'Trader', 'Retailer', 'Industrial', 'Developer'].map(t => (
                   <option key={t} value={t}>{t}</option>
                 ))}
               </select>
@@ -722,6 +728,56 @@ export default function AccountDetailPage() {
               className="px-2.5 py-1.5 text-sm rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] placeholder:text-[var(--muted)] focus:outline-none focus:border-brand/40"
             />
           </label>
+
+          {/* Cert Management Section */}
+          <div className="border-t border-[var(--border)] pt-3 mt-1">
+            <span className="text-2xs font-semibold uppercase tracking-wide text-[var(--muted)]">Certificate Management</span>
+            <div className="flex gap-2 mt-2">
+              <label className="flex flex-col gap-1 flex-1">
+                <span className="text-2xs text-[var(--sub)]">Current System</span>
+                <select defaultValue={state.certMgmtType} onChange={e => { state.certMgmtType = e.target.value; }} className="px-2.5 py-1.5 text-sm rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] focus:outline-none focus:border-brand/40">
+                  <option value="">Unknown</option>
+                  <option value="ETRM">ETRM</option>
+                  <option value="GTRM">GTRM</option>
+                  <option value="Excel">Excel</option>
+                  <option value="None">None</option>
+                </select>
+              </label>
+              <label className="flex flex-col gap-1 flex-1">
+                <span className="text-2xs text-[var(--sub)]">ETRM System</span>
+                <select defaultValue={state.etrmSystem} onChange={e => { state.etrmSystem = e.target.value; }} className="px-2.5 py-1.5 text-sm rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] focus:outline-none focus:border-brand/40">
+                  <option value="">—</option>
+                  <option value="Molecule">Molecule</option>
+                  <option value="Brady">Brady</option>
+                  <option value="OpenLink Endur">OpenLink Endur</option>
+                  <option value="Allegro">Allegro</option>
+                  <option value="FIS Aligne">FIS Aligne</option>
+                </select>
+              </label>
+            </div>
+            <div className="flex gap-2 mt-2">
+              <label className="flex flex-col gap-1 flex-1">
+                <span className="text-2xs text-[var(--sub)]">GTRM System</span>
+                <select defaultValue={state.gtrmSystem} onChange={e => { state.gtrmSystem = e.target.value; }} className="px-2.5 py-1.5 text-sm rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] focus:outline-none focus:border-brand/40">
+                  <option value="">—</option>
+                  <option value="CerQlar">CerQlar</option>
+                  <option value="Unicorn">Unicorn</option>
+                </select>
+              </label>
+              <label className="flex flex-col gap-1 flex-1">
+                <span className="text-2xs text-[var(--sub)]">Cert Registries</span>
+                <input defaultValue={state.certRegistries} onChange={e => { state.certRegistries = e.target.value; }} placeholder="Grexel, Statnett, UBA…" className="px-2.5 py-1.5 text-sm rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] placeholder:text-[var(--muted)] focus:outline-none focus:border-brand/40" />
+              </label>
+            </div>
+            <label className="flex flex-col gap-1 mt-2">
+              <span className="text-2xs text-[var(--sub)]">IT Integrations</span>
+              <input defaultValue={state.itIntegrations} onChange={e => { state.itIntegrations = e.target.value; }} placeholder="SAP, Bloomberg, custom…" className="px-2.5 py-1.5 text-sm rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] placeholder:text-[var(--muted)] focus:outline-none focus:border-brand/40" />
+            </label>
+            <label className="flex flex-col gap-1 mt-2">
+              <span className="text-2xs text-[var(--sub)]">Cert Pain Points</span>
+              <textarea rows={2} defaultValue={state.certPainPoints} onChange={e => { state.certPainPoints = e.target.value; }} placeholder="Pain points related to cert management…" className="px-2.5 py-1.5 text-sm rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] placeholder:text-[var(--muted)] focus:outline-none focus:border-brand/40 resize-none" />
+            </label>
+          </div>
         </div>
       ),
       footer: (
@@ -737,6 +793,8 @@ export default function AccountDetailPage() {
                 return;
               }
               const moduleFit = state.moduleFit.split(',').map(s => s.trim()).filter(Boolean);
+              const certRegistries = state.certRegistries.split(',').map(s => s.trim()).filter(Boolean);
+              const itIntegrations = state.itIntegrations.split(',').map(s => s.trim()).filter(Boolean);
               updateAccount.mutate(
                 {
                   name: state.name.trim(),
@@ -747,6 +805,12 @@ export default function AccountDetailPage() {
                   whyNow: state.whyNow.trim() || undefined,
                   moduleFit,
                   competitors: state.competitors.trim() || undefined,
+                  certMgmtType: state.certMgmtType || undefined,
+                  etrmSystem: state.etrmSystem || undefined,
+                  gtrmSystem: state.gtrmSystem || undefined,
+                  certRegistries,
+                  itIntegrations,
+                  certPainPoints: state.certPainPoints.trim() || undefined,
                 },
                 {
                   onSuccess: () => { addToast({ type: 'success', message: 'Account updated' }); closeDrawer(); },
@@ -943,6 +1007,47 @@ export default function AccountDetailPage() {
               <span className="text-2xs text-muted">Last updated {fRelative(a.lastActivityAt)}</span>
             </div>
           </div>
+
+          {/* Cert Management Landscape */}
+          {(a.certMgmtType || (a.certRegistries && a.certRegistries.length > 0) || a.certPainPoints) && (
+            <div className="md:col-span-2 rounded-lg bg-[var(--elevated)] border border-[var(--border)] p-3.5">
+              <SectionTitle>Certificate Management Landscape</SectionTitle>
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 mt-2">
+                {a.certMgmtType && (
+                  <div>
+                    <span className="text-2xs text-muted uppercase tracking-wide font-semibold">Current System</span>
+                    <div className="flex items-center gap-1.5 mt-0.5">
+                      <Badge variant={a.certMgmtType === 'ETRM' ? 'info' : a.certMgmtType === 'GTRM' ? 'ok' : a.certMgmtType === 'Excel' ? 'warn' : 'neutral'}>{a.certMgmtType}</Badge>
+                      {a.certMgmtType === 'ETRM' && a.etrmSystem && <span className="text-sm">{a.etrmSystem}</span>}
+                      {a.certMgmtType === 'GTRM' && a.gtrmSystem && <span className="text-sm">{a.gtrmSystem}</span>}
+                    </div>
+                  </div>
+                )}
+                {a.certRegistries && a.certRegistries.length > 0 && (
+                  <div>
+                    <span className="text-2xs text-muted uppercase tracking-wide font-semibold">Registries</span>
+                    <div className="flex flex-wrap gap-1 mt-0.5">
+                      {a.certRegistries.map(r => <Badge key={r} variant="neutral">{r}</Badge>)}
+                    </div>
+                  </div>
+                )}
+                {a.itIntegrations && a.itIntegrations.length > 0 && (
+                  <div>
+                    <span className="text-2xs text-muted uppercase tracking-wide font-semibold">IT Integrations</span>
+                    <div className="flex flex-wrap gap-1 mt-0.5">
+                      {a.itIntegrations.map(i => <Badge key={i} variant="neutral">{i}</Badge>)}
+                    </div>
+                  </div>
+                )}
+                {a.certPainPoints && (
+                  <div className="sm:col-span-2 md:col-span-1">
+                    <span className="text-2xs text-muted uppercase tracking-wide font-semibold">Cert Pain Points</span>
+                    <p className="text-sm mt-0.5 leading-relaxed">{a.certPainPoints}</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
 
           {/* Buying committee sidebar */}
           <div>

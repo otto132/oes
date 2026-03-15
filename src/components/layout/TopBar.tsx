@@ -8,7 +8,9 @@ import { useNotificationStream } from '@/lib/queries/notifications';
 
 const titles: Record<string, string> = {
   '/': 'Home', '/queue': 'Approval Queue', '/signals': 'Signals', '/leads': 'Leads',
-  '/accounts': 'Accounts', '/pipeline': 'Pipeline', '/inbox': 'Inbox', '/tasks': 'Tasks', '/settings': 'Settings', '/admin': 'Admin',
+  '/accounts': 'Accounts', '/pipeline': 'Pipeline', '/inbox': 'Inbox', '/tasks': 'Tasks',
+  '/meetings': 'Meetings', '/import': 'Import', '/digest': 'Weekly Digest',
+  '/settings': 'Settings', '/admin': 'Admin',
 };
 
 export default function TopBar() {
