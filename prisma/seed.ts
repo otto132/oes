@@ -15,6 +15,7 @@ async function main() {
   console.log('🌱 Seeding Eco-Insight Revenue OS...');
 
   // ── Clean slate ────────────────────────────────
+  await prisma.weeklyDigest.deleteMany();
   await prisma.taskComment.deleteMany();
   await prisma.task.deleteMany();
   await prisma.goal.deleteMany();
@@ -183,6 +184,145 @@ async function main() {
   ]});
   console.log('  ✓ 3 meetings');
 
+  // ── Weekly Digest (demo) ─────────────────────────
+  await prisma.weeklyDigest.create({
+    data: {
+      weekStart: daysAgo(7),
+      weekEnd: daysAgo(0),
+      tenantId: 'tenant-default',
+      pipelineSnapshot: {
+        totalValue: 1875000,
+        valueDelta: 120000,
+        valueDeltaPct: 6.8,
+        stageChanges: [
+          { name: 'E.ON Germany GoO Procurement', from: 'Discovery', to: 'Evaluation' },
+          { name: 'Axpo ELcert Expansion', from: 'Proposal', to: 'Negotiation' },
+        ],
+        closedWon: [],
+        closedLost: [],
+        newOpps: [
+          { name: 'RWE GoO Issuance', accountName: 'RWE Renewables Europe', amount: 320000 },
+        ],
+        atRisk: [
+          { name: 'Vattenfall GoO Platform', healthDrop: 15 },
+        ],
+      },
+      accountHighlights: [
+        {
+          accountName: 'E.ON Energy Markets',
+          accountId: 'a3',
+          narrative: 'Best momentum this quarter. Kai Mueller pulled in his IT director for API review — that is a buying signal, not a blocker. The deal moved from Discovery to Evaluation, and they are asking the right questions (REST endpoints, SSO). The €460K opportunity is real, but competitive pressure from Bloomberg TOMS is serious. Speed matters here.',
+          activityCount: 5,
+        },
+        {
+          accountName: 'Axpo Nordic AS',
+          accountId: 'a5',
+          narrative: 'Erik accepted the 8.5% multi-module discount. ELcert expansion moved to Negotiation. This should close at QBR on March 28. Low risk, high certainty — just do not let the paperwork drift.',
+          activityCount: 3,
+        },
+        {
+          accountName: 'Vattenfall Nordic AB',
+          accountId: 'a1',
+          narrative: 'Three weeks since the revised GoO volume proposal. No response. Lars is evaluating 3 vendors (confirmed via LinkedIn), but engagement with us has gone cold. Health dropped 15 points. This is a €380K deal sitting in silence — it needs direct action, not another email.',
+          activityCount: 1,
+        },
+        {
+          accountName: 'Statkraft Markets',
+          accountId: 'a4',
+          narrative: 'Intro call via Erik Sandvik went well. Torben liked the pilot concept. But no follow-up in 4 days. The referral channel is warm — use it before it cools.',
+          activityCount: 2,
+        },
+      ],
+      weekAhead: {
+        meetings: [
+          { id: 'm-eon', title: 'E.ON API Integration Review', date: daysFromNow(0).toISOString(), accountName: 'E.ON Energy Markets', prepStatus: 'ready' },
+          { id: 'm-rwe', title: 'RWE Discovery Call', date: daysFromNow(6).toISOString(), accountName: 'RWE Renewables Europe', prepStatus: 'draft' },
+        ],
+        tasksDue: [
+          { id: 't5', title: 'Send Axpo revised pricing — ELcert', dueDate: daysFromNow(6).toISOString(), accountName: 'Axpo Nordic AS' },
+          { id: 't2', title: 'Prepare Statkraft pilot scope document', dueDate: daysFromNow(4).toISOString(), accountName: 'Statkraft Markets' },
+        ],
+        overdue: [
+          { id: 't1', title: 'Follow up Vattenfall — GoO proposal response', dueDate: daysAgo(4).toISOString(), accountName: 'Vattenfall Nordic AB' },
+          { id: 't4', title: 'Follow up Kai Mueller — API feasibility', dueDate: daysAgo(6).toISOString(), accountName: 'E.ON Energy Markets' },
+        ],
+      },
+      renderedHtml: `<!DOCTYPE html>
+<html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>Eco-Insight Weekly Digest</title></head>
+<body style="margin:0;padding:0;background:#f4f4f5;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif">
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f4f5;padding:24px 0">
+<tr><td align="center">
+<table width="600" cellpadding="0" cellspacing="0" style="background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.08)">
+
+<tr><td style="background:linear-gradient(135deg,#0f172a,#1e3a5f);padding:28px 32px">
+<h1 style="color:#fff;font-size:22px;margin:0 0 4px">Weekly Digest</h1>
+<p style="color:#94a3b8;font-size:13px;margin:0">Week of Mar 9 – 15, 2026</p>
+</td></tr>
+
+<tr><td style="padding:28px 32px">
+
+<h2 style="font-size:15px;color:#0f172a;margin:0 0 12px;border-bottom:2px solid #e2e8f0;padding-bottom:8px">Weekly Read</h2>
+<p style="font-size:14px;color:#334155;line-height:1.6;margin:0 0 24px">
+A week of real movement on E.ON and Axpo, offset by silence from Vattenfall. The pipeline grew 6.8% to €1.88M with a new RWE opportunity entering Discovery. E.ON pulled in their IT director — that is a buying signal. Axpo accepted pricing. But the biggest deal in the pipe (Vattenfall, €380K) has gone quiet for three weeks. That is the one thing to fix.
+</p>
+
+<h2 style="font-size:15px;color:#0f172a;margin:0 0 12px;border-bottom:2px solid #e2e8f0;padding-bottom:8px">What Actually Moved</h2>
+<ul style="font-size:14px;color:#334155;line-height:1.7;padding-left:20px;margin:0 0 24px">
+<li><strong>E.ON → Evaluation.</strong> Kai Mueller brought in IT director Thomas Weber for API review. Real buying process underway.</li>
+<li><strong>Axpo → Negotiation.</strong> Erik accepted the 8.5% discount on ELcert expansion. QBR March 28 should close it.</li>
+<li><strong>RWE entered pipeline.</strong> Maria Hoffmann reached out via LinkedIn. Discovery call booked March 20. €320K potential but very early — 15% probability is right.</li>
+<li><strong>Statkraft intro landed.</strong> Torben liked the pilot concept via Erik's referral. Good signal, but no follow-up yet.</li>
+</ul>
+
+<h2 style="font-size:15px;color:#c2410c;margin:0 0 12px;border-bottom:2px solid #fed7aa;padding-bottom:8px">Friction / Drift / Risk</h2>
+<ul style="font-size:14px;color:#334155;line-height:1.7;padding-left:20px;margin:0 0 24px">
+<li><strong style="color:#c2410c">Vattenfall is drifting.</strong> 23 days since last meaningful activity. Lars is evaluating 3 vendors and we are not in the conversation. Health dropped 15 points. A phone call, not an email, is needed.</li>
+<li><strong style="color:#c2410c">Fortum stalling.</strong> Platform overview was due 2 days ago and has not been sent. Anna needs ammunition for her CFO — we are not giving it to her.</li>
+<li><strong style="color:#c2410c">Kai Mueller follow-up overdue.</strong> API feasibility response is 6 days late. E.ON is moving fast — we cannot be the slow ones.</li>
+</ul>
+
+<h2 style="font-size:15px;color:#0f172a;margin:0 0 12px;border-bottom:2px solid #e2e8f0;padding-bottom:8px">Market Signal</h2>
+<ul style="font-size:14px;color:#334155;line-height:1.7;padding-left:20px;margin:0 0 24px">
+<li><strong>AIB registry downtime hit 12 markets.</strong> Settlement delays across Europe. This is exactly the pain we solve. Use this in every conversation this week — urgency for automation just got real.</li>
+<li><strong>TotalEnergies launching Nordic GoO desk.</strong> Greenfield opportunity. They need everything from day one. Laura has the lead — push for a call before they pick an incumbent.</li>
+<li><strong>Ørsted-BASF PPA (186 MW).</strong> BASF is now a GoO buyer. Industrial profile matches our ICP. Outreach draft is in the queue.</li>
+</ul>
+
+<h2 style="font-size:15px;color:#0f172a;margin:0 0 12px;border-bottom:2px solid #e2e8f0;padding-bottom:8px">Best Opportunities Right Now</h2>
+<ol style="font-size:14px;color:#334155;line-height:1.7;padding-left:20px;margin:0 0 24px">
+<li><strong>E.ON Germany (€460K)</strong> — active evaluation, IT engaged, real urgency. Win the API review.</li>
+<li><strong>Axpo ELcert (€95K)</strong> — pricing accepted, close at QBR. Lowest risk, highest certainty.</li>
+<li><strong>TotalEnergies (greenfield)</strong> — new Nordic GoO desk, no incumbent. Time-sensitive.</li>
+</ol>
+
+<h2 style="font-size:15px;color:#0f172a;margin:0 0 12px;border-bottom:2px solid #e2e8f0;padding-bottom:8px">Next Moves</h2>
+<ol style="font-size:14px;color:#334155;line-height:1.7;padding-left:20px;margin:0 0 24px">
+<li>Call Lars Eriksson directly. Do not email. Vattenfall needs personal engagement now.</li>
+<li>Send E.ON API docs before tomorrow's integration review. Kai's IT team is waiting.</li>
+<li>Get Fortum platform overview to Anna today. Every day of delay weakens her internal case.</li>
+<li>Ask Erik to nudge Torben at Statkraft. The referral is warm — use it.</li>
+<li>Push TotalEnergies intro call. Greenfield desks move fast and pick vendors early.</li>
+</ol>
+
+<h2 style="font-size:15px;color:#0f172a;margin:0 0 12px;border-bottom:2px solid #e2e8f0;padding-bottom:8px">Bottom Line</h2>
+<p style="font-size:14px;color:#334155;line-height:1.6;margin:0 0 8px">
+Pipeline is growing and two deals moved forward — that is real progress. But the biggest risk is the biggest deal: Vattenfall is going silent while evaluating competitors. The AIB outage is a gift — it makes the automation case urgent for every prospect. Use it. The next seven days are about execution speed: close Axpo, win E.ON's API review, and re-engage Vattenfall before someone else does.
+</p>
+
+</td></tr>
+
+<tr><td style="background:#f8fafc;padding:16px 32px;border-top:1px solid #e2e8f0">
+<p style="font-size:11px;color:#94a3b8;margin:0;text-align:center">Eco-Insight Revenue OS — Weekly Digest</p>
+</td></tr>
+
+</table>
+</td></tr>
+</table>
+</body></html>`,
+    },
+  });
+  console.log('  ✓ 1 weekly digest');
+
   // ── Agent Configs ─────────────────────────────
   await prisma.agentConfig.createMany({ data: [
     { name: 'lead_qualifier', displayName: 'Lead Qualifier', description: 'Scores and qualifies inbound leads using FIUAC criteria, company research, and signal correlation.', status: 'active', parameters: {} },
@@ -194,7 +334,7 @@ async function main() {
   ]});
   console.log('  ✓ 6 agent configs');
 
-  console.log('\n✅ Seed complete: 3 users, 6 signals, 4 leads, 6 accounts, 9 contacts, 7 opps, 3 goals, 6 tasks, 6 activities, 5 queue items, 6 emails, 3 meetings, 6 agent configs');
+  console.log('\n✅ Seed complete: 5 users, 6 signals, 4 leads, 6 accounts, 9 contacts, 7 opps, 3 goals, 6 tasks, 6 activities, 5 queue items, 6 emails, 3 meetings, 1 weekly digest, 6 agent configs');
 }
 
 main()
