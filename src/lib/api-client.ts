@@ -170,6 +170,14 @@ export const api = {
     archive: (id: string) => post<any>('/inbox', { action: 'archive', id }),
     createTask: (id: string) => post<any>('/inbox', { action: 'create_task', id }),
     createAccount: (id: string) => post<any>('/inbox', { action: 'create_account', id }),
+    snooze: (id: string, snoozedUntil: string) => post<any>('/inbox', { action: 'snooze', id, snoozedUntil }),
+    threads: (filter?: string, accountId?: string) => {
+      const params = new URLSearchParams();
+      if (filter) params.set('filter', filter);
+      if (accountId) params.set('accountId', accountId);
+      const qs = params.toString();
+      return get<any>(`/inbox/threads${qs ? `?${qs}` : ''}`);
+    },
   },
 
   // ── Tasks ──────────────────────────────────────
