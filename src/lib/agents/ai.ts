@@ -139,6 +139,21 @@ export async function logUsage(
   });
 }
 
+// ── Prompt injection defense ────────────────────────────────
+
+/**
+ * Sanitize user-controlled strings before interpolation into prompts.
+ * Strips characters commonly used in prompt injection attempts and
+ * truncates to a reasonable length.
+ */
+export function sanitizeForPrompt(input: string | null | undefined, maxLen = 500): string {
+  if (!input) return '';
+  return input
+    .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g, '') // strip control chars (keep \n, \r, \t)
+    .replace(/<\/?[a-zA-Z][^>]*>/g, '')              // strip XML/HTML tags
+    .slice(0, maxLen);
+}
+
 // ── Model selection ─────────────────────────────────────────
 
 export function getModelForAgent(config: { parameters?: unknown } | null, defaultModel: string): string {

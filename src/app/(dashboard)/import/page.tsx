@@ -211,7 +211,8 @@ export default function ImportPage() {
             </div>
           </div>
 
-          <div className="rounded-lg border border-[var(--border)] overflow-hidden">
+          {/* Desktop table */}
+          <div className="hidden sm:block rounded-lg border border-[var(--border)] overflow-hidden">
             <table className="w-full border-collapse">
               <thead>
                 <tr>
@@ -249,6 +250,36 @@ export default function ImportPage() {
                 })}
               </tbody>
             </table>
+          </div>
+
+          {/* Mobile card layout */}
+          <div className="sm:hidden space-y-2">
+            {mappings.map((m, i) => {
+              const colIdx = headers.indexOf(m.sourceColumn);
+              const sample = colIdx >= 0 ? allRows.slice(0, 3).map(r => r[colIdx]).filter(Boolean).join(', ') : '';
+              return (
+                <div key={i} className="rounded-lg border border-[var(--border)] bg-[var(--surface)] p-3 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium text-[var(--text)]">{m.sourceColumn}</span>
+                  </div>
+                  {sample && <p className="text-xs text-[var(--muted)] truncate">{sample}</p>}
+                  <select
+                    value={m.targetField || ''}
+                    onChange={(e) => {
+                      const updated = [...mappings];
+                      updated[i] = { ...updated[i], targetField: e.target.value || null };
+                      setMappings(updated);
+                    }}
+                    className={`w-full px-2 py-2 text-sm rounded-md bg-[var(--elevated)] border border-[var(--border)] ${m.targetField ? 'text-[var(--text)]' : 'text-[var(--muted)]'}`}
+                  >
+                    <option value="">— Skip —</option>
+                    {LEAD_IMPORT_FIELDS.map(f => (
+                      <option key={f.key} value={f.key}>{f.label}{f.required ? ' *' : ''}</option>
+                    ))}
+                  </select>
+                </div>
+              );
+            })}
           </div>
 
           <div className="flex justify-between mt-4">

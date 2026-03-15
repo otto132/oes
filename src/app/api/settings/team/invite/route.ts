@@ -1,9 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { randomBytes } from 'crypto';
 import { z } from 'zod';
 import { resolveTenantDb } from '@/lib/tenant';
 import { auth } from '@/lib/auth';
 import { unauthorized, forbidden, conflict, zodError, badRequest } from '@/lib/api-errors';
 import { auditLog, AUDIT_ACTIONS } from '@/lib/audit';
+import { rateLimit, rateLimitResponse } from '@/lib/rate-limit';
 
 const inviteSchema = z.object({
   email: z.string().email('Invalid email address'),
@@ -13,6 +15,9 @@ const inviteSchema = z.object({
 export async function POST(req: NextRequest) {
   const session = await auth();
   if (!session?.user?.id) return unauthorized();
+
+  const rl = rateLimit(`invite:${session.user.id}`, { limit: 10, windowSec: 60 });
+  if (!rl.success) return rateLimitResponse(rl);
   const db = resolveTenantDb(session as any);
 
   const dbUser = await db.user.findUnique({ where: { id: session.user.id } });
@@ -45,12 +50,14 @@ export async function POST(req: NextRequest) {
     data: { status: 'REVOKED' },
   });
 
-  // Create new invitation with 7-day expiry
+  // Create new invitation with 7-day expiry and cryptographically secure token
   const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+  const token = randomBytes(32).toString('hex');
   const invitation = await db.invitation.create({
     data: {
       email,
       role,
+      token,
       invitedById: session.user.id,
       expiresAt,
       tenantId: dbUser.tenantId,

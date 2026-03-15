@@ -12,6 +12,10 @@ const daysFromNow = (n: number) => new Date(now.getTime() + n * 864e5);
 const hoursAgo = (n: number) => new Date(now.getTime() - n * 36e5);
 
 async function main() {
+  if (process.env.NODE_ENV === 'production') {
+    console.error('❌ Seed script cannot run in production. Aborting.');
+    process.exit(1);
+  }
   console.log('🌱 Seeding Eco-Insight Revenue OS...');
 
   // ── Clean slate ────────────────────────────────

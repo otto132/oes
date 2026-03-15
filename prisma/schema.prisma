@@ -813,7 +813,7 @@ model Invitation {
   id          String           @id @default(cuid())
   email       String
   role        Role             @default(MEMBER)
-  token       String           @unique @default(cuid())
+  token       String           @unique
   status      InvitationStatus @default(PENDING)
   invitedBy   User             @relation("SentInvitations", fields: [invitedById], references: [id])
   invitedById String

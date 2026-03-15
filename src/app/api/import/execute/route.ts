@@ -6,12 +6,16 @@ import { db as rawDb } from '@/lib/db';
 import { unauthorized, badRequest } from '@/lib/api-errors';
 import { executeRequestSchema, leadRowSchema } from '@/lib/schemas/import';
 import { logger } from '@/lib/logger';
+import { rateLimit, rateLimitResponse } from '@/lib/rate-limit';
 
 const MAX_ROWS = 2000;
 
 export async function POST(req: NextRequest) {
   const session = await auth();
   if (!session?.user?.id) return unauthorized();
+
+  const rl = rateLimit(`import:${session.user.id}`, { limit: 5, windowSec: 60 });
+  if (!rl.success) return rateLimitResponse(rl);
 
   const db = scopedDb(session.user.id, (session.user as any).role ?? 'MEMBER');
   const raw = await req.json();

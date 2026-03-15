@@ -46,7 +46,13 @@ export async function testSignInCallback({ user }: { user: { email?: string | nu
     return true;
   }
 
-  // Auto-provision: first unknown user becomes ADMIN, subsequent become MEMBER
+  // Auto-provision: only allowed in development or when ALLOW_AUTO_PROVISION=true
+  if (process.env.NODE_ENV === 'production' && process.env.ALLOW_AUTO_PROVISION !== 'true') {
+    logger.warn('[auth] Rejected unknown user (auto-provisioning disabled in production)', { email: user.email });
+    return false;
+  }
+
+  // First unknown user becomes ADMIN, subsequent become MEMBER
   const userCount = await db.user.count();
   const role = userCount === 0 ? 'ADMIN' : 'MEMBER';
 
