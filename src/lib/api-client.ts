@@ -251,6 +251,17 @@ export const api = {
     status: () => get<any>('/sync'),
   },
 
+  // ── Import ──────────────────────────────────────
+  import: {
+    analyze: (headers: string[], sampleRows: string[][]) =>
+      post<any>('/import/analyze', { headers, sampleRows }),
+    execute: (data: {
+      mappings: { sourceColumn: string; targetField: string | null }[];
+      rows: string[][];
+      headers: string[];
+    }) => post<any>('/import/execute', data),
+  },
+
   // ── Auth ───────────────────────────────────────
   auth: {
     connectOutlook: () => window.location.href = '/api/auth/connect',

@@ -1,7 +1,7 @@
 'use client';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, Shield, Signal, Target, Building2, TrendingUp, Inbox, CheckSquare, Settings, Search, LogOut, Sun, Moon } from 'lucide-react';
+import { Home, Shield, Signal, Target, Building2, TrendingUp, Inbox, CheckSquare, Settings, Search, LogOut, Sun, Moon, Upload } from 'lucide-react';
 import { useSession, signOut } from 'next-auth/react';
 import { useStore } from '@/lib/store';
 import { cn } from '@/lib/utils';
@@ -26,6 +26,7 @@ const sections: { label: string; items: NavItem[] }[] = [
     { href: '/accounts', label: 'Accounts', icon: Building2 },
     { href: '/pipeline', label: 'Pipeline', icon: TrendingUp },
     { href: '/inbox', label: 'Inbox', icon: Inbox, badgeKey: 'inbox' },
+    { href: '/import', label: 'Import', icon: Upload },
   ]},
   { label: 'Workflow', items: [
     { href: '/tasks', label: 'Tasks', icon: CheckSquare, badgeKey: 'tasks' },
