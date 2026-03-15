@@ -37,7 +37,7 @@ describe('Weekly Digest Agent', () => {
     config: {
       id: 'cfg-2', name: 'weekly_digest', displayName: 'Weekly Digest',
       description: 'Weekly CRM summary', status: 'active', parameters: {},
-      createdAt: new Date(), updatedAt: new Date(),
+      createdAt: new Date(), updatedAt: new Date(), lastRunAt: null,
     },
     userId: 'system',
   };

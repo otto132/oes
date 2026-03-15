@@ -178,7 +178,7 @@ export const weeklyDigestAgent: Agent = {
       }),
       prisma.task.findMany({
         where: { createdAt: { gte: weekStart, lte: weekEnd } },
-        select: { id: true, title: true, status: true, dueDate: true },
+        select: { id: true, title: true, status: true, due: true },
       }),
       prisma.queueItem.findMany({
         where: { createdAt: { gte: weekStart, lte: weekEnd } },
@@ -197,12 +197,12 @@ export const weeklyDigestAgent: Agent = {
         select: { id: true, title: true, date: true, accountId: true },
       }),
       prisma.task.findMany({
-        where: { dueDate: { gt: now, lte: nextWeekEnd }, status: { not: 'Done' } },
-        select: { id: true, title: true, dueDate: true },
+        where: { due: { gt: now, lte: nextWeekEnd }, status: { not: 'Done' } },
+        select: { id: true, title: true, due: true },
       }),
       prisma.task.findMany({
-        where: { dueDate: { lt: now }, status: { not: 'Done' } },
-        select: { id: true, title: true, dueDate: true },
+        where: { due: { lt: now }, status: { not: 'Done' } },
+        select: { id: true, title: true, due: true },
       }),
       prisma.opportunity.findMany({
         where: { createdAt: { gte: weekStart, lte: weekEnd } },

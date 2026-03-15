@@ -31,6 +31,7 @@ describe('Meeting Analyst Agent', () => {
       parameters: {},
       createdAt: new Date(),
       updatedAt: new Date(),
+      lastRunAt: null,
     },
     userId: 'user-1',
     triggerEvent: {

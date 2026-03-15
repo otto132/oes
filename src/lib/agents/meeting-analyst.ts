@@ -101,7 +101,7 @@ ${rawNotes}`;
     try {
       await prisma.meeting.update({
         where: { id: meetingId },
-        data: { summary: analysis.summary },
+        data: { outcomeSummary: analysis.summary },
       });
     } catch (err) {
       errors.push({
