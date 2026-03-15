@@ -5,7 +5,7 @@ import { scopedDb } from '@/lib/scoped-db';
 import { adaptOpportunity, adaptActivity, adaptContact } from '@/lib/adapters';
 import { withHandler } from '@/lib/api-handler';
 import { opportunityActionSchema } from '@/lib/schemas/opportunities';
-import { notFound, unauthorized } from '@/lib/api-errors';
+import { notFound, unauthorized, badRequest } from '@/lib/api-errors';
 import { parsePagination, paginate } from '@/lib/schemas/pagination';
 import { auth } from '@/lib/auth';
 import { STAGE_PROB } from '@/lib/types';
@@ -40,7 +40,7 @@ export async function GET(req: NextRequest) {
   }
 
   const pagination = parsePagination(req);
-  const where: Prisma.OpportunityWhereInput = { stage: { notIn: [OppStage.ClosedWon, OppStage.ClosedLost] } };
+  const where: Prisma.OpportunityWhereInput = { stage: { notIn: ['Won', 'Lost'] as any[] } };
 
   // Aggregates across ALL records
   const allOpps = await scoped.opportunity.findMany({ where, select: { amount: true, stage: true } });
@@ -68,10 +68,10 @@ export const POST = withHandler(opportunityActionSchema, async (req, ctx) => {
     const ownerId = body.ownerId || session.user.id;
     const opp = await ctx.db.opportunity.create({
       data: {
-        name, accountId, stage: (stage || 'Contacted') as OppStage,
-        amount: amount || 0, probability: STAGE_PROB[stage || 'Contacted'] || 10,
+        name, accountId, stage: (stage || 'Discovery') as any,
+        amount: amount || 0, probability: STAGE_PROB[stage || 'Discovery'] || 15,
         closeDate: closeDate ? new Date(closeDate) : undefined,
-        ownerId,
+        ownerId, source: 'Direct',
       },
       include: { owner: true, account: { select: { id: true, name: true } } },
     });
@@ -81,14 +81,32 @@ export const POST = withHandler(opportunityActionSchema, async (req, ctx) => {
   // Move stage
   if (body.action === 'move') {
     const { id, stage } = body;
+    const STAGE_ORDER = ['Discovery', 'Evaluation', 'Proposal', 'Negotiation', 'Commit'];
+
+    const current = await ctx.db.opportunity.findUnique({ where: { id }, select: { stage: true } });
+    if (!current) return notFound('Opportunity not found');
+
+    if (current.stage === 'Won' || current.stage === 'Lost') {
+      return badRequest('Cannot move terminal opportunities');
+    }
+
     const opp = await ctx.db.opportunity.update({
       where: { id },
-      data: { stage: stage as OppStage, probability: STAGE_PROB[stage] || 0 },
+      data: { stage: stage as any, probability: STAGE_PROB[stage] || 0 },
       include: { owner: true, account: { select: { id: true, name: true } } },
     });
+
+    // Log regression as special activity
+    const currentIdx = STAGE_ORDER.indexOf(current.stage);
+    const targetIdx = STAGE_ORDER.indexOf(stage);
+    const isRegression = currentIdx >= 0 && targetIdx >= 0 && targetIdx < currentIdx;
+    const summary = isRegression
+      ? `Stage moved back: ${current.stage} → ${stage}`
+      : `Stage → ${stage}`;
+
     await ctx.db.activity.create({
       data: {
-        type: 'Note', summary: `Stage → ${stage}`, detail: `${opp.name} moved`,
+        type: 'Note', summary, detail: `${opp.name} moved`,
         source: 'Pipeline', accountId: opp.accountId, authorId: session.user.id,
       },
     });
@@ -101,10 +119,13 @@ export const POST = withHandler(opportunityActionSchema, async (req, ctx) => {
     const { id, winNotes, competitorBeaten, keyStakeholders, lessonsLearned } = body;
     const opp = await ctx.db.opportunity.update({
       where: { id },
-      data: { stage: 'ClosedWon', probability: 100, winNotes, competitorBeaten, keyStakeholders, lessonsLearned },
+      data: { stage: 'Won' as any, probability: 100, winNotes, competitorBeaten, keyStakeholders, lessonsLearned },
       include: { owner: true, account: { select: { id: true, name: true } } },
     });
-    await ctx.db.account.update({ where: { id: opp.accountId }, data: { status: 'Active', lastActivityAt: new Date() } });
+    // Auto-promote to Customer on first Won deal (don't overwrite Partner)
+    const account = await ctx.db.account.findUnique({ where: { id: opp.accountId }, select: { status: true } });
+    const newStatus = account?.status === 'Partner' ? 'Partner' : 'Customer';
+    await ctx.db.account.update({ where: { id: opp.accountId }, data: { status: newStatus, lastActivityAt: new Date() } });
     await ctx.db.activity.create({
       data: {
         type: 'Note', summary: `WON: ${opp.name}`,
@@ -120,7 +141,7 @@ export const POST = withHandler(opportunityActionSchema, async (req, ctx) => {
     const { id, lossReason, lossCompetitor, lossNotes, lessonsLearned } = body;
     const opp = await ctx.db.opportunity.update({
       where: { id },
-      data: { stage: 'ClosedLost', probability: 0, lossReason, lossCompetitor, lossNotes, lessonsLearned },
+      data: { stage: 'Lost' as any, probability: 0, lossReason, lossCompetitor, lossNotes, lessonsLearned },
       include: { owner: true, account: { select: { id: true, name: true } } },
     });
     await ctx.db.activity.create({
@@ -146,7 +167,7 @@ export const POST = withHandler(opportunityActionSchema, async (req, ctx) => {
     const { ids } = body;
     await ctx.db.opportunity.updateMany({
       where: { id: { in: ids } },
-      data: { stage: 'ClosedLost', probability: 0 },
+      data: { stage: 'Lost' as any, probability: 0 },
     });
     return NextResponse.json({ data: { processed: ids.length } });
   }
