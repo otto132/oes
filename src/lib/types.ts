@@ -48,7 +48,7 @@ export interface Lead {
   pain: string; moduleFit: string[]; scores: FIUACScores; confidence: number;
   certMgmtType?: string; etrmSystem?: string; gtrmSystem?: string;
   certRegistries?: string[]; itIntegrations?: string[]; certPainPoints?: string;
-  owner: User; createdAt: string;
+  owner: User | null; createdAt: string;
   opportunityId?: ID | null; convertedAt?: string | null;
   disqualifyReason?: string | null; pausedUntil?: string | null;
 }
@@ -69,7 +69,7 @@ export type CertScheme = 'GoO' | 'ELcert' | 'REGO' | 'I-REC' | 'EECS';
 export interface Account {
   id: ID; name: string; type: string; country: string; countryCode: string;
   region: string; status: AccountStatus; schemes: CertScheme[];
-  scores: FIUACScores; ownerId: string; owner: User; pipelineValue: number; lastActivityAt: string;
+  scores: FIUACScores; ownerId: string; owner: User | null; pipelineValue: number; lastActivityAt: string;
   certMgmtType?: string; etrmSystem?: string; gtrmSystem?: string;
   certRegistries?: string[]; itIntegrations?: string[]; certPainPoints?: string;
   pain: string; whyNow: string; moduleFit: string[];
@@ -89,7 +89,7 @@ export const LEAD_STAGES: LeadStage[] = ['New','Researching','Qualified','Paused
 export interface Opportunity {
   id: ID; name: string; accountId: ID; accountName: string;
   stage: OppStage; amount: number; probability: number; closeDate: string;
-  owner: User; health: DealHealth;
+  owner: User | null; health: DealHealth;
   nextAction: string; nextActionDate: string;
   source?: string;
   lossReason?: string; lossCompetitor?: string;
@@ -124,7 +124,7 @@ export interface TaskComment { author: User; text: string; createdAt: string; me
 
 export interface Task {
   id: ID; title: string; accountName: string; accountId: ID;
-  dueDate: string; owner: User; assignees?: User[];
+  dueDate: string; owner: User | null; assignees?: User[];
   priority: TaskPriority; status: TaskStatus; source: string;
   goalId?: ID; reviewer?: User; comments: TaskComment[];
   completedAt?: string; notes?: string;
@@ -135,7 +135,7 @@ export interface Task {
 // ── Goals ────────────────────────────────────────
 export interface Goal {
   id: ID; title: string; accountName: string; accountId: ID;
-  owner: User; status: 'active' | 'completed' | 'archived';
+  owner: User | null; status: 'active' | 'completed' | 'archived';
 }
 
 // ── Activities ───────────────────────────────────

@@ -444,7 +444,7 @@ function PipelinePageInner() {
                             <HealthBar health={o.health} />
                           </div>
                           <div className="flex items-center justify-between">
-                            <Avatar initials={o.owner.initials} color={o.owner.color} size="xs" />
+                            {o.owner && <Avatar initials={o.owner.initials} color={o.owner.color} size="xs" />}
                             <span className="text-3xs text-[var(--muted)] bg-[var(--surface)] px-1.5 py-0.5 rounded">{STAGE_PROB[o.stage]}%</span>
                           </div>
                           {o.source && <span className="inline-block mt-1.5 text-3xs px-1.5 py-0.5 rounded bg-[var(--surface)] text-[var(--muted)] border border-[var(--border)]">{o.source}</span>}
@@ -488,7 +488,7 @@ function PipelinePageInner() {
                   <td className="px-3.5 py-2.5 border-b border-[var(--border)] font-mono font-semibold text-sm text-[var(--text)]">{fmt(o.amount)}</td>
                   <td className="px-3.5 py-2.5 border-b border-[var(--border)]"><div className="flex items-center gap-1.5"><HealthBar health={o.health} /><span className="text-2xs" style={{ color: riskHex(o.health) }}>{healthAvg(o.health)}</span></div></td>
                   <td className="px-3.5 py-2.5 border-b border-[var(--border)]"><span className={`font-mono text-xs ${isOverdue(o.closeDate) ? 'text-danger' : 'text-[var(--sub)]'}`}>{fDate(o.closeDate)}</span></td>
-                  <td className="px-3.5 py-2.5 border-b border-[var(--border)]"><Avatar initials={o.owner.initials} color={o.owner.color} size="xs" /></td>
+                  <td className="px-3.5 py-2.5 border-b border-[var(--border)]">{o.owner && <Avatar initials={o.owner.initials} color={o.owner.color} size="xs" />}</td>
                 </tr>
               ))}
             </tbody>

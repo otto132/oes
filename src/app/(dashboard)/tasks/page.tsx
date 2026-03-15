@@ -143,7 +143,7 @@ function TasksPageInner() {
 
   let all = tasks;
   if (debouncedSearch) all = all.filter(t => `${t.title} ${t.accountName}`.toLowerCase().includes(debouncedSearch.toLowerCase()));
-  const mine = all.filter(t => t.assignees?.some(u => u.id === me.id) || t.owner.id === me.id);
+  const mine = all.filter(t => t.assignees?.some(u => u.id === me.id) || t.owner?.id === me.id);
   const review = all.filter(t => t.status === 'InReview' && t.reviewer?.id === me.id);
   const visible = tab === 'mine' ? mine : tab === 'review' ? review : all;
   const overdue = visible.filter(t => t.status !== 'Done' && isOverdue(t.dueDate));
@@ -733,7 +733,7 @@ function TasksPageInner() {
           <div>
             <div className="text-3xs font-semibold tracking-wide uppercase text-muted mb-1.5">Assigned To</div>
             <div className="flex items-center gap-1.5 flex-wrap">
-              {(t.assignees || [t.owner]).map(u => (
+              {(t.assignees || (t.owner ? [t.owner] : [])).map(u => (
                 <div key={u.id} className="flex items-center gap-1"><Avatar initials={u.initials} color={u.color} size="xs" /><span className="text-xs">{u.name}</span></div>
               ))}
             </div>
@@ -973,11 +973,11 @@ function TasksPageInner() {
           );
         })()}
         <div className="flex items-center -space-x-1">
-          {(t.assignees || [t.owner]).slice(0, 3).map(u => (
+          {(t.assignees || (t.owner ? [t.owner] : [])).slice(0, 3).map(u => (
             <Avatar key={u.id} initials={u.initials} color={u.color} size="xs" />
           ))}
           {!done && (
-            <QuickAssign taskId={t.id} currentAssigneeIds={(t.assignees || [t.owner]).map(u => u.id)} teamMembers={teamMembers} />
+            <QuickAssign taskId={t.id} currentAssigneeIds={(t.assignees || (t.owner ? [t.owner] : [])).map(u => u.id)} teamMembers={teamMembers} />
           )}
         </div>
       </div>
