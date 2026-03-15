@@ -142,3 +142,43 @@ export const WinLossAnalysisSchema = z.object({
   competitorInsight: z.string().nullable(),
   recommendations: z.array(z.string()),
 });
+
+// ── Meeting Analyst ────────────────────────────────────────────
+export const MeetingAnalysisSchema = z.object({
+  summary: z.string().describe('Structured narrative summary of the meeting'),
+  actionItems: z.array(z.object({
+    title: z.string(),
+    suggestedOwner: z.string().optional(),
+    suggestedDueDate: z.string().optional(),
+    accountName: z.string().optional(),
+  })).describe('Extracted action items from the notes'),
+  followUpMeetings: z.array(z.object({
+    topic: z.string(),
+    suggestedDate: z.string().optional(),
+    attendees: z.array(z.string()),
+  })).describe('Follow-up meetings detected in notes'),
+  enrichmentSuggestions: z.array(z.object({
+    field: z.string().describe('Account field to update (e.g., pain, whyNow, competitors)'),
+    currentValue: z.string().optional(),
+    suggestedValue: z.string(),
+    reasoning: z.string(),
+  })).describe('Account data that could be updated from meeting notes'),
+  contactIntelligence: z.array(z.object({
+    name: z.string(),
+    role: z.string().optional(),
+    sentiment: z.string().optional().describe('positive | neutral | negative'),
+    isNew: z.boolean().describe('Whether this is a new contact not yet in the CRM'),
+  })).describe('Contact information mentioned in notes'),
+  sentiment: z.enum(['positive', 'neutral', 'negative']),
+});
+
+// ── Weekly Digest ──────────────────────────────────────────────
+export const DigestNarrativeSchema = z.object({
+  pipelineSummary: z.string().describe('2-3 sentence narrative of pipeline changes this week'),
+  accountParagraphs: z.array(z.object({
+    accountId: z.string(),
+    accountName: z.string(),
+    narrative: z.string().describe('One paragraph summarizing this account\'s week'),
+  })),
+  weekAheadSummary: z.string().describe('1-2 sentence preview of the upcoming week'),
+});
