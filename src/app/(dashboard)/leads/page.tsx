@@ -752,7 +752,7 @@ export default function LeadsPage() {
                         <div className="text-sm font-medium mb-1.5">{l.company}</div>
                         <div className="text-xs text-sub leading-tight line-clamp-2 mb-2">{l.pain || 'No pain hypothesis yet'}</div>
                         <div className="flex items-center justify-between mb-1">
-                          <div className="flex items-center gap-1">{l.moduleFit.slice(0, 2).map(f => <Badge key={f} variant="ok" className="!text-3xs">{f}</Badge>)}</div>
+                          <div className="flex items-center gap-1">{(l.moduleFit || []).slice(0, 2).map(f => <Badge key={f} variant="ok" className="!text-3xs">{f}</Badge>)}</div>
                           <Avatar initials={l.owner.initials} color={l.owner.color} size="xs" />
                         </div>
                         <div className="flex items-center gap-1.5"><FIUACBars scores={l.scores} /><ScorePill scores={l.scores} /></div>

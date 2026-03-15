@@ -41,7 +41,9 @@ export default auth((req) => {
   ) {
     const origin = req.headers.get("origin")
     const referer = req.headers.get("referer")
-    const appOrigin = req.nextUrl.origin
+    const host = req.headers.get("host")
+    const proto = req.headers.get("x-forwarded-proto") || "http"
+    const appOrigin = host ? `${proto}://${host}` : req.nextUrl.origin
 
     // Accept if Origin header matches, or fall back to Referer header
     const originMatch = origin === appOrigin
