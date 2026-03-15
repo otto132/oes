@@ -2,7 +2,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { api } from '@/lib/api-client';
 import { Badge, FIUACBars, Skeleton, SkeletonText } from '@/components/ui';
-import { cn, fR } from '@/lib/utils';
+import { fR } from '@/lib/utils';
 import type { Account, Contact, Opportunity, Activity } from '@/lib/types';
 import { Building2, User, Briefcase, Clock } from 'lucide-react';
 

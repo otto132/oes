@@ -1,8 +1,8 @@
 'use client';
 import { useRef, useEffect } from 'react';
 import { cn, fR, clsLabel } from '@/lib/utils';
-import { Badge, ConfBadge, AgentTag } from '@/components/ui';
-import type { EmailThread, Email } from '@/lib/types';
+import { Badge } from '@/components/ui';
+import type { EmailThread } from '@/lib/types';
 import { Mail } from 'lucide-react';
 
 const SENTIMENT_DOT: Record<string, string> = {

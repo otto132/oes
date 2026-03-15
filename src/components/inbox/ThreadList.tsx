@@ -1,9 +1,10 @@
 'use client';
-import { useState, useCallback, useEffect, useRef } from 'react';
+import { useRef } from 'react';
 import { cn, fR, clsLabel } from '@/lib/utils';
 import { Badge } from '@/components/ui';
 import type { EmailThread } from '@/lib/types';
-import { Search, Filter } from 'lucide-react';
+
+
 
 const FILTERS = [
   { key: 'all', label: 'All' },

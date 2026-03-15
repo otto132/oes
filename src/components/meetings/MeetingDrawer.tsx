@@ -4,7 +4,7 @@ import { useMeetingDetail } from '@/lib/queries/meetings';
 import { PrepTab } from './PrepTab';
 import { OutcomeTab } from './OutcomeTab';
 import { Skeleton, SkeletonText } from '@/components/ui';
-import { cn, fR } from '@/lib/utils';
+import { cn } from '@/lib/utils';
 import { X, Calendar, Clock, Users } from 'lucide-react';
 import type { Meeting } from '@/lib/types';
 

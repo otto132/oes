@@ -1,12 +1,12 @@
 'use client';
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useInboxThreadsQuery, useSnoozeEmail, useMarkEmailRead, useArchiveEmail, useCreateTaskFromEmail } from '@/lib/queries/inbox';
 import { useStore } from '@/lib/store';
 import { ThreadList } from '@/components/inbox/ThreadList';
 import { ThreadView } from '@/components/inbox/ThreadView';
 import { InboxContext } from '@/components/inbox/InboxContext';
 import { InboxQuickActions } from '@/components/inbox/InboxQuickActions';
-import { EmptyState, ErrorState, Skeleton, SkeletonCard, SkeletonText } from '@/components/ui';
+import { ErrorState, Skeleton, SkeletonCard, SkeletonText } from '@/components/ui';
 import type { EmailThread } from '@/lib/types';
 
 function InboxSkeleton() {

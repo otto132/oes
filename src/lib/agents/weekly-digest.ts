@@ -159,13 +159,13 @@ export const weeklyDigestAgent: Agent = {
       contacts,
     ] = await Promise.all([
       prisma.opportunity.findMany({
-        where: { stage: { notIn: ['ClosedWon', 'ClosedLost'] } },
+        where: { stage: { notIn: ['Won', 'Lost'] } },
         include: {
           account: { select: { id: true, name: true } },
         },
       }),
       prisma.opportunity.aggregate({
-        where: { stage: { notIn: ['ClosedWon', 'ClosedLost'] } },
+        where: { stage: { notIn: ['Won', 'Lost'] } },
         _sum: { amount: true },
       }),
       prisma.inboxEmail.findMany({
@@ -209,11 +209,11 @@ export const weeklyDigestAgent: Agent = {
         select: { id: true, name: true, amount: true, stage: true },
       }),
       prisma.opportunity.findMany({
-        where: { stage: 'ClosedWon', updatedAt: { gte: weekStart, lte: weekEnd } },
+        where: { stage: 'Won', updatedAt: { gte: weekStart, lte: weekEnd } },
         select: { id: true, name: true, amount: true },
       }),
       prisma.opportunity.findMany({
-        where: { stage: 'ClosedLost', updatedAt: { gte: weekStart, lte: weekEnd } },
+        where: { stage: 'Lost', updatedAt: { gte: weekStart, lte: weekEnd } },
         select: { id: true, name: true },
       }),
     ]);

@@ -2,8 +2,7 @@
 import { useState } from 'react';
 import { useSubmitOutcome, useMarkNoShow, useMeetingDetail } from '@/lib/queries/meetings';
 import { Badge, Spinner } from '@/components/ui';
-import { cn } from '@/lib/utils';
-import { Sparkles, CheckCircle2, AlertCircle, Clipboard } from 'lucide-react';
+import { Sparkles, CheckCircle2, AlertCircle } from 'lucide-react';
 import type { Meeting } from '@/lib/types';
 
 type Step = 'paste' | 'processing' | 'review';

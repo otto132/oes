@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { withHandler } from '@/lib/api-handler';
 import { getAnthropicClient, MODEL_SONNET } from '@/lib/agents/ai';
 
@@ -26,7 +26,7 @@ export const GET = withHandler(null, async (req, ctx) => {
       take: 5,
     }) : [],
     meeting.accountId ? ctx.db.opportunity.findMany({
-      where: { accountId: meeting.accountId, stage: { notIn: ['ClosedWon', 'ClosedLost'] } },
+      where: { accountId: meeting.accountId, stage: { notIn: ['Won', 'Lost'] as any[] } },
     }) : [],
   ]);
 
