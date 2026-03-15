@@ -59,6 +59,13 @@ export async function PATCH(
     });
   }
 
+  // Validate assignee/reviewer IDs exist
+  const idsToCheck = [...(body.assigneeIds || []), ...(body.reviewerId ? [body.reviewerId] : [])];
+  if (idsToCheck.length > 0) {
+    const validUsers = await rawDb.user.count({ where: { id: { in: idsToCheck }, isActive: true } });
+    if (validUsers !== idsToCheck.length) return NextResponse.json({ error: 'One or more assignee/reviewer IDs are invalid' }, { status: 400 });
+  }
+
   const data: Record<string, unknown> = {};
   if (body.title !== undefined) data.title = body.title;
   if (body.priority !== undefined) data.priority = body.priority;

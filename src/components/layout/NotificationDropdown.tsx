@@ -185,7 +185,7 @@ export default function NotificationDropdown() {
           </div>
 
           {/* List */}
-          <div className="overflow-y-auto max-h-[420px]">
+          <div className="overflow-y-auto max-h-[calc(100vh-200px)] md:max-h-[420px]">
             {isLoading ? (
               <div className="px-4 py-8 text-center text-sm text-sub">Loading...</div>
             ) : allNotifications.length === 0 ? (

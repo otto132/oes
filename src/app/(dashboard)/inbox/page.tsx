@@ -6,6 +6,7 @@ import { ThreadList } from '@/components/inbox/ThreadList';
 import { ThreadView } from '@/components/inbox/ThreadView';
 import { InboxContext } from '@/components/inbox/InboxContext';
 import { InboxQuickActions } from '@/components/inbox/InboxQuickActions';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { ErrorState, Skeleton, SkeletonCard, SkeletonText } from '@/components/ui';
 import type { EmailThread } from '@/lib/types';
 
@@ -26,6 +27,7 @@ function InboxSkeleton() {
 export default function InboxPage() {
   const [filter, setFilter] = useState('');
   const [selectedThreadId, setSelectedThreadId] = useState<string | null>(null);
+  const [confirmArchiveId, setConfirmArchiveId] = useState<string | null>(null);
   const addToast = useStore(s => s.addToast);
 
   const { data: resp, isLoading, isError, refetch } = useInboxThreadsQuery(filter || undefined);
@@ -54,7 +56,7 @@ export default function InboxPage() {
   // Keyboard shortcuts
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
-      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement || (e.target instanceof HTMLElement && e.target.isContentEditable)) return;
       const idx = threads.findIndex(t => t.threadId === selectedThreadId);
 
       switch (e.key) {
@@ -69,9 +71,7 @@ export default function InboxPage() {
           break;
         case 'e':
           if (selectedThread) {
-            archiveEmail.mutate(selectedThread.latestEmail.id, {
-              onSuccess: () => addToast({ type: 'success', message: 'Archived' }),
-            });
+            setConfirmArchiveId(selectedThread.latestEmail.id);
           }
           break;
         case 't':
@@ -142,11 +142,7 @@ export default function InboxPage() {
                 onSuccess: () => addToast({ type: 'success', message: 'Snoozed' }),
               });
             }}
-            onArchive={() => {
-              archiveEmail.mutate(selectedThread.latestEmail.id, {
-                onSuccess: () => addToast({ type: 'success', message: 'Archived' }),
-              });
-            }}
+            onArchive={() => setConfirmArchiveId(selectedThread.latestEmail.id)}
             isPending={archiveEmail.isPending || createTask.isPending || snoozeEmail.isPending}
           />
         )}
@@ -159,6 +155,22 @@ export default function InboxPage() {
           contactEmail={selectedThread?.latestEmail.fromEmail}
         />
       </div>
+      <ConfirmDialog
+        open={!!confirmArchiveId}
+        title="Archive Conversation"
+        message="Are you sure you want to archive this conversation? You can find it again later in the archived folder."
+        confirmLabel="Archive"
+        variant="default"
+        onConfirm={() => {
+          if (confirmArchiveId) {
+            archiveEmail.mutate(confirmArchiveId, {
+              onSuccess: () => addToast({ type: 'success', message: 'Archived' }),
+            });
+          }
+          setConfirmArchiveId(null);
+        }}
+        onCancel={() => setConfirmArchiveId(null)}
+      />
     </div>
   );
 }

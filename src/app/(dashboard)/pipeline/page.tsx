@@ -225,6 +225,8 @@ function PipelinePageInner() {
   const { data: teamData } = useTeamQuery();
   const [showAssignPicker, setShowAssignPicker] = useState(false);
   const [showStagePicker, setShowStagePicker] = useState(false);
+  const [showCloseLostConfirm, setShowCloseLostConfirm] = useState(false);
+  const lastDropTime = useRef(0);
 
   function toggleSelect(id: string) {
     setSelected(prev => {
@@ -348,6 +350,11 @@ function PipelinePageInner() {
                   setDropStage(null);
                   setDragId(null);
                   if (id) {
+                    // Debounce rapid drops (500ms)
+                    const now = Date.now();
+                    if (now - lastDropTime.current < 500) return;
+                    lastDropTime.current = now;
+
                     const opp = open.find(o => o.id === id);
                     if (opp && opp.stage !== stage) {
                       const srcIdx = KANBAN_STAGES.indexOf(opp.stage);
@@ -523,14 +530,7 @@ function PipelinePageInner() {
             label: 'Close Lost',
             variant: 'danger',
             isPending: bulkCloseLost.isPending,
-            onClick: () => {
-              bulkCloseLost.mutate([...selected], {
-                onSuccess: () => {
-                  addToast({ type: 'info', message: `Opportunities closed as lost` });
-                  setSelected(new Set());
-                },
-              });
-            },
+            onClick: () => setShowCloseLostConfirm(true),
           },
           {
             label: 'Assign Owner',
@@ -573,6 +573,38 @@ function PipelinePageInner() {
             >
               Cancel
             </button>
+          </div>
+        </div>
+      )}
+
+      {showCloseLostConfirm && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-[var(--elevated)] border border-[var(--border)] rounded-lg p-4 max-w-xs mx-4">
+            <p className="text-sm font-medium text-[var(--text)] mb-1">Close {selected.size} opportunities as lost?</p>
+            <p className="text-xs text-[var(--muted)] mb-4">This action cannot be undone. The deals will be marked as lost with no competitor or reason recorded.</p>
+            <div className="flex items-center justify-end gap-2">
+              <button
+                className="px-3 py-1.5 text-sm text-[var(--sub)] bg-[var(--surface)] border border-[var(--border)] rounded-md hover:bg-[var(--hover)] transition-colors"
+                onClick={() => setShowCloseLostConfirm(false)}
+              >
+                Cancel
+              </button>
+              <button
+                disabled={bulkCloseLost.isPending}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium bg-red-500 text-white rounded-md hover:brightness-110 transition-colors disabled:opacity-50"
+                onClick={() => {
+                  bulkCloseLost.mutate([...selected], {
+                    onSuccess: () => {
+                      addToast({ type: 'info', message: `Opportunities closed as lost` });
+                      setSelected(new Set());
+                      setShowCloseLostConfirm(false);
+                    },
+                  });
+                }}
+              >
+                {bulkCloseLost.isPending && <Spinner className="h-3 w-3" />}Close Lost
+              </button>
+            </div>
           </div>
         </div>
       )}

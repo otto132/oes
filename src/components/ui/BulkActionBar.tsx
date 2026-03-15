@@ -25,7 +25,7 @@ export function BulkActionBar({ count, actions, onClear }: BulkActionBarProps) {
   };
 
   return (
-    <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-40 flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[var(--elevated)] border border-[var(--border)] shadow-lg backdrop-blur-sm">
+    <div className="fixed bottom-20 md:bottom-4 left-1/2 -translate-x-1/2 z-40 flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[var(--elevated)] border border-[var(--border)] shadow-lg backdrop-blur-sm">
       <span className="text-sm font-medium text-[var(--text)] mr-2">{count} selected</span>
       {actions.map((action) => (
         <button

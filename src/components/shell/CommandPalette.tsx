@@ -2,6 +2,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useStore } from '@/lib/store';
+import { useFocusTrap } from '@/hooks/use-focus-trap';
 import {
   Home, Shield, Signal, Target, Building2, TrendingUp,
   Inbox, CheckSquare, Settings, Search, Plus, Clock,
@@ -73,6 +74,8 @@ export default function CommandPalette() {
   const router = useRouter();
   const inputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
+  const dialogRef = useRef<HTMLDivElement>(null);
+  useFocusTrap(dialogRef, paletteOpen);
   const [query, setQuery] = useState('');
   const [activeIdx, setActiveIdx] = useState(0);
   const [searchResults, setSearchResults] = useState<PaletteItem[]>([]);
@@ -241,6 +244,10 @@ export default function CommandPalette() {
 
       {/* Palette */}
       <div
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-label="Command palette"
         className="relative w-full max-w-[520px] mx-4 rounded-xl bg-[var(--elevated)] border border-[var(--border)] shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-150"
         onKeyDown={onKeyDown}
       >
@@ -261,7 +268,7 @@ export default function CommandPalette() {
         </div>
 
         {/* Results */}
-        <div ref={listRef} className="max-h-[340px] overflow-y-auto py-1.5">
+        <div ref={listRef} className="max-h-[50vh] md:max-h-[340px] overflow-y-auto py-1.5">
           {flatItems.length === 0 && (
             <div className="py-8 text-center text-base text-muted">No results found</div>
           )}

@@ -21,7 +21,7 @@ export async function GET(req: NextRequest) {
   if (id) {
     const opp = await scoped.opportunity.findUnique({
       where: { id },
-      include: { owner: true, account: { include: { contacts: true } } },
+      include: { owner: true, account: { include: { contacts: { take: 100 } } } },
     });
     if (!opp) return notFound('Opportunity not found');
 
@@ -42,10 +42,14 @@ export async function GET(req: NextRequest) {
   const pagination = parsePagination(req);
   const where: Prisma.OpportunityWhereInput = { stage: { notIn: ['Won', 'Lost'] as any[] } };
 
-  // Aggregates across ALL records
-  const allOpps = await scoped.opportunity.findMany({ where, select: { amount: true, stage: true } });
-  const total = allOpps.reduce((s, o) => s + o.amount, 0);
-  const weighted = allOpps.reduce((s, o) => s + Math.round(o.amount * (STAGE_PROB[o.stage] || 0) / 100), 0);
+  // Aggregate pipeline totals by stage (avoids loading ALL opps into memory)
+  const stageAgg = await db.opportunity.groupBy({
+    by: ['stage'],
+    where,
+    _sum: { amount: true },
+  });
+  const total = stageAgg.reduce((s, g) => s + (g._sum?.amount || 0), 0);
+  const weighted = stageAgg.reduce((s, g) => s + Math.round((g._sum?.amount || 0) * (STAGE_PROB[g.stage] || 0) / 100), 0);
 
   // Then paginated query
   const opps = await scoped.opportunity.findMany({
@@ -156,6 +160,7 @@ export const POST = withHandler(opportunityActionSchema, async (req, ctx) => {
 
   if (body.action === 'bulk_move') {
     const { ids, stage } = body;
+    if (ids.length > 500) return badRequest('Too many items (max 500)');
     await ctx.db.opportunity.updateMany({
       where: { id: { in: ids } },
       data: { stage: stage as OppStage },
@@ -165,6 +170,7 @@ export const POST = withHandler(opportunityActionSchema, async (req, ctx) => {
 
   if (body.action === 'bulk_close_lost') {
     const { ids } = body;
+    if (ids.length > 500) return badRequest('Too many items (max 500)');
     await ctx.db.opportunity.updateMany({
       where: { id: { in: ids } },
       data: { stage: 'Lost' as any, probability: 0 },
@@ -174,6 +180,7 @@ export const POST = withHandler(opportunityActionSchema, async (req, ctx) => {
 
   if (body.action === 'bulk_assign') {
     const { ids, ownerId } = body;
+    if (ids.length > 500) return badRequest('Too many items (max 500)');
     await ctx.db.opportunity.updateMany({
       where: { id: { in: ids } },
       data: { ownerId },

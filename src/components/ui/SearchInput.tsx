@@ -66,7 +66,7 @@ export function SearchInput({
         <button
           type="button"
           onClick={handleClear}
-          className="absolute right-1.5 top-1/2 -translate-y-1/2 p-0.5 rounded hover:bg-[var(--hover)] text-[var(--muted)] hover:text-[var(--text)] transition-colors"
+          className="absolute right-1 top-1/2 -translate-y-1/2 w-7 h-7 flex items-center justify-center rounded hover:bg-[var(--hover)] text-[var(--muted)] hover:text-[var(--text)] transition-colors"
           aria-label="Clear search"
         >
           <X className="w-3 h-3" />

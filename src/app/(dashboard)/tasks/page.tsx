@@ -600,7 +600,13 @@ function TasksPageInner() {
                 <div className="flex items-center gap-0.5">
                   {i > 0 && <button className="text-[10px] text-muted hover:text-[var(--text)]" onClick={() => { const s = state.subtasks.splice(i, 1)[0]; state.subtasks.splice(i - 1, 0, s); state.subtasks.forEach((s: any, idx: number) => s.position = idx); openEditTaskDrawer({ ...t, subtasks: state.subtasks } as any); }}>↑</button>}
                   {i < state.subtasks.length - 1 && <button className="text-[10px] text-muted hover:text-[var(--text)]" onClick={() => { const s = state.subtasks.splice(i, 1)[0]; state.subtasks.splice(i + 1, 0, s); state.subtasks.forEach((s: any, idx: number) => s.position = idx); openEditTaskDrawer({ ...t, subtasks: state.subtasks } as any); }}>↓</button>}
-                  <button className="text-[10px] text-muted hover:text-danger" onClick={() => { state.subtasks.splice(i, 1); state.subtasks.forEach((s: any, idx: number) => s.position = idx); openEditTaskDrawer({ ...t, subtasks: state.subtasks } as any); }}>✕</button>
+                  <button className="text-[10px] text-muted hover:text-danger" onClick={() => {
+                    const removed = state.subtasks.splice(i, 1)[0];
+                    const removedIdx = i;
+                    state.subtasks.forEach((s: any, idx: number) => s.position = idx);
+                    addToast({ type: 'info', message: `Subtask "${removed.title.slice(0, 30)}" removed — close drawer to discard all changes` });
+                    openEditTaskDrawer({ ...t, subtasks: state.subtasks } as any);
+                  }}>✕</button>
                 </div>
               </div>
             ))}

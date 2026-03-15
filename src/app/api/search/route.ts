@@ -29,7 +29,7 @@ export async function GET(req: NextRequest) {
       select: { id: true, company: true, stage: true, type: true },
       take: 5,
     }),
-    db.signal.findMany({
+    scoped.signal.findMany({
       where: { title: { contains: q, mode: 'insensitive' } },
       select: { id: true, title: true, type: true },
       take: 3,

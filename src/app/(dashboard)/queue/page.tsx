@@ -158,6 +158,18 @@ function QueuePageInner() {
             disabled={approve.isPending}
             className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium bg-brand text-brand-on rounded-md hover:brightness-110 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             onClick={() => {
+              // Validate required fields before approving
+              const emptyRequired = Object.entries(state).filter(([key, val]) => {
+                if (q.type === 'outreach_draft' && (key === 'subject' || key === 'body')) return !val?.trim();
+                if (q.type === 'lead_qualification' && key === 'company') return !val?.trim();
+                if (q.type === 'enrichment' && key === 'after') return !val?.trim();
+                if (q.type === 'task_creation' && key === 'task') return !val?.trim();
+                return false;
+              });
+              if (emptyRequired.length > 0) {
+                addToast({ type: 'error', message: `Required fields cannot be empty: ${emptyRequired.map(([k]) => fields[k]?.label || k).join(', ')}` });
+                return;
+              }
               const editedPayload = { ...q.payload, ...state };
               approve.mutate(
                 { id: q.id, editedPayload },
