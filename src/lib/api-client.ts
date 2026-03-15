@@ -96,18 +96,22 @@ export const api = {
 
   // ── Leads ──────────────────────────────────────
   leads: {
-    list: (cursor?: string, limit?: number) => {
+    list: (cursor?: string, limit?: number, paused?: boolean) => {
       const params = new URLSearchParams();
       if (cursor) params.set('cursor', cursor);
       if (limit) params.set('limit', String(limit));
+      if (paused) params.set('paused', 'true');
       const qs = params.toString();
       return get<any>(`/leads${qs ? `?${qs}` : ''}`);
     },
     create: (data: { company: string; type?: string; country?: string; pain?: string }) =>
       post<any>('/leads', { action: 'create', ...data }),
     advance: (id: string) => post<any>('/leads', { action: 'advance', id }),
-    disqualify: (id: string) => post<any>('/leads', { action: 'disqualify', id }),
-    convert: (id: string, data: any) => post<any>('/leads', { action: 'convert', id, ...data }),
+    disqualify: (id: string, reason: string) => post<any>('/leads', { action: 'disqualify', id, reason }),
+    convert: (id: string, data: { accountName: string; accountType?: string; oppName: string; oppAmount?: number; closeDate?: string; ownerId?: string }) =>
+      post<any>('/leads', { action: 'convert', id, ...data }),
+    pause: (id: string, pausedUntil: string) => post<any>('/leads', { action: 'pause', id, pausedUntil }),
+    requalify: (id: string) => post<any>('/leads', { action: 'requalify', id }),
     bulkAdvance: (ids: string[]) => post<any>('/leads', { action: 'bulk_advance', ids }),
     bulkDisqualify: (ids: string[]) => post<any>('/leads', { action: 'bulk_disqualify', ids }),
     bulkAssign: (ids: string[], ownerId: string) => post<any>('/leads', { action: 'bulk_assign', ids, ownerId }),
